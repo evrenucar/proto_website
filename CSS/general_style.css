@@ -1,0 +1,72 @@
+body {
+  background-color: #2A2A2A;
+  color: #fafafa;
+  font-family: sans-serif;
+}
+*{ /*every element to 0 padding and margin */
+  margin: 0;
+  padding: 0;
+  /* border: 1px solid red; */
+}
+
+
+/* The sidebar menu */
+.sidenav {
+ height: 100%; /* Full-height: remove this if you want "auto" height */
+ width: 180px; /* Set the width of the sidebar */
+ position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+ z-index: 1; /* Stay on top */
+ top: 0; /* Stay at the top */
+ left: 0;
+ background-color: #111; /* Black */
+ overflow-x: hidden; /* Disable horizontal scroll */
+ padding-top: 20px;
+}
+
+/* The navigation menu links */
+.sidenav a {
+ display: flex;
+ text-decoration: none;
+ font-size: 25px;
+ color: #818181;
+ display: block;
+}
+.sidenav_links a{
+  padding: 6px 8px 6px 16px;
+}
+
+/* mouse hover color to white */
+.sidenav a:hover
+{
+ color: #f1f1f1;
+}
+
+.sidenav_contacts {
+  display: flex;
+  position: absolute;
+  bottom: 25px;
+  left: 10px;
+
+}
+.sidenav_contacts img{
+  padding: 6px;
+  height: 40px;
+}
+
+header,footer {
+  margin-left: 280px; /* distance to sidebar*/
+
+}
+
+/* footer {
+  margin-top: 20px;
+} 
+seems to be unnecessary
+*/
+
+
+/* small screen scaling */
+@media screen and (max-height: 450px) {
+ .sidenav {padding-top: 15px;}
+ .sidenav a {font-size: 18px;}
+}
