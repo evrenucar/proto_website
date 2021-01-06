@@ -29,9 +29,7 @@ body {
 }
 
 /* The navigation menu links */
-#first{
-  margin-top: 90px;
-  }
+
 .sidenav a {
  display: flex;
  text-decoration: none;
