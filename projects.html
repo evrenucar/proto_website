@@ -7,18 +7,21 @@
         <meta name="author" content="Evren Uçar">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="keywords" content="HTML, CSS, JavaScript">
+        <link rel="stylesheet" href="CSS/hamburger_button.css">
         <link rel="stylesheet" href="CSS/general_style.css">
+        <link rel="stylesheet" href="CSS/projects_grid_style.css">
+        <link rel="stylesheet" href="CSS/loader.css">
 
     </head>
 <!-- Side navigation Menu-->
 <div class="sidenav">
   <div class="sidenav_links">
     <a href="index.html" >
-      <img src="image/evren_icon_white.png" alt="evren_icon_white" height="35"></a>
+      <img id="logo" src="image/evren_icon_white.png" alt="evren_icon_white" height="35"></a>
     <a id="first" href="index.html" >About Me</a>
     <a href="things_i_do.html">Things I do</a>
     <a href="photography.html">Photography</a>
-    <a href="travels.html">Travels</a>
+    <!-- <a href="travels.html">Travels</a> -->
     <a href="projects.html" style="color: #f1f1f1" >Projects</a>
   </div>
   <div class="sidenav_contacts">
@@ -35,40 +38,81 @@
 <div class="main">
     <body>
         <header>
-          <h1>Projelerim</h1>
-            <!-- <img src="image/leatherwork.jpg" alt="leatherworking" height="300">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-              Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-              Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-            </p> -->
-            <div class=project>
-              <h1>Monowheel self balancing vehicle</h1>
-                  <img class=main_photo src="image/monowheel_1.png" alt="placeholder" height="300">
-                  <img class=main_photo src="image/monowheel_2.jpg" alt="placeholder" height="300">
-                  <img class=main_photo src="image/monowheel_3.jpg" alt="placeholder" height="300">
-                  <p>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-                    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                  </p>
+          <div class="grid">
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="projects/thumb_1.png" class="container_img" title="project_1">
+              </a>
             </div>
-            <div class=project>
-              <h1>One axis gimbal</h1>
-                  <img class=main_photo src="image/gimbal_1.png" alt="placeholder" height="300">
-                  <img class=main_photo src="image/gimbal_2.jpg" alt="placeholder" height="300">
-                  <img class=main_photo src="image/gimbal_3.png" alt="placeholder" height="300">
-                  <p>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-                    Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                  </p>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="projects/thumb_2.png" class="container_img" title="project_1">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_2">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_3">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_4">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_5">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_6">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_7">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_8">
+              </a>
+            </div>
+            <div class="container" >
+              <a href="index.html" class="container_img">
+                <img src="random_photos/1_normal.jpg" class="container_img" title="project_9">
+              </a>
+            </div>
+            <div id="project_2"><img src="random_photos/2_normal.jpg"></div>
+            <div><img src="random_photos/1_vertical.jpg"></div>
+            <div><img src="random_photos/3_normal.jpg"></div>
+            <div><img src="random_photos/1_big.jpg"></div>
+            <div><img src="random_photos/4_normal.jpg"></div>
+            <div><img src="random_photos/4_vertical.jpg"></div>
+            <div><img src="random_photos/5_normal.jpg"></div>
+            <div><img src="random_photos/6_normal.jpg"></div>
+            <div><img src="random_photos/2_big.jpg"></div>
+            <div><img src="random_photos/1_horizontal.jpg"></div>
+            <div><img src="random_photos/2_vertical.jpg"></div>
+            <div><img src="random_photos/7_normal.jpg"></div>
+            <div><img src="random_photos/8_normal.jpg"></div>
+            <div><img src="random_photos/9_normal.jpg"></div>
+            <div><img src="random_photos/3_big.jpg"></div>
+            <div><img src="random_photos/3_vertical.jpg"></div>
+            <div><img src="random_photos/10_normal.jpg"></div>
+            <div><img src="random_photos/11_normal.jpg"></div>
+            <div><img src="random_photos/12_normal.jpg"></div>
+          </div>
+            <div class="loader-wrapper">
+              <span class="loader"><span class="loader-inner"></span></span>
             </div>
         </header>
-
         <footer>
 
         </footer>

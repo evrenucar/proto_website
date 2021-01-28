@@ -7,21 +7,25 @@
         <meta name="author" content="Evren Uçar">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="keywords" content="HTML, CSS, JavaScript">
+        <link rel="stylesheet" href="CSS/hamburger_button.css">
         <link rel="stylesheet" href="CSS/general_style.css">
         <link rel="stylesheet" href="CSS/index_style.css">
+        <link rel="stylesheet" href="CSS/loader.css">
         <script src="JavaScript/Copy.js"></script>
+        <script src="JavaScript\MobileMenu.js"></script>
+
     </head>
 
 
 <!-- Side navigation Menu-->
-<div class="sidenav">
+<div class="sidenav" id="sidenav_menu">
   <div class="sidenav_links">
     <a href="index.html" >
-      <img src="image/evren_icon_white.png" alt="evren_icon_white" height="35"></a>
+      <img id="logo"  src="image/evren_icon_white.png" alt="evren_icon_white" height="35"></a>
         <a id="first" href="index.html" style="color: #f1f1f1" >About Me</a>
     <a href="things_i_do.html">Things I do</a>
     <a href="photography.html">Photography</a>
-    <a href="travels.html">Travels</a>
+    <!-- <a href="travels.html">Travels</a> -->
     <a href="projects.html">Projects</a>
   </div>
   <div class="sidenav_contacts">
@@ -33,18 +37,22 @@
         <img src="icon/youtube_white.png" alt="youtube icon" height="50"></a>
   </div>
 </div>
-
 <!-- Page content -->
 <div class="main">
     <body>
+        <!--Menu icon-->
+        <wrapper><input type="checkbox" class="toggle_menu" onclick="MobileMenu(this)"/><bun><burger></burger></bun></wrapper>
         <header>
-            <img class="main_photo" src="image/masked_photo.png" alt="photo of evren" height="300">
+          <img class="main_photo" src="image/masked_photo.png" alt="photo of evren" height="300">
           <div class=main_text>
             <h1 id="merhaba">Hi there! I'm</h1>
             <h1 id="evren">Evren <span id=Uçar>Uçar</span> </h1>
               <p class="main_paragraph">
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec interdum imperdiet lacus, varius tristique erat tristique sed. Suspendisse potenti. Integer eget enim neque. Nullam ac lobortis ante. Phasellus malesuada magna id maximus tincidunt. Quisque viverra, tortor mattis suscipit fermentum, dolor purus mollis nisl, in cursus ligula est at urna. Etiam ornare et nibh at congue. Duis ut tincidunt dolor. Proin ultricies efficitur tortor, sed blandit neque ultricies in. Maecenas a sapien sapien. Consectetur varius erat!
               </p>
+          </div>
+          <div class="loader-wrapper">
+            <span class="loader"><span class="loader-inner"></span></span>
           </div>
         </header>
 <!--Contact Information-->

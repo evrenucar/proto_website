@@ -1,0 +1,80 @@
+wrapper {
+    display: none;
+    /*display: block;*/
+    position: relative;
+    width: 100px;
+    height: 100px;
+    position: -webkit-sticky; /* Safari */
+    position: sticky;
+    top: 0;
+    margin-top: 15px;
+    margin-left: 35px;
+  }
+  wrapper bun:before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 12%;
+    background: #a1a1a1;
+    box-shadow: 0 0 0 10px #d3eefc00;
+    border-radius: 100px;
+    transition: all 0.5s cubic-bezier(0.1, 0.9, 0, 1.2);
+    top: 10%;
+    right: 0;
+  }
+  wrapper bun:after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 12%;
+    background: #a1a1a1;
+    box-shadow: 0 0 0 10px #d3eefc00;
+    border-radius: 100px;
+    transition: all 0.5s cubic-bezier(0.1, 0.9, 0, 1.2);
+    bottom: 10%;
+    left: 0;
+  }
+  wrapper bun burger {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    height: 100px;
+    width: 100px;
+  }
+  wrapper bun burger:before, wrapper bun burger:after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 12%;
+    background: #a1a1a1;
+    box-shadow: 0 0 0 10px #d3eefc00;
+    border-radius: 100px;
+    transition: all 0.5s cubic-bezier(0.1, 0.9, 0, 1.2);
+  }
+  wrapper input {
+    display: block;
+    position: absolute;
+    opacity: 0;
+    z-index: 1;
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+  }
+  wrapper input:hover ~ bun:before, wrapper input:hover ~ bun:after, wrapper input:hover ~ bun :before, wrapper input:hover ~ bun :after {
+    background: #fcfcfc;
+  }
+  wrapper input:checked ~ bun:before, wrapper input:checked ~ bun:after {
+    width: 0;
+
+  }
+  wrapper input:checked ~ bun burger:before {
+    transform: rotate(135deg);
+    
+  }
+  wrapper input:checked ~ bun burger:after {
+    transform: rotate(45deg);
+    box-shadow: 0 0 0 0 #d3eefc;
+  }
+
+  
+  
