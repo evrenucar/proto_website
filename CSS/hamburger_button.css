@@ -5,7 +5,7 @@ wrapper {
     width: 100px;
     height: 100px;
     position: -webkit-sticky; /* Safari */
-    position: sticky;
+    position: fixed;
     top: 0;
     margin-top: 15px;
     margin-left: 35px;
