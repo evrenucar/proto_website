@@ -88,7 +88,7 @@ seems to be unnecessary
        margin-top: 120px;
     }
     #first{
-       margin-top: 90px;
+       margin-top: 30px;
     }
  header, footer{ 
    padding-left: 0px;
@@ -98,4 +98,13 @@ seems to be unnecessary
   wrapper{
     display: block;
   }
+}
+
+/*coming soon page */
+#soon {
+  margin-top: 40vh;
+  color: #3fdaca;
+  font-size: 70px;
+  font-weight: 800;
+  width: 100%;
 }

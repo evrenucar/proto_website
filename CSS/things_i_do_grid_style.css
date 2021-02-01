@@ -19,11 +19,11 @@ width: 100%;
 object-fit: cover;
 }
 
-.grid a:hover {
-filter: brightness(130%);
+.grid img:hover {
+filter: brightness(120%);
 transition: .5s ease-in-out;
 }
-.grid a:not(:hover) {
+.grid img:not(:hover) {
 opacity:initial;
 filter: brightness(100%);
 transition: .3s ease-in-out;
@@ -39,3 +39,42 @@ grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
 grid-auto-rows: 200px;
 grid-auto-flow: dense;
 }
+
+/* On Hover Descriptions of İmages*/
+
+.container p{
+  position: relative;
+  text-align: center;    
+  width: 100%;
+  color: white;
+  font-size: 15px;
+  background-color: #2d978de0;
+  opacity: 1;
+  margin-top: -34px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  opacity: 0;
+}
+a:hover, a:visited, a:link, a:active
+{
+    text-decoration: none;
+}
+
+.container:hover p{
+  opacity: 1;
+  transition: .5s ease-in-out;
+}
+.container:not(:hover) p{
+  opacity: 0;
+  transition: .3s ease-in-out;
+}
+
+/*make description visible for touch devices */
+@media screen and (max-width: 1200px) {
+  
+  .container:not(:hover) p{
+    opacity: 1;
+    transition: .3s ease-in-out;
+  }
+ }
+ 

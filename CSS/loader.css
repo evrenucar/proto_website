@@ -22,7 +22,7 @@
     width: 30px;
     height: 30px;
     position: fixed;
-    border: 10px solid rb(63, 218, 202);
+    border: 10px solid rb(63, 218, 202); /* no border */
     animation: loader 2s infinite ease;
   }
   .loader-inner {
@@ -58,5 +58,8 @@
 @keyframes hide {
     to {
         opacity: 0;
-        left: -2700px;
+        left: -2800px;
    }
+  }
+
+  
