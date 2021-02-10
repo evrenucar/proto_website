@@ -2,8 +2,6 @@ body {
   background-color: #222222;
   color: #fafafa;
   font-family: sans-serif;
-  display: flex;
-  justify-content: center;
 }
 *{ /*every element to 0 padding and margin */
   margin: 0;
