@@ -1,2 +1,2 @@
 # proto_website
-This is the repo for my personal website prototype.
+This is the repo for my personal website.
