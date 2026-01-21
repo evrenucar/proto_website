@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Project - EVREN UCAR</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="CSS/hamburger_button.css">
+    <link rel="stylesheet" href="CSS/general_style.css">
+    <link rel="stylesheet" href="CSS/loader.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <script src="JavaScript/MobileMenu.js"></script>
+    <script src="JavaScript/components.js"></script>
+    <style>
+        .markdown-content {
+            max-width: 900px;
+            /* margin: auto; handled by header padding */
+            color: #fafafa;
+            font-family: sans-serif;
+            line-height: 1.6;
+            min-height: 60vh;
+            padding-top: 50px;
+        }
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border-radius: 4px;
+        }
+        .markdown-content h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .markdown-content h2 {
+            font-size: 2em;
+            margin-top: 40px;
+            margin-bottom: 15px;
+        }
+        .markdown-content h3 {
+            font-size: 1.5em;
+            margin-top: 30px;
+        }
+        .markdown-content p {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        .markdown-content a {
+            color: #3fdaca;
+        }
+        .loader-wrapper-inline {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        @media screen and (max-width: 1200px) {
+            .markdown-content {
+                padding-top: 120px; /* Clear the hamburger menu */
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar-placeholder"></div>
+    <wrapper><input type="checkbox" class="toggle_menu" onclick="MobileMenu(this)"/><bun><burger></burger></bun></wrapper>
+
+    <div class="main">
+        <header>
+            <div id="content" class="markdown-content">
+                <div class="loader-wrapper-inline">
+                <span class="loader"><span class="loader-inner"></span></span>
+                </div>
+            </div>
+        </header>
+        <footer>
+            <!-- Footer content if any -->
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const file = urlParams.get('file');
+
+            if (file) {
+                // Configure marked to prepend 'projects/' to relative images
+                const renderer = {
+                    image(href, title, text) {
+                        // Check if href is relative and doesn't start with projects/
+                        // We assume images are in projects/ folder if path is simple
+                        if (href && !href.startsWith('http') && !href.startsWith('//') && !href.startsWith('/') && !href.startsWith('projects/')) {
+                            href = 'projects/' + href;
+                        }
+
+                        // Clean up arguments
+                        const titleAttr = title ? ` title="${title}"` : '';
+                        const altAttr = text ? ` alt="${text}"` : '';
+
+                        return `<img src="${href}"${altAttr}${titleAttr} loading="lazy">`;
+                    }
+                };
+
+                marked.use({ renderer });
+
+                fetch(`projects/${file}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error("File not found");
+                        return response.text();
+                    })
+                    .then(text => {
+                         const content = document.getElementById('content');
+                         content.innerHTML = marked.parse(text);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        document.getElementById('content').innerHTML = `
+                            <h1>Project not found</h1>
+                            <p>The file "projects/${file}" could not be loaded.</p>
+                            <p><a href="projects.html" style="color:#3fdaca">Back to Projects</a></p>
+                        `;
+                    });
+            } else {
+                 document.getElementById('content').innerHTML = `
+                    <h1>No project selected</h1>
+                    <p><a href="projects.html" style="color:#3fdaca">Back to Projects</a></p>
+                 `;
+            }
+        });
+    </script>
+</body>
+</html>
