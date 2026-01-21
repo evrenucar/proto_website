@@ -1,0 +1,89 @@
+/* Common Grid Styles */
+.grid > div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2em;
+    color: #ffeead;
+}
+
+.grid a, .grid img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+
+.grid img {
+    cursor: pointer;
+    transition: .3s ease-in-out;
+}
+
+.grid img:hover {
+    filter: brightness(120%);
+    transition: .5s ease-in-out;
+}
+
+.grid img:not(:hover) {
+    opacity: initial;
+    filter: brightness(100%);
+}
+
+.grid {
+    padding-top: 7vh;
+    display: grid;
+    grid-auto-flow: dense;
+}
+
+/* Projects Grid Variant */
+.grid.projects {
+    grid-gap: 40px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-auto-rows: 400px;
+}
+
+/* Things I Do Grid Variant */
+.grid.things {
+    grid-gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-auto-rows: 200px;
+}
+
+/* On Hover Descriptions */
+.container p {
+    position: relative;
+    text-align: center;
+    width: 100%;
+    color: white;
+    font-size: 30px; /* Default (Projects) size */
+    background-color: #2d978de0;
+    margin-top: -75px; /* Default margin */
+    padding-top: 7.5px;
+    padding-bottom: 6px;
+    opacity: 0;
+    transition: .3s ease-in-out;
+    pointer-events: none;
+}
+
+/* Adjustments for Things I Do descriptions */
+.grid.things .container p {
+    font-size: 15px;
+    margin-top: -45px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.container:hover p {
+    opacity: 1;
+    transition: .5s ease-in-out;
+}
+
+a:hover, a:visited, a:link, a:active {
+    text-decoration: none;
+}
+
+/* Touch devices */
+@media screen and (max-width: 1200px) {
+    .container:not(:hover) p {
+        opacity: 1;
+    }
+}

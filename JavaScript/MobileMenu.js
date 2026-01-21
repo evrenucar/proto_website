@@ -1,9 +1,8 @@
-function MobileMenu(x) {
-
-  var x = document.getElementById("sidenav_menu");
-  if (x.style.display === "none") {
-    x.style.display = "block";
-  } else {
-    x.style.display = "none";
-  }
-  } 
+function MobileMenu(checkbox) {
+    var menu = document.getElementById("sidenav_menu");
+    if (checkbox.checked) {
+        menu.classList.add("open");
+    } else {
+        menu.classList.remove("open");
+    }
+}

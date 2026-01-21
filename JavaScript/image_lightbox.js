@@ -2,7 +2,7 @@ const lightbox = document.createElement('div')
 lightbox.id = 'lightbox' //adds lightbox id to the div element
 document.body.appendChild(lightbox) //adds lightbox div element to the document body
 
-const images = document.querySelectorAll('img') //selects all img and adds it under "images"
+const images = document.querySelectorAll('.grid img') //selects all img inside .grid
 images.forEach(image=> { //does the foolowing for every img  (not sure if "image" is just a name)
   image.addEventListener('click', e => { //adds event listener for clicking
     lightbox.classList.add('active') //adds "active" class to lightbox ()
