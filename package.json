@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sync:notion": "node scripts/sync-notion.mjs",
     "build": "node scripts/build-site.mjs",
     "preview": "node scripts/preview-server.mjs"
   }

@@ -1,12 +1,15 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  bookmarksPage,
+  braindumpPage,
   featuredProjectSlugs,
   homePage,
   makingItems,
   makingPage,
   navigation,
+  openQuestsPage,
   photographyItems,
   photographyPage,
   placeholderPage,
@@ -20,18 +23,26 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const buildDate = new Date().toISOString().slice(0, 10);
 const notionProjectOverridesPath = path.join(rootDir, "src", "notion-projects.json");
+const notionItemsPath = path.join(rootDir, "src", "notion-items.json");
+const photographyItemsPath = path.join(rootDir, "photography_assets", "photos.json");
 
-const pageUrls = {
-  "index.html": `${site.url}/`,
-  "projects.html": `${site.url}/projects.html`,
-  "things_i_do.html": `${site.url}/things_i_do.html`,
-  "photography.html": `${site.url}/photography.html`,
-  "coming_soon.html": `${site.url}/coming_soon.html`,
-  "404.html": `${site.url}/404.html`
+const sectionMeta = {
+  projects: {
+    label: "Projects",
+    heading: "Project work"
+  },
+  "things_i_do": {
+    label: "Things i do",
+    heading: "Smaller builds and experiments"
+  },
+  "open-quests": {
+    label: "Open-Quests",
+    heading: "Ongoing builds and questions"
+  }
 };
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -43,46 +54,309 @@ function pageTitle(title) {
   return title.includes(site.name) ? title : `${title} | ${site.name}`;
 }
 
+function normalizeSection(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", "-");
+
+  if (["project", "projects"].includes(normalized)) {
+    return "projects";
+  }
+
+  if (
+    ["things-i-do", "things i do", "thing", "things", "things_i_do", "making"].includes(
+      normalized
+    )
+  ) {
+    return "things_i_do";
+  }
+
+  if (["open-quests", "open quests", "open quest", "open_quests"].includes(normalized)) {
+    return "open-quests";
+  }
+
+  return "";
+}
+
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function pagePathToUrl(filePath) {
+  const normalizedPath = filePath.replaceAll("\\", "/");
+
+  if (normalizedPath === "index.html") {
+    return `${site.url}/`;
+  }
+
+  return `${site.url}/${normalizedPath}`.replace(/([^:]\/)\/+/g, "$1");
+}
+
+function relativeHref(fromFile, toFile) {
+  if (
+    !toFile ||
+    isExternalUrl(toFile) ||
+    toFile.startsWith("#") ||
+    toFile.startsWith("data:") ||
+    toFile.startsWith("mailto:") ||
+    toFile.startsWith("tel:")
+  ) {
+    return toFile;
+  }
+
+  const fromPath = fromFile.replaceAll("\\", "/");
+  const targetPath = toFile.replaceAll("\\", "/");
+  const fromDir = path.posix.dirname(fromPath);
+  const relativePath = path.posix.relative(fromDir, targetPath);
+
+  return relativePath || path.posix.basename(targetPath);
+}
+
+function resolveInlineContentPaths(currentFile, html) {
+  return String(html || "").replace(/\b(src|href)="([^"]+)"/g, (match, attribute, value) => {
+    if (
+      !value ||
+      isExternalUrl(value) ||
+      value.startsWith("#") ||
+      value.startsWith("data:") ||
+      value.startsWith("mailto:") ||
+      value.startsWith("tel:")
+    ) {
+      return match;
+    }
+
+    return `${attribute}="${relativeHref(currentFile, value)}"`;
+  });
+}
+
 function absoluteAsset(assetPath) {
+  if (!assetPath) {
+    return absoluteAsset(seo.defaultImage);
+  }
+
+  if (/^https?:\/\//i.test(assetPath)) {
+    return assetPath;
+  }
+
   return `${site.url}/${assetPath}`.replace(/([^:]\/)\/+/g, "$1");
 }
 
-function renderSidebar(currentFile) {
+function encodeEmailPart(value) {
+  return String(value || "")
+    .split("")
+    .reverse()
+    .join("");
+}
+
+function formatDateLabel(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function contentPagePath(section, slug) {
+  return `content/${section}/${slug}.html`;
+}
+
+function isExternalUrl(url) {
+  return /^https?:\/\//i.test(url || "");
+}
+
+function getSectionLabel(section) {
+  return sectionMeta[section]?.label || "Notes";
+}
+
+function renderCopyEmailControl({ className, label, content }) {
+  return `<button class="${className}" type="button" aria-label="${escapeHtml(
+    label
+  )}" data-copy-email data-email-user="${escapeHtml(
+    encodeEmailPart(site.emailUser)
+  )}" data-email-domain="${escapeHtml(encodeEmailPart(site.emailDomain))}" data-email-reversed="true">${content}</button>`;
+}
+
+function sectionToNavFile(section) {
+  if (section === "projects") {
+    return "projects.html";
+  }
+
+  if (section === "things_i_do") {
+    return "things_i_do.html";
+  }
+
+  if (section === "open-quests") {
+    return "open-quests.html";
+  }
+
+  return "";
+}
+
+function renderSidebar(currentFile, currentNavFile = currentFile) {
   const links = navigation
     .map(({ label, href }, index) => {
-      const current = href === currentFile;
+      const current = href === currentNavFile;
       const className = index === 0 ? "nav-link nav-link-first" : "nav-link";
-      return `<a class="${className}${current ? " is-current" : ""}" href="${href}"${
-        current ? ' aria-current="page"' : ""
-      }>${escapeHtml(label)}</a>`;
+      return `<a class="${className}${current ? " is-current" : ""}" href="${relativeHref(
+        currentFile,
+        href
+      )}"${current ? ' aria-current="page"' : ""}>${escapeHtml(label)}</a>`;
     })
     .join("");
 
   return `
     <aside class="sidenav" id="sidenav_menu" aria-label="Primary">
       <div class="sidenav_links">
-        <a class="logo-link" href="index.html" aria-label="${escapeHtml(site.name)} home">
-          <img id="logo" src="image/evren_icon_white.png" alt="${escapeHtml(site.name)} logo" height="35">
-        </a>
         ${links}
       </div>
       <div class="sidenav_contacts">
-        <a href="mailto:${site.email}" aria-label="Email ${escapeHtml(site.name)}">
-          <img src="icon/gmail_white.png" alt="Email icon" height="40">
-        </a>
+        ${renderCopyEmailControl({
+          className: "contact-button",
+          label: `Copy ${site.name} email address`,
+          content: `<img src="${relativeHref(currentFile, "icon/gmail_white.png")}" alt="Email icon">`
+        })}
         <a href="${site.social.linkedin}" target="_blank" rel="noreferrer" aria-label="LinkedIn">
-          <img src="icon/linkedin_white.png" alt="LinkedIn icon" height="40">
+          <img src="${relativeHref(currentFile, "icon/linkedin_white.png")}" alt="LinkedIn icon">
         </a>
         <a href="${site.social.youtube}" target="_blank" rel="noreferrer" aria-label="YouTube">
-          <img src="icon/youtube_white.png" alt="YouTube icon" height="40">
+          <img src="${relativeHref(currentFile, "icon/youtube_white.png")}" alt="YouTube icon">
         </a>
       </div>
     </aside>
   `;
 }
 
+function renderFooter(currentFile) {
+  const linkedNavigation = navigation
+    .map(
+      ({ label, href }) =>
+        `<a href="${relativeHref(currentFile, href)}">${escapeHtml(label)}</a>`
+    )
+    .join("");
+
+  return `
+      <footer class="page-footer">
+        <div class="footer-block footer-brand">
+          <a class="footer-logo-link" href="${relativeHref(currentFile, "index.html")}" aria-label="${escapeHtml(
+            site.name
+          )} home">
+            <img class="footer-logo" src="${relativeHref(currentFile, "image/evren_logo_white.svg")}" alt="${escapeHtml(
+              site.name
+            )} logo">
+          </a>
+          ${renderCopyEmailControl({
+            className: "footer-copy-button",
+            label: `Copy ${site.name} email address`,
+            content: "Copy email"
+          })}
+        </div>
+        <nav class="footer-block footer-links footer-nav" aria-label="Footer navigation">
+          ${linkedNavigation}
+        </nav>
+        <div class="footer-block footer-links footer-social">
+          <a href="${site.social.linkedin}" target="_blank" rel="noreferrer">LinkedIn</a>
+          <a href="${site.social.youtube}" target="_blank" rel="noreferrer">YouTube</a>
+        </div>
+      </footer>
+  `;
+}
+
+function renderBottomTicker() {
+  if (!site.tickerText) {
+    return "";
+  }
+
+  const tickerText = escapeHtml(site.tickerText);
+
+  return `
+      <div class="page-bottom-ticker" aria-label="Scrolling site banner">
+        <div class="page-bottom-ticker-track">
+          <span>${tickerText}</span>
+          <span aria-hidden="true">${tickerText}</span>
+          <span aria-hidden="true">${tickerText}</span>
+        </div>
+      </div>
+  `;
+}
+
+function renderCopyToast() {
+  return `
+      <div class="copy-toast" role="status" aria-live="polite" hidden data-copy-toast></div>
+  `;
+}
+
+function renderLightbox() {
+  return `
+      <div class="lightbox" data-lightbox hidden>
+        <button class="lightbox-close" type="button" aria-label="Close image" data-lightbox-close>Close</button>
+        <figure class="lightbox-figure">
+          <img src="" alt="" data-lightbox-image>
+          <figcaption>
+            <strong class="lightbox-caption-title" data-lightbox-caption hidden></strong>
+            <p class="lightbox-caption-copy" data-lightbox-description hidden></p>
+          </figcaption>
+        </figure>
+      </div>
+  `;
+}
+
+function renderNavBackdrop() {
+  return `
+    <button class="nav-backdrop" type="button" aria-label="Close navigation" hidden data-nav-backdrop></button>
+  `;
+}
+
+function renderDesktopNavToggle() {
+  return `
+    <button
+      class="desktop-nav-toggle"
+      type="button"
+      aria-expanded="true"
+      aria-controls="sidenav_menu"
+      aria-label="Close navigation"
+      data-desktop-nav-toggle
+    >
+      <span class="desktop-nav-toggle-icon" aria-hidden="true" data-desktop-nav-toggle-icon></span>
+      <span class="sr-only" data-desktop-nav-toggle-label>Close navigation</span>
+    </button>
+  `;
+}
+
+function renderInitialNavigationStateScript() {
+  return `
+    <script>
+      try {
+        const root = document.documentElement;
+        if (window.localStorage.getItem("evren-site:desktop-nav-collapsed") === "true") {
+          root.classList.add("nav-desktop-collapsed");
+        }
+        if (window.localStorage.getItem("evren-site:mobile-nav-open") === "true") {
+          root.classList.add("nav-open");
+        }
+      } catch (error) {}
+    </script>
+  `;
+}
+
 function renderShell({
   currentFile,
+  currentNavFile = currentFile,
   metaTitle,
   metaDescription,
   bodyClass = "",
@@ -91,7 +365,7 @@ function renderShell({
   robots = "index,follow",
   structuredData = []
 }) {
-  const canonicalUrl = pageUrls[currentFile];
+  const canonicalUrl = pagePathToUrl(currentFile);
   const schemaBlocks = structuredData
     .map((item) => `<script type="application/ld+json">${JSON.stringify(item)}</script>`)
     .join("\n");
@@ -108,7 +382,7 @@ function renderShell({
     <meta name="theme-color" content="#222222">
     <meta name="keywords" content="${escapeHtml(homePage.seoKeywords.join(", "))}">
     <link rel="canonical" href="${canonicalUrl}">
-    <link rel="stylesheet" href="CSS/site.css">
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/site.css")}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="${escapeHtml(site.name)}">
     <meta property="og:title" content="${escapeHtml(pageTitle(metaTitle))}">
@@ -119,13 +393,21 @@ function renderShell({
     <meta name="twitter:title" content="${escapeHtml(pageTitle(metaTitle))}">
     <meta name="twitter:description" content="${escapeHtml(metaDescription)}">
     <meta name="twitter:image" content="${absoluteAsset(ogImage)}">
-    <link rel="icon" href="image/evren_icon_black.png" type="image/png">
+    <link rel="icon" type="image/png" href="${relativeHref(currentFile, "favicon/favicon-96x96.png")}" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="${relativeHref(currentFile, "favicon/favicon.svg")}" />
+    <link rel="shortcut icon" href="${relativeHref(currentFile, "favicon/favicon.ico")}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="${relativeHref(currentFile, "favicon/apple-touch-icon.png")}" />
+    <meta name="apple-mobile-web-app-title" content="evren" />
+    <link rel="manifest" href="${relativeHref(currentFile, "favicon/site.webmanifest")}" />
+    ${renderInitialNavigationStateScript()}
     ${schemaBlocks}
-    <script src="JavaScript/site.js" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/site.js")}" defer></script>
   </head>
   <body class="${escapeHtml(bodyClass)}">
     <a class="skip-link" href="#content">Skip to content</a>
-    ${renderSidebar(currentFile)}
+    ${renderDesktopNavToggle()}
+    ${renderSidebar(currentFile, currentNavFile)}
+    ${renderNavBackdrop()}
     <div class="main-shell">
       <button
         class="mobile-menu"
@@ -142,15 +424,11 @@ function renderShell({
       <main id="content" class="page-content">
         ${content}
       </main>
-      <footer class="page-footer">
-        <p>${escapeHtml(site.email)}</p>
-        <p>
-          <a href="${site.social.linkedin}" target="_blank" rel="noreferrer">LinkedIn</a>
-          <span>|</span>
-          <a href="${site.social.youtube}" target="_blank" rel="noreferrer">YouTube</a>
-        </p>
-      </footer>
+      ${renderFooter(currentFile)}
+      ${renderBottomTicker()}
     </div>
+    ${renderLightbox()}
+    ${renderCopyToast()}
   </body>
 </html>
 `;
@@ -170,27 +448,81 @@ function renderSectionHeader(tag, title, paragraphs = []) {
   `;
 }
 
+function getResolvedItemHref(item) {
+  if (item.actionType === "page") {
+    return item.actionUrl || item.detailPagePath || "";
+  }
+
+  if (item.actionType === "external") {
+    return item.actionUrl || "";
+  }
+
+  return "";
+}
+
+function renderCardAction(item) {
+  const href = getResolvedItemHref(item);
+
+  if ((item.actionType === "page" || item.actionType === "external") && href) {
+    return `<a class="action-link" href="${href}"${
+      isExternalUrl(href) ? ' target="_blank" rel="noreferrer"' : ""
+    }>${escapeHtml(item.actionLabel || "Open page")}</a>`;
+  }
+
+  if (item.actionType === "status" && item.actionLabel) {
+    return `<span class="status-label">${escapeHtml(item.actionLabel)}</span>`;
+  }
+
+  return "";
+}
+
+function renderThumbMedia(item) {
+  if (item.image) {
+    return `<img src="${item.image}" alt="${escapeHtml(item.alt || item.title)}" loading="lazy">`;
+  }
+
+  return `
+    <div class="work-thumb-empty">
+      <span>${escapeHtml(item.title)}</span>
+    </div>
+  `;
+}
+
+function renderThumbShell({ href, overlayHtml, item, linkClass = "work-thumb-link" }) {
+  const media = renderThumbMedia(item);
+
+  if (href) {
+    return `<a class="${linkClass}" href="${href}"${
+      isExternalUrl(href) ? ' target="_blank" rel="noreferrer"' : ""
+    }>${media}${overlayHtml}</a>`;
+  }
+
+  return `${media}${overlayHtml}`;
+}
+
 function renderProjectCard(project, detailed = true) {
+  const actionHtml = renderCardAction(project);
+  const thumbHref = getResolvedItemHref(project);
+
   return `
     <article class="work-card${detailed ? "" : " work-card-compact"}">
       <div class="work-thumb">
-        <img src="${project.image}" alt="${escapeHtml(project.alt)}" loading="lazy">
-        <div class="work-overlay">
-          <h3>${escapeHtml(project.title)}</h3>
-          <p>${escapeHtml(project.category)}<span>${escapeHtml(project.year)}</span></p>
-        </div>
+        ${renderThumbShell({
+          href: thumbHref,
+          item: project,
+          overlayHtml: `
+            <div class="work-overlay">
+              <h3>${escapeHtml(project.title)}</h3>
+              <p>${escapeHtml(project.category || "")}<span>${escapeHtml(project.year || "")}</span></p>
+            </div>
+          `
+        })}
       </div>
       ${
         detailed
           ? `<div class="work-details">
-              <p>${escapeHtml(project.summary)}</p>
-              <div class="work-actions">
-                ${
-                  project.externalUrl
-                    ? `<a class="action-link" href="${escapeHtml(project.externalUrl)}" target="_blank" rel="noreferrer">Open project notes</a>`
-                    : `<span class="status-label">${escapeHtml(project.status)}</span>`
-                }
-              </div>
+              ${project.summary ? `<p>${escapeHtml(project.summary)}</p>` : ""}
+              ${actionHtml ? `<div class="work-actions">${actionHtml}</div>` : ""}
             </div>`
           : ""
       }
@@ -199,23 +531,125 @@ function renderProjectCard(project, detailed = true) {
 }
 
 function renderMakingCard(item) {
+  const href = getResolvedItemHref(item);
+
   return `
     <article class="mini-card">
       <div class="work-thumb">
-        <img src="${item.image}" alt="${escapeHtml(item.alt)}" loading="lazy">
-        <div class="work-overlay work-overlay-small">
-          <h3>${escapeHtml(item.title)}</h3>
-          <p>${escapeHtml(item.category)}</p>
-        </div>
+        ${renderThumbShell({
+          href,
+          item,
+          linkClass: "mini-card-link",
+          overlayHtml: `
+            <div class="work-overlay work-overlay-small">
+              <h3>${escapeHtml(item.title)}</h3>
+              <p>${escapeHtml(item.category || "")}</p>
+            </div>
+          `
+        })}
       </div>
     </article>
   `;
 }
 
-function renderHomePage(projectData) {
+function renderTextCards(items) {
+  return items
+    .map((item) => {
+      const actionHtml = renderCardAction(item);
+
+      return `
+        <article class="text-card">
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.summary || item.copy || "")}</p>
+          ${actionHtml ? `<div class="text-card-actions">${actionHtml}</div>` : ""}
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderPhotoCard(photo) {
+  return `
+    <figure class="photo-card ${photo.span}">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="${photo.image}"
+        data-lightbox-alt="${escapeHtml(photo.alt)}"
+        data-lightbox-caption="${escapeHtml(photo.title || "")}"
+        data-lightbox-description="${escapeHtml(photo.description || "")}"
+      >
+        <img src="${photo.image}" alt="${escapeHtml(photo.alt)}">
+      </button>
+      <figcaption>${escapeHtml(photo.title || "")}</figcaption>
+    </figure>
+  `;
+}
+
+function renderPhotoGrid(items) {
+  return items.map((photo) => renderPhotoCard(photo)).join("");
+}
+
+function renderInfoPage({ tag, title, intro, items }) {
+  return `
+    <section class="page-section page-section-first">
+      ${renderSectionHeader(tag, title, intro)}
+      <div class="text-grid">
+        ${renderTextCards(items)}
+      </div>
+    </section>
+  `;
+}
+
+function renderDetailPage(item, currentFile) {
+  const metaParts = [];
+
+  if (item.lastUpdatedLabel) {
+    metaParts.push(`
+      <div class="detail-meta-item">
+        <span>Last updated</span>
+        <strong>${escapeHtml(item.lastUpdatedLabel)}</strong>
+      </div>
+    `);
+  }
+
+  if (item.sharedUrl) {
+    metaParts.push(`
+      <div class="detail-meta-item detail-meta-link">
+        <a class="action-link" href="${item.sharedUrl}" target="_blank" rel="noreferrer">Open in Notion</a>
+      </div>
+    `);
+  }
+
+  return `
+    <article class="page-section page-section-first detail-page">
+      ${renderSectionHeader(
+        getSectionLabel(item.section),
+        item.detailPage?.title || item.title,
+        item.summary ? [item.summary] : []
+      )}
+      ${metaParts.length > 0 ? `<div class="detail-meta">${metaParts.join("")}</div>` : ""}
+      ${
+        item.image
+          ? `<figure class="detail-hero"><img src="${relativeHref(currentFile, item.image)}" alt="${escapeHtml(
+              item.alt || item.title
+            )}"></figure>`
+          : ""
+      }
+      <div class="article-content">
+        ${resolveInlineContentPaths(currentFile, item.detailPage?.contentHtml || "")}
+      </div>
+    </article>
+  `;
+}
+
+function renderHomePage({ projectsData, makingData, openQuestsData, photographyData }) {
   const featuredProjects = featuredProjectSlugs
-    .map((slug) => projectData.find((project) => project.slug === slug))
+    .map((slug) => projectsData.find((project) => project.slug === slug))
     .filter(Boolean);
+  const makingPreview = makingData.slice(0, 6);
+  const photographyPreview = photographyData.slice(0, 6);
 
   const facts = homePage.facts
     .map(
@@ -267,11 +701,16 @@ function renderHomePage(projectData) {
     </section>
 
     <section class="page-section">
-      ${renderSectionHeader("Work", "What I usually help with", [
-        "I work best when a project needs both thinking and making. The details do not need to be solved yet. They just need to be worth testing."
-      ])}
+      ${renderSectionHeader("Design engineering consulting", "What I usually help with", homePage.consultingIntro)}
       <div class="text-grid">
         ${serviceCards}
+      </div>
+    </section>
+
+    <section class="page-section">
+      ${renderSectionHeader("My Process", "How I like to work", homePage.processIntro)}
+      <div class="text-grid">
+        ${processCards}
       </div>
     </section>
 
@@ -285,79 +724,109 @@ function renderHomePage(projectData) {
     </section>
 
     <section class="page-section">
-      ${renderSectionHeader("Process", "How I like to work", [
-        "I prefer getting to a physical version early. A rough object usually answers more than a polished slide."
-      ])}
+      ${renderSectionHeader("Things i do", "Smaller builds and experiments", makingPage.intro.slice(0, 1))}
+      <div class="mini-grid">
+        ${makingPreview.map((item) => renderMakingCard(item)).join("")}
+      </div>
+    </section>
+
+    <section class="page-section">
+      ${renderSectionHeader("Photography", "Analog archive", photographyPage.intro.slice(0, 1))}
+      <div class="photo-grid photo-grid-preview">
+        ${renderPhotoGrid(photographyPreview)}
+      </div>
+    </section>
+
+    <section class="page-section">
+      ${renderSectionHeader("Open-Quests", "Ongoing builds and questions", openQuestsPage.intro.slice(0, 1))}
       <div class="text-grid">
-        ${processCards}
+        ${renderTextCards(openQuestsData)}
+      </div>
+    </section>
+
+    <section class="page-section">
+      ${renderSectionHeader("Cool bookmarks", "References worth keeping close", bookmarksPage.intro.slice(0, 1))}
+      <div class="text-grid">
+        ${renderTextCards(bookmarksPage.items)}
+      </div>
+    </section>
+
+    <section class="page-section hello-section">
+      ${renderSectionHeader("Hello", "Reach out", homePage.hello.copy)}
+      <div class="hello-card">
+        <p class="body-copy hello-copy">
+          If something here feels relevant to what you are building, send a note.
+        </p>
+        ${renderCopyEmailControl({
+          className: "hello-copy-button",
+          label: `Copy ${site.name} email address`,
+          content: escapeHtml(homePage.hello.buttonLabel)
+        })}
       </div>
     </section>
   `;
 }
 
-function renderProjectsPage(projectData) {
+function renderProjectsPage(projectsData) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader("Projects", "Project work", [
         "A selection of product and concept work. The long writeups are still being rebuilt, so this page stays short and direct for now."
       ])}
       <div class="work-grid">
-        ${projectData.map((project) => renderProjectCard(project, true)).join("")}
+        ${projectsData.map((project) => renderProjectCard(project, true)).join("")}
       </div>
     </section>
 
     <section class="page-section note-block">
       <p>
-        Detailed project pages can later point to Notion or another external source. The structure is already in place for that, without changing the visible layout again.
+        Detailed project pages can point to synced Notion content or another external source, without changing the visible layout again.
       </p>
     </section>
   `;
 }
 
-function renderMakingPage() {
+function renderMakingPage(makingData) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader("Things I do", "Smaller builds and experiments", makingPage.intro)}
       <div class="mini-grid">
-        ${makingItems.map((item) => renderMakingCard(item)).join("")}
+        ${makingData.map((item) => renderMakingCard(item)).join("")}
       </div>
     </section>
   `;
 }
 
-function renderPhotographyPage() {
+function renderPhotographyPage(photographyData) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader("Photography", "Analog archive", photographyPage.intro)}
       <div class="photo-grid">
-        ${photographyItems
-          .map(
-            (photo) => `
-              <figure class="photo-card ${photo.span}">
-                <button
-                  type="button"
-                  class="photo-button"
-                  data-lightbox-button
-                  data-lightbox-src="${photo.image}"
-                  data-lightbox-alt="${escapeHtml(photo.alt)}"
-                  data-lightbox-caption="${escapeHtml(photo.title)}"
-                >
-                  <img src="${photo.image}" alt="${escapeHtml(photo.alt)}">
-                </button>
-                <figcaption>${escapeHtml(photo.title)}</figcaption>
-              </figure>
-            `
-          )
-          .join("")}
-      </div>
-      <div class="lightbox" data-lightbox hidden>
-        <button class="lightbox-close" type="button" aria-label="Close image" data-lightbox-close>Close</button>
-        <figure class="lightbox-figure">
-          <img src="" alt="" data-lightbox-image>
-          <figcaption data-lightbox-caption></figcaption>
-        </figure>
+        ${renderPhotoGrid(photographyData)}
       </div>
     </section>
+  `;
+}
+
+function renderBraindumpPage() {
+  return `
+    <link rel="stylesheet" href="CSS/braindump.css">
+    <div class="braindump-viewport" id="braindump-viewport">
+      <div class="braindump-canvas" id="braindump-canvas">
+        <svg id="braindump-svg-layer"></svg>
+      </div>
+      <div class="braindump-toolbar">
+        <button type="button" data-tool="text" aria-label="Add Text">T</button>
+        <button type="button" data-tool="draw" aria-label="Draw">✎</button>
+        <button type="button" data-tool="bookmark" aria-label="Add Bookmark">🔗</button>
+        <button type="button" data-tool="page" aria-label="Add Page">📄</button>
+        <button type="button" data-tool="save" aria-label="Save Board">💾</button>
+      </div>
+      <div id="braindump-modal" class="braindump-modal" hidden>
+        <!-- Dynamic content for forms -->
+      </div>
+    </div>
+    <script src="JavaScript/braindump.js" defer></script>
   `;
 }
 
@@ -368,6 +837,291 @@ function renderPlaceholderPage(title, bodyCopy) {
       <p class="body-copy"><a class="action-link" href="projects.html">Back to projects</a></p>
     </section>
   `;
+}
+
+function normalizeActionType(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (["page", "internal"].includes(normalized)) {
+    return "page";
+  }
+
+  if (["external", "url", "link"].includes(normalized)) {
+    return "external";
+  }
+
+  if (["status", "label"].includes(normalized)) {
+    return "status";
+  }
+
+  return "";
+}
+
+function normalizeBaseItem(item, section) {
+  const normalizedSection = normalizeSection(section);
+  const slug = slugify(item.slug || item.title);
+  const summary = item.summary || item.copy || "";
+  const actionUrl = item.externalUrl || item.actionUrl || "";
+  let actionType = normalizeActionType(item.actionType);
+  let actionLabel = item.actionLabel || item.status || "";
+
+  if (!actionType) {
+    if (actionUrl) {
+      actionType = isExternalUrl(actionUrl) ? "external" : "page";
+    } else if (actionLabel) {
+      actionType = "status";
+    }
+  }
+
+  return {
+    ...item,
+    section: normalizedSection,
+    slug,
+    title: item.title,
+    category: item.category || "",
+    year: item.year ? String(item.year) : "",
+    image: item.image || "",
+    alt: item.alt || item.title,
+    summary,
+    actionLabel,
+    actionType,
+    actionUrl,
+    sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
+    sharedUrl: item.sharedUrl || "",
+    lastUpdated: item.lastUpdated || "",
+    lastUpdatedLabel: formatDateLabel(item.lastUpdated),
+    detailPage: item.detailPage || null,
+    detailPagePath: item.detailPage?.contentHtml ? contentPagePath(normalizedSection, slug) : ""
+  };
+}
+
+function normalizeNotionItem(item) {
+  const section = normalizeSection(item.section);
+
+  if (!section || !item || !item.slug || !item.title) {
+    return null;
+  }
+
+  const slug = slugify(item.slug);
+  const detailPage = item.detailPage?.contentHtml
+    ? {
+        ...item.detailPage
+      }
+    : null;
+  let actionType = normalizeActionType(item.actionType);
+  let actionLabel = item.actionLabel || "";
+  const actionUrl = item.actionUrl || "";
+
+  if (!actionType) {
+    if (detailPage) {
+      actionType = "page";
+    } else if (actionUrl) {
+      actionType = isExternalUrl(actionUrl) ? "external" : "page";
+    } else if (actionLabel) {
+      actionType = "status";
+    }
+  }
+
+  if ((actionType === "page" || actionType === "external") && !actionLabel) {
+    actionLabel = "Open page";
+  }
+
+  const detailPagePath = detailPage ? contentPagePath(section, slug) : "";
+
+  return {
+    ...item,
+    section,
+    slug,
+    title: item.title,
+    category: item.category || "",
+    year: item.year ? String(item.year) : "",
+    image: item.image || "",
+    alt: item.alt || item.title,
+    summary: item.summary || "",
+    actionLabel,
+    actionType,
+    actionUrl,
+    sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
+    sharedUrl: item.sharedUrl || "",
+    lastUpdated: item.lastUpdated || "",
+    lastUpdatedLabel: formatDateLabel(item.lastUpdated),
+    detailPage,
+    detailPagePath
+  };
+}
+
+async function loadJsonIfExists(filePath) {
+  try {
+    await access(filePath);
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch (error) {
+    if (error && error.code !== "ENOENT") {
+      throw error;
+    }
+
+    return null;
+  }
+}
+
+function normalizePhotographyItem(item, index) {
+  if (!item) {
+    return null;
+  }
+
+  const title = String(item.title || `Archive ${String(index + 1).padStart(2, "0")}`);
+  const description = String(item.description || "");
+  const fileName = String(item.file || "").trim();
+  const image = String(item.image || "").trim() || (fileName ? `photography_assets/${fileName}` : "");
+
+  if (!image) {
+    return null;
+  }
+
+  return {
+    title,
+    description,
+    image,
+    alt: String(item.alt || title),
+    span: String(item.span || "")
+  };
+}
+
+async function loadPhotographyItems() {
+  const items = await loadJsonIfExists(photographyItemsPath);
+
+  if (Array.isArray(items) && items.length > 0) {
+    return items.map((item, index) => normalizePhotographyItem(item, index)).filter(Boolean);
+  }
+
+  return photographyItems
+    .map((item, index) => normalizePhotographyItem(item, index))
+    .filter(Boolean);
+}
+
+async function loadLegacyProjectOverrides() {
+  const overrides = await loadJsonIfExists(notionProjectOverridesPath);
+
+  if (!Array.isArray(overrides)) {
+    return [];
+  }
+
+  return overrides
+    .filter((item) => item && typeof item.slug === "string")
+    .map((item) =>
+      normalizeNotionItem({
+        section: "projects",
+        slug: item.slug,
+        title: item.title || item.slug,
+        summary: item.summary || "",
+        actionLabel: item.externalUrl ? item.status || "Open project notes" : item.status || "",
+        actionType: item.externalUrl ? "external" : item.status ? "status" : "",
+        actionUrl: item.externalUrl || "",
+        image: item.image || "",
+        alt: item.alt || item.title || item.slug
+      })
+    )
+    .filter(Boolean);
+}
+
+async function loadNotionItems() {
+  const items = await loadJsonIfExists(notionItemsPath);
+
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.map(normalizeNotionItem).filter(Boolean);
+}
+
+function sortContentItems(a, b) {
+  const hasOrderA = Number.isFinite(a.sortOrder);
+  const hasOrderB = Number.isFinite(b.sortOrder);
+
+  if (hasOrderA && hasOrderB && a.sortOrder !== b.sortOrder) {
+    return a.sortOrder - b.sortOrder;
+  }
+
+  if (hasOrderA && !hasOrderB) {
+    return -1;
+  }
+
+  if (!hasOrderA && hasOrderB) {
+    return 1;
+  }
+
+  return a.title.localeCompare(b.title);
+}
+
+function mergeItems(baseItems, overrideItems) {
+  const merged = new Map(baseItems.map((item) => [item.slug, item]));
+
+  overrideItems.forEach((item) => {
+    const existing = merged.get(item.slug);
+
+    if (!existing) {
+      merged.set(item.slug, item);
+      return;
+    }
+
+    const nextItem = {
+      ...existing
+    };
+
+    Object.entries(item).forEach(([key, value]) => {
+      if (key === "detailPage" || key === "detailPagePath") {
+        return;
+      }
+
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      if (typeof value === "string" && value.trim() === "") {
+        return;
+      }
+
+      nextItem[key] = value;
+    });
+
+    merged.set(item.slug, {
+      ...nextItem,
+      detailPage: item.detailPage || existing.detailPage || null,
+      detailPagePath: item.detailPagePath || existing.detailPagePath || ""
+    });
+  });
+
+  return Array.from(merged.values()).sort(sortContentItems);
+}
+
+function filterBySection(items, section) {
+  return items.filter((item) => item.section === section);
+}
+
+async function loadContentData() {
+  const baseProjects = projects.map((item) => normalizeBaseItem(item, "projects"));
+  const baseMakingItems = makingItems.map((item) => normalizeBaseItem(item, "things_i_do"));
+  const baseOpenQuests = openQuestsPage.items.map((item) => normalizeBaseItem(item, "open-quests"));
+  const legacyProjectOverrides = await loadLegacyProjectOverrides();
+  const notionItems = await loadNotionItems();
+  const photographyData = await loadPhotographyItems();
+
+  const notionProjects = [...legacyProjectOverrides, ...filterBySection(notionItems, "projects")];
+  const projectsData = mergeItems(baseProjects, notionProjects);
+  const makingData = mergeItems(baseMakingItems, filterBySection(notionItems, "things_i_do"));
+  const openQuestsData = mergeItems(baseOpenQuests, filterBySection(notionItems, "open-quests"));
+  const detailItems = [...projectsData, ...makingData, ...openQuestsData].filter(
+    (item) => item.detailPage?.contentHtml
+  );
+
+  return {
+    projectsData,
+    makingData,
+    openQuestsData,
+    photographyData,
+    detailItems
+  };
 }
 
 const websiteSchema = {
@@ -383,7 +1137,6 @@ const personSchema = {
   "@type": "Person",
   name: site.name,
   url: site.url,
-  email: site.email,
   jobTitle: "Freelance Industrial Design Engineer",
   alumniOf: {
     "@type": "CollegeOrUniversity",
@@ -405,46 +1158,17 @@ const collectionSchema = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   name: "Projects",
-  url: pageUrls["projects.html"],
+  url: pagePathToUrl("projects.html"),
   description:
     "A selection of project summaries by Evren Ucar across product concepts, workshop tools, and mobility ideas."
 };
-
-async function loadProjectData() {
-  let projectData = [...projects];
-
-  try {
-    await access(notionProjectOverridesPath);
-    const rawOverrides = await readFile(notionProjectOverridesPath, "utf8");
-    const overrides = JSON.parse(rawOverrides);
-
-    if (Array.isArray(overrides)) {
-      const overrideMap = new Map(
-        overrides
-          .filter((item) => item && typeof item.slug === "string")
-          .map((item) => [item.slug, item])
-      );
-
-      projectData = projectData.map((project) => ({
-        ...project,
-        ...(overrideMap.get(project.slug) || {})
-      }));
-    }
-  } catch (error) {
-    if (error && error.code !== "ENOENT") {
-      throw error;
-    }
-  }
-
-  return projectData;
-}
 
 function renderSitemap(pageList) {
   const urls = pageList
     .filter((page) => !["coming_soon.html", "404.html"].includes(page.file))
     .map(
       (page) => `  <url>
-    <loc>${pageUrls[page.file]}</loc>
+    <loc>${pagePathToUrl(page.file)}</loc>
     <lastmod>${buildDate}</lastmod>
   </url>`
     )
@@ -458,7 +1182,9 @@ ${urls}
 }
 
 async function build() {
-  const projectData = await loadProjectData();
+  const { projectsData, makingData, openQuestsData, photographyData, detailItems } =
+    await loadContentData();
+  await rm(path.join(rootDir, "content"), { recursive: true, force: true });
 
   const pages = [
     {
@@ -468,36 +1194,88 @@ async function build() {
       ogImage: homePage.hero.image.src,
       bodyClass: "page-home",
       structuredData: [websiteSchema, personSchema],
-      content: renderHomePage(projectData)
+      content: renderHomePage({
+        projectsData,
+        makingData,
+        openQuestsData,
+        photographyData
+      })
     },
     {
       file: "projects.html",
       title: "Projects",
       description:
         "Selected project summaries from Evren Ucar across industrial design, product concepts, and physical prototyping work.",
-      ogImage: projectData[2].image,
+      ogImage: projectsData[0]?.image || seo.defaultImage,
       bodyClass: "page-projects",
       structuredData: [websiteSchema, collectionSchema],
-      content: renderProjectsPage(projectData)
+      content: renderProjectsPage(projectsData)
     },
     {
       file: "things_i_do.html",
       title: "Things I Do",
       description: makingPage.description,
-      ogImage: makingItems[0].image,
+      ogImage: makingData[0]?.image || seo.defaultImage,
       bodyClass: "page-making",
       structuredData: [websiteSchema],
-      content: renderMakingPage()
+      content: renderMakingPage(makingData)
+    },
+    {
+      file: "open-quests.html",
+      title: "Open Quests",
+      description: openQuestsPage.description,
+      ogImage: seo.defaultImage,
+      bodyClass: "page-open-quests",
+      structuredData: [websiteSchema],
+      content: renderInfoPage({
+        tag: "Open-Quests",
+        title: "Ongoing builds and questions",
+        intro: openQuestsPage.intro,
+        items: openQuestsData
+      })
+    },
+    {
+      file: "cool-bookmarks.html",
+      title: "Cool Bookmarks",
+      description: bookmarksPage.description,
+      ogImage: seo.defaultImage,
+      bodyClass: "page-bookmarks",
+      structuredData: [websiteSchema],
+      content: renderInfoPage({
+        tag: "Cool bookmarks",
+        title: "References worth keeping close",
+        intro: bookmarksPage.intro,
+        items: bookmarksPage.items
+      })
+    },
+    {
+      file: "braindump.html",
+      title: braindumpPage.title,
+      description: braindumpPage.description,
+      ogImage: seo.defaultImage,
+      bodyClass: "page-braindump",
+      structuredData: [],
+      content: renderBraindumpPage()
     },
     {
       file: "photography.html",
       title: "Photography",
       description: photographyPage.description,
-      ogImage: photographyItems[4].image,
+      ogImage: photographyData[4]?.image || seo.defaultImage,
       bodyClass: "page-photography",
       structuredData: [websiteSchema],
-      content: renderPhotographyPage()
+      content: renderPhotographyPage(photographyData)
     },
+    ...detailItems.map((item) => ({
+      file: item.detailPagePath,
+      currentNavFile: sectionToNavFile(item.section),
+      title: item.detailPage?.title || item.title,
+      description: item.detailPage?.description || item.summary || site.description,
+      ogImage: item.image || seo.defaultImage,
+      bodyClass: "page-detail",
+      structuredData: [websiteSchema],
+      content: renderDetailPage(item, contentPagePath(item.section, item.slug))
+    })),
     {
       file: "coming_soon.html",
       title: placeholderPage.title,
@@ -523,15 +1301,15 @@ async function build() {
     }
   ];
 
-  await mkdir(path.join(rootDir, "CSS"), { recursive: true });
-  await mkdir(path.join(rootDir, "JavaScript"), { recursive: true });
-
   await Promise.all(
-    pages.map((page) =>
-      writeFile(
-        path.join(rootDir, page.file),
+    pages.map(async (page) => {
+      const outputPath = path.join(rootDir, page.file);
+      await mkdir(path.dirname(outputPath), { recursive: true });
+      await writeFile(
+        outputPath,
         renderShell({
           currentFile: page.file,
+          currentNavFile: page.currentNavFile,
           metaTitle: page.title,
           metaDescription: page.description,
           bodyClass: page.bodyClass,
@@ -541,8 +1319,8 @@ async function build() {
           content: page.content
         }),
         "utf8"
-      )
-    )
+      );
+    })
   );
 
   await Promise.all([

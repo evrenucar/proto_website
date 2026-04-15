@@ -10,7 +10,40 @@
         <link rel="stylesheet" href="CSS/hamburger_button.css">
         <link rel="stylesheet" href="CSS/general_style.css">
         <link rel="stylesheet" href="CSS/grid_style.css">
+        <style>
+            .contact-button {
+              padding: 0;
+              border: 0;
+              background: transparent;
+              cursor: pointer;
+            }
+
+            .copy-toast {
+              position: fixed;
+              right: 24px;
+              bottom: 24px;
+              z-index: 90;
+              padding: 12px 16px;
+              border: 1px solid #3fdaca;
+              background: rgba(26, 25, 25, 0.96);
+              color: #fafafa;
+              opacity: 0;
+              transform: translateY(8px);
+              transition: opacity 0.2s ease, transform 0.2s ease;
+              pointer-events: none;
+            }
+
+            .copy-toast[hidden] {
+              display: none;
+            }
+
+            .copy-toast.is-visible {
+              opacity: 1;
+              transform: translateY(0);
+            }
+        </style>
         <script defer src="JavaScript/image_lightbox.js"></script>
+        <script defer src="JavaScript/site.js"></script>
     </head>
 <!-- Side navigation Menu-->
 <div class="sidenav">
@@ -24,8 +57,8 @@
     <a href="projects.html">Projects</a>
   </div>
   <div class="sidenav_contacts">
-      <a href="mailto:evrenucar1999@gmail.com" target="_blank" >
-        <img src="icon/gmail_white.png" alt="gmail icon" height="50"></a>
+      <button class="contact-button" type="button" aria-label="Copy Evren Ucar email address" data-copy-email data-email-user="9991racunerve" data-email-domain="moc.liamg" data-email-reversed="true">
+        <img src="icon/gmail_white.png" alt="gmail icon" height="50"></button>
       <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" >
         <img src="icon/linkedin_white.png" alt="linkedin icon" height="50"></a>
       <a href="https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw" target="_blank" >
@@ -78,6 +111,7 @@
         <footer>
 
         </footer>
+        <div class="copy-toast" role="status" aria-live="polite" hidden data-copy-toast></div>
    </body>
  </div>
 </html>

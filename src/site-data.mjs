@@ -2,11 +2,14 @@ export const site = {
   name: "Evren Ucar",
   domain: "evrenucar.com",
   url: "https://evrenucar.com",
-  email: "evrenucar1999@gmail.com",
+  emailUser: "evrenucar1999",
+  emailDomain: "gmail.com",
   headline: "Industrial design engineer, prototyper, and hands-on maker.",
   description:
     "Portfolio website for Evren Ucar, a TU Delft graduate and freelance industrial design engineer working across mechanics, electronics, prototyping, and hands-on making.",
   location: "Netherlands",
+  tickerText:
+    "If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. | ",
   social: {
     linkedin: "https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/",
     youtube: "https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw"
@@ -16,8 +19,11 @@ export const site = {
 export const navigation = [
   { label: "About Me", href: "index.html" },
   { label: "Projects", href: "projects.html" },
-  { label: "Things I Do", href: "things_i_do.html" },
-  { label: "Photography", href: "photography.html" }
+  { label: "Things i do", href: "things_i_do.html" },
+  { label: "Photography", href: "photography.html" },
+  { label: "Open-Quests", href: "open-quests.html" },
+  { label: "Cool bookmarks", href: "cool-bookmarks.html" },
+  { label: "Braindump", href: "braindump.html" }
 ];
 
 export const homePage = {
@@ -25,9 +31,9 @@ export const homePage = {
   description:
     "Evren Ucar is a TU Delft graduate and freelance industrial design engineer developing physical products through mechanics, electronics, prototyping, and practical problem-solving.",
   hero: {
-    eyebrow: "About me",
+    eyebrow: "About",
     titleLead: "Hi there. I'm",
-    titleHighlight: "Evren Ucar.",
+    titleHighlight: "Evren",
     intro: [
       "I am Evren Ucar, a TU Delft graduate and freelance industrial design engineer. Most of my work happens in the messy part between a rough idea and something you can hold, test, break, and improve.",
       "That usually means product development through mechanics, electronics, prototyping, and practical problem-solving. I like making progress tangible early, then improving it through use.",
@@ -66,6 +72,9 @@ export const homePage = {
       copy: "Bringing enough engineering into the process to make ideas behave in the real world."
     }
   ],
+  consultingIntro: [
+    "I usually help when a project needs design judgement, prototyping, and enough engineering to move an idea into the real world."
+  ],
   process: [
     {
       title: "Start simple",
@@ -80,6 +89,17 @@ export const homePage = {
       copy: "Changes matter more when they come from use, handling, assembly, and real constraints."
     }
   ],
+  processIntro: [
+    "I prefer getting to a physical version early. A rough object usually answers more than a polished slide."
+  ],
+  hello: {
+    title: "Hello",
+    copy: [
+      "You made it all the way down here, so this is probably the right moment to say hi.",
+      "If you are working on a product, a build, or something that needs practical design engineering input, reach out."
+    ],
+    buttonLabel: "Copy email"
+  },
   seoKeywords: [
     "industrial design engineer",
     "freelance industrial designer",
@@ -101,7 +121,8 @@ export const projects = [
     summary:
       "A concept project focused on a clear product idea, approachable form, and a direction that could move toward production.",
     status: "Case study soon",
-    externalUrl: ""
+    externalUrl: "",
+    span: "stack-wide"
   },
   {
     slug: "axis",
@@ -113,7 +134,8 @@ export const projects = [
     summary:
       "A project built around movement, control, and the relationship between form and mechanical behavior.",
     status: "Case study soon",
-    externalUrl: ""
+    externalUrl: "",
+    span: "stack-offset-lg"
   },
   {
     slug: "moto-gimbal",
@@ -125,7 +147,8 @@ export const projects = [
     summary:
       "A motorcycle camera gimbal concept looking at mounting, stability, and a more usable filming setup on the road.",
     status: "Case study soon",
-    externalUrl: ""
+    externalUrl: "",
+    span: "stack-emphasis"
   },
   {
     slug: "mono-wheel",
@@ -137,7 +160,8 @@ export const projects = [
     summary:
       "A mobility exploration shaped by balance, compact packaging, and the practical feel of a rideable object.",
     status: "Case study soon",
-    externalUrl: ""
+    externalUrl: "",
+    span: "stack-offset-sm"
   },
   {
     slug: "makerlight",
@@ -149,7 +173,8 @@ export const projects = [
     summary:
       "A lighting concept for hands-on work, with attention to usability, placement, and workshop conditions.",
     status: "Case study soon",
-    externalUrl: ""
+    externalUrl: "",
+    span: "stack-wide stack-offset-sm"
   },
   {
     slug: "wine-and-cheese-picnic-set",
@@ -161,7 +186,8 @@ export const projects = [
     summary:
       "A portable serving set shaped around carrying, setup, and the small details that make an outdoor product pleasant to use.",
     status: "Case study soon",
-    externalUrl: ""
+    externalUrl: "",
+    span: "stack-offset-lg"
   }
 ];
 
@@ -182,129 +208,204 @@ export const makingItems = [
     title: "3DP Mk3 Stand",
     category: "3D printed workshop tool",
     image: "things_i_do/thumb_1.png",
-    alt: "3D printed Mk3 stand"
+    alt: "3D printed Mk3 stand",
+    span: "stack-wide"
   },
   {
     title: "Heavy Duty Wheel",
     category: "Mechanical prototype",
     image: "things_i_do/thumb_2.png",
-    alt: "Heavy duty wheel prototype"
+    alt: "Heavy duty wheel prototype",
+    span: "stack-offset-lg"
   },
   {
     title: "Screen Holder",
     category: "Quick fixture",
     image: "things_i_do/thumb_3.png",
-    alt: "Screen holder prototype"
+    alt: "Screen holder prototype",
+    span: ""
   },
   {
     title: "Stereo RaspiCAM Holder",
     category: "Camera rig",
     image: "things_i_do/thumb_4.jpg",
-    alt: "Stereo RaspiCAM holder"
+    alt: "Stereo RaspiCAM holder",
+    span: "stack-offset-sm"
   },
   {
     title: "Marker Revival",
     category: "Repair",
     image: "things_i_do/thumb_5.jpg",
-    alt: "Marker repair project"
+    alt: "Marker repair project",
+    span: "stack-wide"
   },
   {
     title: "RC Rover Model",
     category: "CAD model",
     image: "things_i_do/thumb_22.png",
-    alt: "RC rover model"
+    alt: "RC rover model",
+    span: "stack-offset-lg"
   },
   {
     title: "3DP Bearing",
     category: "Print test",
     image: "things_i_do/thumb_7.jpg",
-    alt: "3D printed bearing"
+    alt: "3D printed bearing",
+    span: ""
   },
   {
     title: "Frutti Rendering",
     category: "Visualization",
     image: "things_i_do/thumb_8.jpg",
-    alt: "Frutti rendering"
+    alt: "Frutti rendering",
+    span: "stack-offset-sm"
   },
   {
     title: "METU MECH T-Shirt",
     category: "Graphic work",
     image: "things_i_do/thumb_9.jpg",
-    alt: "METU mechanical engineering T-shirt design"
+    alt: "METU mechanical engineering T-shirt design",
+    span: "stack-wide"
   },
   {
     title: "TOS Machine Lathe",
     category: "Workshop process",
     image: "things_i_do/thumb_10.jpg",
-    alt: "TOS machine lathe"
+    alt: "TOS machine lathe",
+    span: ""
   },
   {
     title: "Precision Bed Levelling",
     category: "Calibration",
     image: "things_i_do/thumb_11.jpg",
-    alt: "Precision bed levelling"
+    alt: "Precision bed levelling",
+    span: "stack-offset-lg"
   },
   {
     title: "3DP Adhesive Wallhook",
     category: "Household fix",
     image: "things_i_do/thumb_12.jpg",
-    alt: "3D printed adhesive wall hook"
+    alt: "3D printed adhesive wall hook",
+    span: ""
   },
   {
     title: "TI-84 Restoration",
     category: "Electronics repair",
     image: "things_i_do/thumb_13.png",
-    alt: "TI-84 calculator restoration"
+    alt: "TI-84 calculator restoration",
+    span: "stack-wide stack-offset-sm"
   },
   {
     title: "3DP TT Paddle",
     category: "Sports experiment",
     image: "things_i_do/thumb_14.png",
-    alt: "3D printed table tennis paddle"
+    alt: "3D printed table tennis paddle",
+    span: ""
   },
   {
     title: "Sourdough Bread",
     category: "Hands-on process",
     image: "things_i_do/thumb_15.png",
-    alt: "Sourdough bread"
+    alt: "Sourdough bread",
+    span: "stack-offset-lg"
   },
   {
     title: "Metal Spinning Top",
     category: "Turning practice",
     image: "things_i_do/thumb_16.png",
-    alt: "Metal spinning top"
+    alt: "Metal spinning top",
+    span: "stack-wide"
   },
   {
     title: "Support Bearing Holder",
     category: "Fixture",
     image: "things_i_do/thumb_17.png",
-    alt: "Support bearing holder"
+    alt: "Support bearing holder",
+    span: "stack-offset-sm"
   },
   {
     title: "Cardboard Sandbox Event",
     category: "Workshop build",
     image: "things_i_do/thumb_18.png",
-    alt: "Cardboard sandbox event build"
+    alt: "Cardboard sandbox event build",
+    span: ""
   },
   {
     title: "OTT First Event Award 2018",
     category: "Event object",
     image: "things_i_do/thumb_19.png",
-    alt: "Event award object"
+    alt: "Event award object",
+    span: "stack-wide stack-offset-sm"
   },
   {
     title: "3DP Lamp Repair",
     category: "Repair",
     image: "things_i_do/thumb_20.png",
-    alt: "3D printed lamp repair"
+    alt: "3D printed lamp repair",
+    span: ""
   },
   {
     title: "Nerf Marker Renderings",
     category: "Concept rendering",
     image: "things_i_do/thumb_21.png",
-    alt: "Marker rendering concepts"
+    alt: "Marker rendering concepts",
+    span: "stack-offset-lg"
   }
 ];
+
+export const openQuestsPage = {
+  title: "Open Quests | Evren Ucar",
+  description:
+    "A short index of ongoing builds, process questions, and hands-on threads that Evren Ucar is still actively working through.",
+  intro: [
+    "This page is for the ideas and builds that are still open. Some are practical workshop projects. Some are just questions that keep pulling me back in.",
+    "It is meant to stay rough and active instead of pretending everything is already wrapped up."
+  ],
+  items: [
+    {
+      title: "Darkroom build",
+      copy:
+        "An ongoing build at OMA Collective, balancing layout, workflow, and the practical details that make the room usable."
+    },
+    {
+      title: "Small metal casting kiln",
+      copy:
+        "Still being shaped through material choices, insulation decisions, and a lot of real-world trial and error."
+    },
+    {
+      title: "Workshop process notes",
+      copy:
+        "A growing place for the smaller questions around prototyping, fabrication, fixtures, and useful ways of testing ideas quickly."
+    }
+  ]
+};
+
+export const bookmarksPage = {
+  title: "Cool Bookmarks | Evren Ucar",
+  description:
+    "A lightweight page for references, useful links, and recurring sources that keep feeding Evren Ucar's workshop and design practice.",
+  intro: [
+    "This page will collect the links I keep coming back to, without turning into a messy dump.",
+    "For now I am setting up the buckets first, then I will fill them with the useful stuff."
+  ],
+  items: [
+    {
+      title: "Tools and references",
+      copy:
+        "Useful pages for fabrication, prototyping, and figuring out practical details without overcomplicating them."
+    },
+    {
+      title: "People and projects",
+      copy:
+        "Studios, makers, and side projects worth revisiting when I want to see how other people solve things."
+    },
+    {
+      title: "Materials and processes",
+      copy:
+        "Pages I want close by while learning more about analog work, metals, workshop setups, and physical making."
+    }
+  ]
+};
 
 export const photographyPage = {
   title: "Photography | Evren Ucar",
@@ -450,4 +551,9 @@ export const placeholderPage = {
 
 export const seo = {
   defaultImage: "image/masked_photo.png"
+};
+
+export const braindumpPage = {
+  title: "Braindump | Evren Ucar",
+  description: "An infinite whiteboard for ideas, sketches, and references."
 };

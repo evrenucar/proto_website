@@ -21,33 +21,62 @@
     <meta name="twitter:title" content="Evren Ucar | Industrial Design Engineer and Maker">
     <meta name="twitter:description" content="Evren Ucar is a TU Delft graduate and freelance industrial design engineer developing physical products through mechanics, electronics, prototyping, and practical problem-solving.">
     <meta name="twitter:image" content="https://evrenucar.com/image/masked_photo.png">
-    <link rel="icon" href="image/evren_icon_black.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+    <link rel="shortcut icon" href="favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="evren" />
+    <link rel="manifest" href="favicon/site.webmanifest" />
+    
+    <script>
+      try {
+        const root = document.documentElement;
+        if (window.localStorage.getItem("evren-site:desktop-nav-collapsed") === "true") {
+          root.classList.add("nav-desktop-collapsed");
+        }
+        if (window.localStorage.getItem("evren-site:mobile-nav-open") === "true") {
+          root.classList.add("nav-open");
+        }
+      } catch (error) {}
+    </script>
+  
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Evren Ucar","url":"https://evrenucar.com","description":"Portfolio website for Evren Ucar, a TU Delft graduate and freelance industrial design engineer working across mechanics, electronics, prototyping, and hands-on making."}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"Evren Ucar","url":"https://evrenucar.com","email":"evrenucar1999@gmail.com","jobTitle":"Freelance Industrial Design Engineer","alumniOf":{"@type":"CollegeOrUniversity","name":"Delft University of Technology"},"image":"https://evrenucar.com/image/masked_photo.png","sameAs":["https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/","https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw"],"knowsAbout":["industrial design","prototype development","mechanics","electronics","analog photography","fabrication"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"Evren Ucar","url":"https://evrenucar.com","jobTitle":"Freelance Industrial Design Engineer","alumniOf":{"@type":"CollegeOrUniversity","name":"Delft University of Technology"},"image":"https://evrenucar.com/image/masked_photo.png","sameAs":["https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/","https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw"],"knowsAbout":["industrial design","prototype development","mechanics","electronics","analog photography","fabrication"]}</script>
     <script src="JavaScript/site.js" defer></script>
   </head>
   <body class="page-home">
     <a class="skip-link" href="#content">Skip to content</a>
     
+    <button
+      class="desktop-nav-toggle"
+      type="button"
+      aria-expanded="true"
+      aria-controls="sidenav_menu"
+      aria-label="Close navigation"
+      data-desktop-nav-toggle
+    >
+      <span class="desktop-nav-toggle-icon" aria-hidden="true" data-desktop-nav-toggle-icon></span>
+      <span class="sr-only" data-desktop-nav-toggle-label>Close navigation</span>
+    </button>
+  
+    
     <aside class="sidenav" id="sidenav_menu" aria-label="Primary">
       <div class="sidenav_links">
-        <a class="logo-link" href="index.html" aria-label="Evren Ucar home">
-          <img id="logo" src="image/evren_icon_white.png" alt="Evren Ucar logo" height="35">
-        </a>
-        <a class="nav-link nav-link-first is-current" href="index.html" aria-current="page">About Me</a><a class="nav-link" href="projects.html">Projects</a><a class="nav-link" href="things_i_do.html">Things I Do</a><a class="nav-link" href="photography.html">Photography</a>
+        <a class="nav-link nav-link-first is-current" href="index.html" aria-current="page">About Me</a><a class="nav-link" href="projects.html">Projects</a><a class="nav-link" href="things_i_do.html">Things i do</a><a class="nav-link" href="photography.html">Photography</a><a class="nav-link" href="open-quests.html">Open-Quests</a><a class="nav-link" href="cool-bookmarks.html">Cool bookmarks</a>
       </div>
       <div class="sidenav_contacts">
-        <a href="mailto:evrenucar1999@gmail.com" aria-label="Email Evren Ucar">
-          <img src="icon/gmail_white.png" alt="Email icon" height="40">
-        </a>
+        <button class="contact-button" type="button" aria-label="Copy Evren Ucar email address" data-copy-email data-email-user="9991racunerve" data-email-domain="moc.liamg" data-email-reversed="true"><img src="icon/gmail_white.png" alt="Email icon"></button>
         <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" rel="noreferrer" aria-label="LinkedIn">
-          <img src="icon/linkedin_white.png" alt="LinkedIn icon" height="40">
+          <img src="icon/linkedin_white.png" alt="LinkedIn icon">
         </a>
         <a href="https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw" target="_blank" rel="noreferrer" aria-label="YouTube">
-          <img src="icon/youtube_white.png" alt="YouTube icon" height="40">
+          <img src="icon/youtube_white.png" alt="YouTube icon">
         </a>
       </div>
     </aside>
+  
+    
+    <button class="nav-backdrop" type="button" aria-label="Close navigation" hidden data-nav-backdrop></button>
   
     <div class="main-shell">
       <button
@@ -67,8 +96,8 @@
     <section class="home-hero">
       <img class="main-photo" src="image/masked_photo.png" alt="Portrait of Evren Ucar">
       <div class="home-copy">
-        <p class="page-tag">About me</p>
-        <h1 class="home-title">Hi there. I&#39;m <span>Evren Ucar.</span></h1>
+        <p class="page-tag">About</p>
+        <h1 class="home-title">Hi there. I&#39;m <span>Evren</span></h1>
         <p class="body-copy">I am Evren Ucar, a TU Delft graduate and freelance industrial design engineer. Most of my work happens in the messy part between a rough idea and something you can hold, test, break, and improve.</p><p class="body-copy">That usually means product development through mechanics, electronics, prototyping, and practical problem-solving. I like making progress tangible early, then improving it through use.</p><p class="body-copy">Outside of work I keep gravitating to the same kind of making through analog photography, lino printing, metalworking, and other hands-on processes. At OMA Collective I am currently helping build a darkroom and a small metal casting kiln, while also getting pulled into resin printing, welding, machine building, and woodworking.</p>
       </div>
     </section>
@@ -95,9 +124,9 @@
     <section class="page-section">
       
     <div class="section-header">
-      <p class="page-tag">Work</p>
+      <p class="page-tag">Design engineering consulting</p>
       <h2 class="section-title">What I usually help with</h2>
-      <p class="body-copy">I work best when a project needs both thinking and making. The details do not need to be solved yet. They just need to be worth testing.</p>
+      <p class="body-copy">I usually help when a project needs design judgement, prototyping, and enough engineering to move an idea into the real world.</p>
     </div>
   
       <div class="text-grid">
@@ -123,68 +152,7 @@
     <section class="page-section">
       
     <div class="section-header">
-      <p class="page-tag">Projects</p>
-      <h2 class="section-title">Selected projects</h2>
-      <p class="body-copy">The longer case studies are still being rebuilt. For now the short summaries stay on the main project page.</p>
-    </div>
-  
-      <div class="work-grid">
-        
-    <article class="work-card">
-      <div class="work-thumb">
-        <img src="projects/thumb_3.jpg" alt="Moto Gimbal project thumbnail" loading="lazy">
-        <div class="work-overlay">
-          <h3>Moto Gimbal</h3>
-          <p>Mobility accessory<span>2021</span></p>
-        </div>
-      </div>
-      <div class="work-details">
-              <p>A motorcycle camera gimbal concept looking at mounting, stability, and a more usable filming setup on the road.</p>
-              <div class="work-actions">
-                <span class="status-label">Case study soon</span>
-              </div>
-            </div>
-    </article>
-  
-    <article class="work-card">
-      <div class="work-thumb">
-        <img src="projects/thumb_4.png" alt="Mono Wheel project thumbnail" loading="lazy">
-        <div class="work-overlay">
-          <h3>Mono Wheel</h3>
-          <p>Mobility concept<span>2020</span></p>
-        </div>
-      </div>
-      <div class="work-details">
-              <p>A mobility exploration shaped by balance, compact packaging, and the practical feel of a rideable object.</p>
-              <div class="work-actions">
-                <span class="status-label">Case study soon</span>
-              </div>
-            </div>
-    </article>
-  
-    <article class="work-card">
-      <div class="work-thumb">
-        <img src="projects/thumb_5.png" alt="MakerLight project thumbnail" loading="lazy">
-        <div class="work-overlay">
-          <h3>MakerLight</h3>
-          <p>Workshop product<span>2020</span></p>
-        </div>
-      </div>
-      <div class="work-details">
-              <p>A lighting concept for hands-on work, with attention to usability, placement, and workshop conditions.</p>
-              <div class="work-actions">
-                <span class="status-label">Case study soon</span>
-              </div>
-            </div>
-    </article>
-  
-      </div>
-    </section>
-
-    <section class="page-section">
-      
-    <div class="section-header">
-      <p class="page-tag">Process</p>
+      <p class="page-tag">My Process</p>
       <h2 class="section-title">How I like to work</h2>
       <p class="body-copy">I prefer getting to a physical version early. A rough object usually answers more than a polished slide.</p>
     </div>
@@ -208,16 +176,367 @@
       
       </div>
     </section>
+
+    <section class="page-section">
+      
+    <div class="section-header">
+      <p class="page-tag">Projects</p>
+      <h2 class="section-title">Selected projects</h2>
+      <p class="body-copy">The longer case studies are still being rebuilt. For now the short summaries stay on the main project page.</p>
+    </div>
+  
+      <div class="work-grid">
+        
+    <article class="work-card">
+      <div class="work-thumb">
+        <img src="projects/thumb_3.jpg" alt="Moto Gimbal project thumbnail" loading="lazy">
+            <div class="work-overlay">
+              <h3>Moto Gimbal</h3>
+              <p>Mobility accessory<span>2021</span></p>
+            </div>
+          
+      </div>
+      <div class="work-details">
+              <p>A motorcycle camera gimbal concept looking at mounting, stability, and a more usable filming setup on the road.</p>
+              <div class="work-actions"><span class="status-label">Case study soon</span></div>
+            </div>
+    </article>
+  
+    <article class="work-card">
+      <div class="work-thumb">
+        <img src="projects/thumb_4.png" alt="Mono Wheel project thumbnail" loading="lazy">
+            <div class="work-overlay">
+              <h3>Mono Wheel</h3>
+              <p>Mobility concept<span>2020</span></p>
+            </div>
+          
+      </div>
+      <div class="work-details">
+              <p>A mobility exploration shaped by balance, compact packaging, and the practical feel of a rideable object.</p>
+              <div class="work-actions"><span class="status-label">Case study soon</span></div>
+            </div>
+    </article>
+  
+    <article class="work-card">
+      <div class="work-thumb">
+        <img src="projects/thumb_5.png" alt="MakerLight project thumbnail" loading="lazy">
+            <div class="work-overlay">
+              <h3>MakerLight</h3>
+              <p>Workshop product<span>2020</span></p>
+            </div>
+          
+      </div>
+      <div class="work-details">
+              <p>A lighting concept for hands-on work, with attention to usability, placement, and workshop conditions.</p>
+              <div class="work-actions"><span class="status-label">Case study soon</span></div>
+            </div>
+    </article>
+  
+      </div>
+    </section>
+
+    <section class="page-section">
+      
+    <div class="section-header">
+      <p class="page-tag">Things i do</p>
+      <h2 class="section-title">Smaller builds and experiments</h2>
+      <p class="body-copy">Not every useful thing becomes a full case study. This page is for the smaller builds, workshop fixes, fabrication tests, and quick ideas that still say something about how I work.</p>
+    </div>
+  
+      <div class="mini-grid">
+        
+    <article class="mini-card">
+      <div class="work-thumb">
+        <img src="things_i_do/thumb_12.jpg" alt="3D printed adhesive wall hook" loading="lazy">
+            <div class="work-overlay work-overlay-small">
+              <h3>3DP Adhesive Wallhook</h3>
+              <p>Household fix</p>
+            </div>
+          
+      </div>
+    </article>
+  
+    <article class="mini-card">
+      <div class="work-thumb">
+        <img src="things_i_do/thumb_7.jpg" alt="3D printed bearing" loading="lazy">
+            <div class="work-overlay work-overlay-small">
+              <h3>3DP Bearing</h3>
+              <p>Print test</p>
+            </div>
+          
+      </div>
+    </article>
+  
+    <article class="mini-card">
+      <div class="work-thumb">
+        <img src="things_i_do/thumb_20.png" alt="3D printed lamp repair" loading="lazy">
+            <div class="work-overlay work-overlay-small">
+              <h3>3DP Lamp Repair</h3>
+              <p>Repair</p>
+            </div>
+          
+      </div>
+    </article>
+  
+    <article class="mini-card">
+      <div class="work-thumb">
+        <img src="things_i_do/thumb_1.png" alt="3D printed Mk3 stand" loading="lazy">
+            <div class="work-overlay work-overlay-small">
+              <h3>3DP Mk3 Stand</h3>
+              <p>3D printed workshop tool</p>
+            </div>
+          
+      </div>
+    </article>
+  
+    <article class="mini-card">
+      <div class="work-thumb">
+        <img src="things_i_do/thumb_14.png" alt="3D printed table tennis paddle" loading="lazy">
+            <div class="work-overlay work-overlay-small">
+              <h3>3DP TT Paddle</h3>
+              <p>Sports experiment</p>
+            </div>
+          
+      </div>
+    </article>
+  
+    <article class="mini-card">
+      <div class="work-thumb">
+        <img src="things_i_do/thumb_18.png" alt="Cardboard sandbox event build" loading="lazy">
+            <div class="work-overlay work-overlay-small">
+              <h3>Cardboard Sandbox Event</h3>
+              <p>Workshop build</p>
+            </div>
+          
+      </div>
+    </article>
+  
+      </div>
+    </section>
+
+    <section class="page-section">
+      
+    <div class="section-header">
+      <p class="page-tag">Photography</p>
+      <h2 class="section-title">Analog archive</h2>
+      <p class="body-copy">Photography gives me another way to stay close to materials, light, and timing. I mostly use it as a slower way of looking.</p>
+    </div>
+  
+      <div class="photo-grid photo-grid-preview">
+        
+    <figure class="photo-card ">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="random_photos/1_normal.jpg"
+        data-lightbox-alt="Analog photograph from Evren Ucar archive 01"
+        data-lightbox-caption="Archive 01"
+        data-lightbox-description=""
+      >
+        <img src="random_photos/1_normal.jpg" alt="Analog photograph from Evren Ucar archive 01">
+      </button>
+      <figcaption>Archive 01</figcaption>
+    </figure>
+  
+    <figure class="photo-card ">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="random_photos/2_normal.jpg"
+        data-lightbox-alt="Analog photograph from Evren Ucar archive 02"
+        data-lightbox-caption="Archive 02"
+        data-lightbox-description=""
+      >
+        <img src="random_photos/2_normal.jpg" alt="Analog photograph from Evren Ucar archive 02">
+      </button>
+      <figcaption>Archive 02</figcaption>
+    </figure>
+  
+    <figure class="photo-card photo-vertical">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="random_photos/1_vertical.jpg"
+        data-lightbox-alt="Analog photograph from Evren Ucar archive 03"
+        data-lightbox-caption="Archive 03"
+        data-lightbox-description=""
+      >
+        <img src="random_photos/1_vertical.jpg" alt="Analog photograph from Evren Ucar archive 03">
+      </button>
+      <figcaption>Archive 03</figcaption>
+    </figure>
+  
+    <figure class="photo-card ">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="random_photos/3_normal.jpg"
+        data-lightbox-alt="Analog photograph from Evren Ucar archive 04"
+        data-lightbox-caption="Archive 04"
+        data-lightbox-description=""
+      >
+        <img src="random_photos/3_normal.jpg" alt="Analog photograph from Evren Ucar archive 04">
+      </button>
+      <figcaption>Archive 04</figcaption>
+    </figure>
+  
+    <figure class="photo-card photo-big">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="random_photos/1_big.jpg"
+        data-lightbox-alt="Analog photograph from Evren Ucar archive 05"
+        data-lightbox-caption="Archive 05"
+        data-lightbox-description=""
+      >
+        <img src="random_photos/1_big.jpg" alt="Analog photograph from Evren Ucar archive 05">
+      </button>
+      <figcaption>Archive 05</figcaption>
+    </figure>
+  
+    <figure class="photo-card ">
+      <button
+        type="button"
+        class="photo-button"
+        data-lightbox-button
+        data-lightbox-src="random_photos/4_normal.jpg"
+        data-lightbox-alt="Analog photograph from Evren Ucar archive 06"
+        data-lightbox-caption="Archive 06"
+        data-lightbox-description=""
+      >
+        <img src="random_photos/4_normal.jpg" alt="Analog photograph from Evren Ucar archive 06">
+      </button>
+      <figcaption>Archive 06</figcaption>
+    </figure>
+  
+      </div>
+    </section>
+
+    <section class="page-section">
+      
+    <div class="section-header">
+      <p class="page-tag">Open-Quests</p>
+      <h2 class="section-title">Ongoing builds and questions</h2>
+      <p class="body-copy">This page is for the ideas and builds that are still open. Some are practical workshop projects. Some are just questions that keep pulling me back in.</p>
+    </div>
+  
+      <div class="text-grid">
+        
+        <article class="text-card">
+          <h3>Darkroom build</h3>
+          <p>An ongoing build at OMA Collective, balancing layout, workflow, and the practical details that make the room usable.</p>
+          
+        </article>
+      
+        <article class="text-card">
+          <h3>Small metal casting kiln</h3>
+          <p>Still being shaped through material choices, insulation decisions, and a lot of real-world trial and error.</p>
+          
+        </article>
+      
+        <article class="text-card">
+          <h3>Workshop process notes</h3>
+          <p>A growing place for the smaller questions around prototyping, fabrication, fixtures, and useful ways of testing ideas quickly.</p>
+          
+        </article>
+      
+      </div>
+    </section>
+
+    <section class="page-section">
+      
+    <div class="section-header">
+      <p class="page-tag">Cool bookmarks</p>
+      <h2 class="section-title">References worth keeping close</h2>
+      <p class="body-copy">This page will collect the links I keep coming back to, without turning into a messy dump.</p>
+    </div>
+  
+      <div class="text-grid">
+        
+        <article class="text-card">
+          <h3>Tools and references</h3>
+          <p>Useful pages for fabrication, prototyping, and figuring out practical details without overcomplicating them.</p>
+          
+        </article>
+      
+        <article class="text-card">
+          <h3>People and projects</h3>
+          <p>Studios, makers, and side projects worth revisiting when I want to see how other people solve things.</p>
+          
+        </article>
+      
+        <article class="text-card">
+          <h3>Materials and processes</h3>
+          <p>Pages I want close by while learning more about analog work, metals, workshop setups, and physical making.</p>
+          
+        </article>
+      
+      </div>
+    </section>
+
+    <section class="page-section hello-section">
+      
+    <div class="section-header">
+      <p class="page-tag">Hello</p>
+      <h2 class="section-title">Reach out</h2>
+      <p class="body-copy">You made it all the way down here, so this is probably the right moment to say hi.</p><p class="body-copy">If you are working on a product, a build, or something that needs practical design engineering input, reach out.</p>
+    </div>
+  
+      <div class="hello-card">
+        <p class="body-copy hello-copy">
+          If something here feels relevant to what you are building, send a note.
+        </p>
+        <button class="hello-copy-button" type="button" aria-label="Copy Evren Ucar email address" data-copy-email data-email-user="9991racunerve" data-email-domain="moc.liamg" data-email-reversed="true">Copy email</button>
+      </div>
+    </section>
   
       </main>
+      
       <footer class="page-footer">
-        <p>evrenucar1999@gmail.com</p>
-        <p>
+        <div class="footer-block footer-brand">
+          <a class="footer-logo-link" href="index.html" aria-label="Evren Ucar home">
+            <img class="footer-logo" src="image/evren_logo_white.svg" alt="Evren Ucar logo">
+          </a>
+          <button class="footer-copy-button" type="button" aria-label="Copy Evren Ucar email address" data-copy-email data-email-user="9991racunerve" data-email-domain="moc.liamg" data-email-reversed="true">Copy email</button>
+        </div>
+        <nav class="footer-block footer-links footer-nav" aria-label="Footer navigation">
+          <a href="index.html">About Me</a><a href="projects.html">Projects</a><a href="things_i_do.html">Things i do</a><a href="photography.html">Photography</a><a href="open-quests.html">Open-Quests</a><a href="cool-bookmarks.html">Cool bookmarks</a>
+        </nav>
+        <div class="footer-block footer-links footer-social">
           <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" rel="noreferrer">LinkedIn</a>
-          <span>|</span>
           <a href="https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw" target="_blank" rel="noreferrer">YouTube</a>
-        </p>
+        </div>
       </footer>
+  
+      
+      <div class="page-bottom-ticker" aria-label="Scrolling site banner">
+        <div class="page-bottom-ticker-track">
+          <span>If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. | </span>
+          <span aria-hidden="true">If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. | </span>
+          <span aria-hidden="true">If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. | </span>
+        </div>
+      </div>
+  
     </div>
+    
+      <div class="lightbox" data-lightbox hidden>
+        <button class="lightbox-close" type="button" aria-label="Close image" data-lightbox-close>Close</button>
+        <figure class="lightbox-figure">
+          <img src="" alt="" data-lightbox-image>
+          <figcaption>
+            <strong class="lightbox-caption-title" data-lightbox-caption hidden></strong>
+            <p class="lightbox-caption-copy" data-lightbox-description hidden></p>
+          </figcaption>
+        </figure>
+      </div>
+  
+    
+      <div class="copy-toast" role="status" aria-live="polite" hidden data-copy-toast></div>
+  
   </body>
 </html>

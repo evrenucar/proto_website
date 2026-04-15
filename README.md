@@ -5,6 +5,7 @@ Personal website for Evren Ucar.
 ## Setup
 
 ```bash
+npm run sync:notion
 npm run build
 npm run preview
 ```
@@ -13,20 +14,37 @@ Preview runs at `http://127.0.0.1:4173`.
 
 ## Structure
 
-- `src/site-data.mjs` holds the main site copy, project list, archive items, and photography selection.
-- `scripts/build-site.mjs` generates the static HTML pages plus `robots.txt` and `sitemap.xml`.
-- `CSS/site.css` is the shared styling for the live site.
-- `JavaScript/site.js` handles the mobile navigation and photography lightbox.
+- `src/site-data.mjs` holds the base copy, fallback cards, and photography content.
+- `src/notion-public-pages.json` is the token-free manifest of public shared Notion page URLs.
+- `scripts/sync-notion.mjs` turns those public pages into `src/notion-items.json`.
+- `scripts/build-site.mjs` generates the static HTML pages, generated detail pages, `robots.txt`, and `sitemap.xml`.
+- `CSS/site.css` is the shared styling.
+- `JavaScript/site.js` handles the mobile nav, copy-email buttons, and photography lightbox.
 
-## Updating content
+## Notion flow
 
-- Edit `src/site-data.mjs` for the main homepage text, project summaries, and archive labels.
-- Run `npm run build` after content or layout changes.
+The site supports public shared Notion pages for:
 
-## Future Notion path
+- `Projects`
+- `Things i do`
+- `Open-Quests`
 
-- `scripts/build-site.mjs` will automatically read `src/notion-projects.json` if it exists.
-- Use `src/notion-projects.example.json` as the shape for future overrides.
-- This makes it possible for a GitHub Action to fetch project links or summary overrides from Notion and rebuild the site without changing the hand-written base content.
+Each manifest entry can control:
 
-More detail is in [docs/notion-sync.md](/c:/Users/evren/Documents/GitHub/proto_website/docs/notion-sync.md).
+- which section the item belongs to
+- the card summary and labels
+- whether the card opens an internal page, an external URL, or only shows a status label
+- sort order
+
+The page title, long-form content, media, and last-updated time are pulled from the public shared Notion page itself.
+
+No Notion token is required.
+
+## Commands
+
+```bash
+npm run sync:notion
+npm run build
+```
+
+More detail is in [docs/notion-sync.md](/C:/Users/evren/Documents/GitHub/proto_website/docs/notion-sync.md).

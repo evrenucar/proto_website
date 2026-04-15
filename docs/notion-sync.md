@@ -1,44 +1,107 @@
-# Notion sync notes
+# Notion Sync
 
-The site is not pulling from Notion yet, but the structure is ready for it.
+The site now uses a token-free Notion sync.
 
-## Current setup
+Instead of calling the official Notion API, the sync script reads a local manifest of public shared page URLs and pulls each page through Notion's public web endpoints.
 
-- Base project data lives in `src/site-data.mjs`.
-- Optional project overrides can live in `src/notion-projects.json`.
-- During `npm run build`, the build script checks for that JSON file and merges entries by `slug`.
+## Setup
 
-## Suggested JSON shape
-
-Use `src/notion-projects.example.json` as the template.
+Create `src/notion-public-pages.json` from [src/notion-public-pages.example.json](/C:/Users/evren/Documents/GitHub/proto_website/src/notion-public-pages.example.json).
 
 Example:
 
 ```json
 [
   {
-    "slug": "moto-gimbal",
-    "externalUrl": "https://www.notion.so/your-workspace/your-project-page",
-    "status": "Open project notes",
-    "summary": "Optional summary override from Notion."
+    "url": "https://evrenucar.notion.site/Eurocrate-storage-universal-solution-310312b0d17d807db8f0dd315797b930?source=copy_link",
+    "section": "projects",
+    "slug": "eurocrate-storage-universal-solution",
+    "category": "Storage system",
+    "year": "2026",
+    "summary": "A short card summary for the project card.",
+    "actionLabel": "Read case study",
+    "actionType": "page",
+    "sortOrder": 10,
+    "seoDescription": "A Eurocrate storage project synced from a public Notion page."
   }
 ]
 ```
 
-## Recommended GitHub Action flow
+Each entry points at one public shared Notion page.
 
-1. Query Notion for your project pages.
-2. Map each Notion page to a site `slug`.
-3. Write the result to `src/notion-projects.json`.
-4. Run `npm run build`.
-5. Deploy the generated site or publish the branch as usual.
+## Required fields
 
-## Good first step when you are ready
+- `url`
+- `section`
 
-Keep the current hand-written summaries as the default source of truth. Let Notion override only fields that benefit from being updated often:
+`section` must be one of:
 
-- `externalUrl`
-- `status`
+- `projects`
+- `things_i_do`
+- `open-quests`
+
+## Optional fields
+
+- `slug`
+- `title`
+- `category`
+- `year`
 - `summary`
+- `image`
+- `alt`
+- `actionLabel`
+- `actionType`
+- `actionUrl`
+- `sortOrder`
+- `seoDescription`
 
-That keeps the website stable even if Notion is unavailable or the sync job fails.
+## What is pulled from Notion
+
+For each public page URL, the sync script pulls:
+
+- the page title
+- the page block content
+- the page `last_edited_time`
+- page cover or first image, if available
+- embedded Notion-hosted images and videos, downloaded into `notion_assets/`
+
+## What stays in the local manifest
+
+The card-level placement and labels stay in `src/notion-public-pages.json`:
+
+- which section the item belongs to
+- card category
+- card year
+- card summary override
+- card action label and type
+- sort order
+
+That is the tradeoff for going token-free. You can still keep all the actual long-form pages inside one Notion database, but the site discovers items from the local list of public shared URLs instead of querying the database directly.
+
+## Generated files
+
+The sync writes:
+
+- `src/notion-items.json`
+- `notion_assets/**`
+
+The build then generates internal detail pages under:
+
+- `content/projects/**`
+- `content/things_i_do/**`
+- `content/open-quests/**`
+
+## Local usage
+
+Run:
+
+```bash
+npm run sync:notion
+npm run build
+```
+
+If `src/notion-public-pages.json` is missing or empty, the sync script removes old generated Notion output and exits cleanly.
+
+## GitHub Action
+
+The GitHub Action runs `npm run sync:notion` on every build. No Notion token or Notion secrets are required anymore.

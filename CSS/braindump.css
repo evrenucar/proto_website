@@ -1,0 +1,209 @@
+/* CSS exclusively for the Braindump Whiteboard page */
+
+.page-braindump {
+  overflow: hidden;
+}
+
+.page-braindump .main-shell {
+  padding-right: 0;
+  display: block;
+  height: 100vh;
+}
+
+.page-braindump .page-content {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  height: 100vh;
+}
+
+.page-braindump .page-footer,
+.page-braindump .page-bottom-ticker {
+  display: none !important;
+}
+
+.braindump-viewport {
+  position: absolute;
+  top: 0;
+  left: clamp(270px, 24vw, 360px); 
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  background-color: #151515;
+  background-image: radial-gradient(#333 1px, transparent 1px);
+  background-size: 30px 30px;
+  cursor: grab;
+  color: #fafafa;
+}
+
+.braindump-viewport:active {
+  cursor: grabbing;
+}
+
+.braindump-viewport[data-mode="draw"] {
+  cursor: crosshair;
+}
+
+.braindump-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+#braindump-svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+#braindump-svg-layer path {
+  fill: none;
+  stroke: #3fdaca;
+  stroke-width: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: auto;
+}
+
+/* Base item class */
+.bd-item {
+  position: absolute;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transform-origin: top left;
+  user-select: none;
+}
+
+.bd-item.selected {
+  outline: 2px solid #3fdaca;
+  outline-offset: 4px;
+  z-index: 100 !important;
+}
+
+/* Text Component */
+.bd-layer-card {
+  background: #2a2a2a;
+  border: 1px solid #343434;
+  border-radius: 8px;
+  padding: 12px;
+  color: #fafafa;
+  min-width: 200px;
+  min-height: 100px;
+}
+
+.bd-layer-card textarea {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: 16px;
+  resize: none;
+  outline: none;
+}
+
+/* Image Component */
+.bd-layer-image {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bd-layer-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Bookmark & Page Components */
+.bd-layer-bookmark {
+  background: #2a2a2a;
+  border: 1px solid #343434;
+  border-radius: 8px;
+  padding: 16px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bd-bookmark-image {
+  width: 100%;
+  height: 160px;
+  border-radius: 4px;
+  object-fit: cover;
+  background-color: #1f1f1f;
+}
+
+.bd-bookmark-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.bd-bookmark-link {
+  color: #3fdaca;
+  text-decoration: none;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.bd-bookmark-link:hover {
+  text-decoration: underline;
+}
+
+/* Toolbar */
+.braindump-toolbar {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  background: #1a1919;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #2d2c2c;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+
+.braindump-toolbar button {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #bfbfbf;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: all 0.2s ease;
+}
+
+.braindump-toolbar button:hover {
+  color: #fafafa;
+  background: #232222;
+}
+
+.braindump-toolbar button.active {
+  background: #2a2a2a;
+  border-color: #343434;
+  color: #3fdaca;
+}
+
+/* Mobile Adjustments */
+@media screen and (max-width: 1200px) {
+  .braindump-viewport {
+    left: 0;
+  }
+}
