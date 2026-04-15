@@ -1,0 +1,25 @@
+{
+  "camera": {
+    "x": 0,
+    "y": 0,
+    "z": 1
+  },
+  "elements": [
+    {
+      "id": "text-1",
+      "type": "text",
+      "x": 350,
+      "y": 100,
+      "content": "Welcome to the Braindump!\n\nThis is an infinite canvas. You can Middle-Click or Space+Drag to pan around."
+    },
+    {
+      "id": "bookmark-1",
+      "type": "bookmark",
+      "x": 350,
+      "y": 300,
+      "title": "Evren Ucar Portfolio",
+      "url": "https://evrenucar.com",
+      "image": "image/masked_photo.png"
+    }
+  ]
+}
