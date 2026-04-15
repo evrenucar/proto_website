@@ -22,8 +22,6 @@ function setNavigationOpen(isOpen, options = {}) {
   navToggle.setAttribute("aria-expanded", String(isOpen));
   sideNav.classList.toggle("is-open", isOpen);
   document.body.classList.toggle("nav-open", isOpen);
-  document.body.style.paddingRight =
-    isOpen && !isDesktopViewport() ? `${getScrollbarCompensation()}px` : "";
 
   if (options.persist !== false) {
     writeStoredMobileNavigationState(isOpen);
@@ -130,7 +128,46 @@ function syncMobileNavigation() {
 }
 
 if (navToggle && sideNav) {
-  navToggle.addEventListener("click", () => {
+  let startX = 0;
+  let isDraggingMenu = false;
+  let hasSwiped = false;
+
+  navToggle.addEventListener("pointerdown", (e) => {
+    startX = e.clientX;
+    isDraggingMenu = true;
+    hasSwiped = false;
+    navToggle.setPointerCapture(e.pointerId);
+  });
+
+  navToggle.addEventListener("pointermove", (e) => {
+    if (!isDraggingMenu) return;
+    const deltaX = e.clientX - startX;
+    if (Math.abs(deltaX) > 30) {
+      hasSwiped = true;
+      const newPos = deltaX < 0 ? "left" : "right";
+      document.documentElement.classList.toggle("nav-pos-left", newPos === "left");
+      try {
+        window.localStorage.setItem("evren-site:mobile-nav-pos", newPos);
+      } catch (err) {}
+      startX = e.clientX; // update anchor
+    }
+  });
+
+  const endDrag = (e) => {
+    if (!isDraggingMenu) return;
+    isDraggingMenu = false;
+    navToggle.releasePointerCapture(e.pointerId);
+  };
+
+  navToggle.addEventListener("pointerup", endDrag);
+  navToggle.addEventListener("pointercancel", endDrag);
+
+  navToggle.addEventListener("click", (e) => {
+    if (hasSwiped) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const nextState = navToggle.getAttribute("aria-expanded") !== "true";
     setNavigationOpen(nextState);
   });
@@ -148,10 +185,6 @@ if (navToggle && sideNav) {
   window.addEventListener("resize", () => {
     if (window.innerWidth > 1200) {
       setNavigationOpen(false, { persist: false });
-    } else if (navToggle.getAttribute("aria-expanded") === "true") {
-      document.body.style.paddingRight = `${getScrollbarCompensation()}px`;
-    } else {
-      document.body.style.paddingRight = "";
     }
 
     syncMobileNavigation();

@@ -33,12 +33,11 @@ The page should let the user add, place, and organize:
 - Add a subtle grid or dot background so placement feels intentional without looking heavy.
 - Keep the whiteboard visually lighter than the rest of the site, but still compatible with the existing design language.
 
-### 3. Define the board item model
+### 3. Define the board item model (Obsidian .canvas compatible)
 
-- Use a shared item shape with `id`, `type`, `x`, `y`, `width`, `height`, `zIndex`, and `data`.
-- Support four initial item types: `text`, `drawing`, `bookmark`, and `page`.
-- Store board state as JSON in `localStorage` for the first version, but add a local dev server script (`scripts/dev-server.mjs`) to allow a "Save" button to overwrite `braindump-state.json` on disk. This enables committing the board state to the official website repo.
-- Seed the board with a small starter dataset so the page does not open empty.
+- Use the [Obsidian Canvas JSON schema](https://github.com/obsidianmd/obsidian-api/blob/master/canvas.d.ts) as the source of truth for the board format (`{"nodes": [], "edges": []}`).
+- Support `text` (markdown cards) and `file` (images/bookmarks/pages) node types to ensure external apps can read it.
+- **Save/Load Fundamentals:** Instead of relying entirely on a `dev-server` for external users, we will add an "Export .canvas" button that downloads the JSON. And an "Import .canvas" button to load one. This ensures anyone can load or save their own local Obsidian files securely inside the browser.
 
 ### 4. Add creation tools
 
@@ -94,11 +93,10 @@ The page should let the user add, place, and organize:
 The first usable version should include:
 
 - pan and zoom
-- persistent board state
+- persistent `.canvas` format JSON state
 - text notes
-- freehand drawing
-- bookmark cards with manual image input
-- page cards backed by internal site data
+- freehand drawing (saved as SVG text or custom nodes)
+- import/export `.canvas` files directly to the user's local filesystem
 - drag and simple layering
 
 Anything beyond that, such as collaboration, scraping remote previews, or syncing across devices, should be treated as a later phase.

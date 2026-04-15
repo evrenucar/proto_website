@@ -15,6 +15,7 @@
   padding: 0;
   margin: 0;
   height: 100vh;
+  position: relative;
 }
 
 .page-braindump .page-footer,
@@ -25,7 +26,7 @@
 .braindump-viewport {
   position: absolute;
   top: 0;
-  left: clamp(270px, 24vw, 360px); 
+  left: 0; 
   right: 0;
   bottom: 0;
   overflow: hidden;
@@ -85,15 +86,35 @@
   z-index: 100 !important;
 }
 
+.bd-item .resize-handle {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background: #fafafa;
+  border: 1px solid #1a1a1a;
+  border-radius: 50%;
+  cursor: se-resize;
+  display: none;
+  z-index: 10;
+}
+
+.bd-item.selected .resize-handle {
+  display: block;
+}
+
 /* Text Component */
 .bd-layer-card {
-  background: #2a2a2a;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   border: 1px solid #343434;
   border-radius: 8px;
   padding: 12px;
-  color: #fafafa;
-  min-width: 200px;
-  min-height: 100px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bd-layer-card textarea {
@@ -104,6 +125,7 @@
   color: inherit;
   font-family: inherit;
   font-size: 16px;
+  text-align: center;
   resize: none;
   outline: none;
 }
@@ -122,15 +144,25 @@
 }
 
 /* Bookmark & Page Components */
-.bd-layer-bookmark {
-  background: #2a2a2a;
+.bd-layer-bookmark, .bd-layer-link {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   border: 1px solid #343434;
   border-radius: 8px;
   padding: 16px;
-  width: 320px;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  color: #fff;
+}
+
+.bd-auto-size-content {
+  box-sizing: border-box;
+  width: max-content !important;
+  height: max-content !important;
+  min-width: 250px;
+  max-width: 400px;
 }
 
 .bd-bookmark-image {
@@ -175,7 +207,7 @@
   z-index: 10;
 }
 
-.braindump-toolbar button {
+.braindump-toolbar button, .braindump-file-label {
   width: 44px;
   height: 44px;
   border-radius: 8px;
@@ -190,7 +222,7 @@
   transition: all 0.2s ease;
 }
 
-.braindump-toolbar button:hover {
+.braindump-toolbar button:hover, .braindump-file-label:hover {
   color: #fafafa;
   background: #232222;
 }
@@ -199,6 +231,12 @@
   background: #2a2a2a;
   border-color: #343434;
   color: #3fdaca;
+}
+
+.braindump-toolbar-divider {
+  width: 1px;
+  background: #2d2c2c;
+  margin: 4px 6px;
 }
 
 /* Mobile Adjustments */

@@ -41,6 +41,7 @@ The text should reflect:
 
 - Keep the site lightweight.
 - Prefer simple static generation over heavy frameworks.
+- Ensure the site is fully compatible with being statically hosted on GitHub Pages.
 - Support future project overrides or links from Notion.
 - A GitHub Action can later fetch Notion data and rebuild the site.
 - Use Playwright when checking layout and interaction changes.

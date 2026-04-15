@@ -349,6 +349,9 @@ function renderInitialNavigationStateScript() {
         if (window.localStorage.getItem("evren-site:mobile-nav-open") === "true") {
           root.classList.add("nav-open");
         }
+        if (window.localStorage.getItem("evren-site:mobile-nav-pos") === "left") {
+          root.classList.add("nav-pos-left");
+        }
       } catch (error) {}
     </script>
   `;
@@ -401,7 +404,7 @@ function renderShell({
     <link rel="manifest" href="${relativeHref(currentFile, "favicon/site.webmanifest")}" />
     ${renderInitialNavigationStateScript()}
     ${schemaBlocks}
-    <script src="${relativeHref(currentFile, "JavaScript/site.js")}" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=2" defer></script>
   </head>
   <body class="${escapeHtml(bodyClass)}">
     <a class="skip-link" href="#content">Skip to content</a>
@@ -816,11 +819,18 @@ function renderBraindumpPage() {
         <svg id="braindump-svg-layer"></svg>
       </div>
       <div class="braindump-toolbar">
-        <button type="button" data-tool="text" aria-label="Add Text">T</button>
-        <button type="button" data-tool="draw" aria-label="Draw">✎</button>
-        <button type="button" data-tool="bookmark" aria-label="Add Bookmark">🔗</button>
-        <button type="button" data-tool="page" aria-label="Add Page">📄</button>
-        <button type="button" data-tool="save" aria-label="Save Board">💾</button>
+        <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">↖️</button>
+        <button type="button" data-tool="pan" aria-label="Pan (Space)" title="Pan (Space)">✋</button>
+        <button type="button" data-tool="text" aria-label="Add Text (T)" title="Text (T)">T</button>
+        <button type="button" data-tool="draw" aria-label="Draw (P)" title="Pen (P)">✎</button>
+        <button type="button" data-tool="bookmark" aria-label="Add Bookmark (L)" title="Link (L)">🔗</button>
+        <div class="braindump-toolbar-divider"></div>
+        <button type="button" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">💾</button>
+        <button type="button" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">⬇️</button>
+        <label class="braindump-file-label" aria-label="Import .canvas" title="Import (.canvas)">
+          <input type="file" id="braindump-import" accept=".canvas,.json" hidden>
+          ⬆️
+        </label>
       </div>
       <div id="braindump-modal" class="braindump-modal" hidden>
         <!-- Dynamic content for forms -->

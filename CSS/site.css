@@ -319,7 +319,8 @@ button {
   display: none;
   position: fixed;
   top: 14px;
-  left: 14px;
+  right: 14px;
+  left: auto;
   width: 44px;
   height: 44px;
   padding: 0;
@@ -329,10 +330,17 @@ button {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
   z-index: 60;
   cursor: pointer;
+  touch-action: none;
   transition:
     left 0.22s ease,
+    right 0.22s ease,
     background-color 0.22s ease,
     border-color 0.22s ease;
+}
+
+html.nav-pos-left .mobile-menu {
+  left: 14px;
+  right: auto;
 }
 
 .mobile-menu span:not(.sr-only) {
@@ -1079,16 +1087,42 @@ button {
   .sidenav {
     display: block;
     width: var(--mobile-nav-width);
-    padding-top: 28px;
+    padding-top: 76px;
     background-color: rgba(26, 25, 25, 0.94);
-    transform: translateX(-110%);
+    transform: translateX(110%);
+    right: 0;
+    left: auto;
     transition: transform 0.22s ease;
+    box-shadow: -24px 0 50px rgba(0, 0, 0, 0.34);
+  }
+
+  html.nav-pos-left .sidenav {
+    left: 0;
+    right: auto;
+    transform: translateX(-110%);
     box-shadow: 24px 0 50px rgba(0, 0, 0, 0.34);
   }
 
   html.nav-open .sidenav,
-  .sidenav.is-open {
+  .sidenav.is-open,
+  html.nav-pos-left.nav-open .sidenav {
     transform: translateX(0);
+  }
+
+  .nav-link {
+    font-size: 35px;
+    line-height: 1.62;
+  }
+
+  .sidenav_contacts a,
+  .sidenav_contacts .contact-button {
+    width: 88px;
+    height: 88px;
+  }
+
+  .sidenav_contacts img {
+    width: 64px;
+    height: 64px;
   }
 
   .main-shell {
@@ -1105,6 +1139,7 @@ button {
     display: block;
   }
 
+  html.nav-open,
   html.nav-open body,
   body.nav-open {
     overflow: hidden;
@@ -1112,7 +1147,14 @@ button {
 
   html.nav-open .mobile-menu,
   body.nav-open .mobile-menu {
+    right: calc(var(--mobile-nav-width) - 58px);
+    left: auto;
+  }
+
+  html.nav-pos-left.nav-open .mobile-menu,
+  body.nav-pos-left.nav-open .mobile-menu {
     left: calc(var(--mobile-nav-width) - 58px);
+    right: auto;
   }
 
   .home-hero {
