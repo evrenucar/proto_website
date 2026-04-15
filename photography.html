@@ -1,73 +1,377 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>EVREN UCAR</title>
-        <meta charset="UTF-8">
-        <meta name="description" content="A page about me">
-        <meta name="author" content="Evren Uçar">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="keywords" content="Design, ID, Industrial Design, Making, Product design, portfolio, freelance, Concept Design, Prototyping">
-        <link rel="stylesheet" href="CSS/general_style.css">
-        <link rel="stylesheet" href="CSS/grid_style.css">
-        <link rel="stylesheet" href="CSS/hamburger_button.css">
-        <link rel="stylesheet" href="CSS/loader.css">
-        <script defer src="JavaScript/image_lightbox.js"></script> <!-- "defer" keeps "DOMContentLoaded" (everything loaded) from firing until the script is loaded-->
-    </head>
-<!-- Side navigation Menu-->
-<div class="sidenav">
-  <div class="sidenav_links">
-    <a href="index.html" >
-      <img src="image/evren_icon_white.png" alt="evren_icon_white" height="35"></a>
-    <a id="first" href="index.html">About Me</a>
-    <a href="things_i_do.html" >Things I Do</a>
-    <a href="photography.html" style="color: #fafafa" >Photography</a>
-    <!-- <a href="travels.html">Travels</a> -->
-    <a href="projects.html">Projects</a>
-  </div>
-  <div class="sidenav_contacts">
-      <a href="mailto:evrenucar1999@gmail.com" target="_blank" >
-        <img src="icon/gmail_white.png" alt="gmail icon" height="50"></a>
-      <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" >
-        <img src="icon/linkedin_white.png" alt="linkedin icon" height="50"></a>
-      <a href="https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw" target="_blank" >
-        <img src="icon/youtube_white.png" alt="youtube icon" height="50"></a>
-   </div>
-</div>
-
-<!-- Page content -->
-<div class="main">
-    <body>
-        <header>
-          <div class="grid">
-            <div><img src="random_photos/1_normal.jpg"></div>
-            <div><img src="random_photos/2_normal.jpg"></div>
-            <div class="vertical"><img src="random_photos/1_vertical.jpg"></div>
-            <div><img src="random_photos/3_normal.jpg"></div>
-            <div class="big"><img src="random_photos/1_big.jpg"></div>
-            <div><img src="random_photos/4_normal.jpg"></div>
-            <div class="vertical"><img src="random_photos/4_vertical.jpg"></div>
-            <div><img src="random_photos/5_normal.jpg"></div>
-            <div><img src="random_photos/6_normal.jpg"></div>
-            <div class="big"><img src="random_photos/2_big.jpg"></div>
-            <div class="horizontal"><img src="random_photos/1_horizontal.jpg"></div>
-            <div class="vertical"><img src="random_photos/2_vertical.jpg"></div>
-            <div><img src="random_photos/7_normal.jpg"></div>
-            <div><img src="random_photos/8_normal.jpg"></div>
-            <div><img src="random_photos/9_normal.jpg"></div>
-            <div class="big"><img src="random_photos/3_big.jpg"></div>
-            <div class="vertical"><img src="random_photos/3_vertical.jpg"></div>
-            <div><img src="random_photos/10_normal.jpg"></div>
-            <div><img src="random_photos/11_normal.jpg"></div>
-            <div><img src="random_photos/12_normal.jpg"></div>
-          </div>
-          <div class="loader-wrapper">
-            <span class="loader"><span class="loader-inner"></span></span>
-          </div>
-        </header>
-
-        <footer>
-
-        </footer>
-   </body>
- </div>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photography | Evren Ucar</title>
+    <meta name="description" content="A selection of analog photography from Evren Ucar. Mostly quiet observations, materials, places, and moments that feel worth holding onto.">
+    <meta name="robots" content="index,follow">
+    <meta name="author" content="Evren Ucar">
+    <meta name="theme-color" content="#222222">
+    <meta name="keywords" content="industrial design engineer, freelance industrial designer, prototype development, product development portfolio, mechanics and electronics prototyping, maker portfolio">
+    <link rel="canonical" href="https://evrenucar.com/photography.html">
+    <link rel="stylesheet" href="CSS/site.css">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Evren Ucar">
+    <meta property="og:title" content="Photography | Evren Ucar">
+    <meta property="og:description" content="A selection of analog photography from Evren Ucar. Mostly quiet observations, materials, places, and moments that feel worth holding onto.">
+    <meta property="og:url" content="https://evrenucar.com/photography.html">
+    <meta property="og:image" content="https://evrenucar.com/random_photos/1_big.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Photography | Evren Ucar">
+    <meta name="twitter:description" content="A selection of analog photography from Evren Ucar. Mostly quiet observations, materials, places, and moments that feel worth holding onto.">
+    <meta name="twitter:image" content="https://evrenucar.com/random_photos/1_big.jpg">
+    <link rel="icon" href="image/evren_icon_black.png" type="image/png">
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Evren Ucar","url":"https://evrenucar.com","description":"Portfolio website for Evren Ucar, a TU Delft graduate and freelance industrial design engineer working across mechanics, electronics, prototyping, and hands-on making."}</script>
+    <script src="JavaScript/site.js" defer></script>
+  </head>
+  <body class="page-photography">
+    <a class="skip-link" href="#content">Skip to content</a>
+    
+    <aside class="sidenav" id="sidenav_menu" aria-label="Primary">
+      <div class="sidenav_links">
+        <a class="logo-link" href="index.html" aria-label="Evren Ucar home">
+          <img id="logo" src="image/evren_icon_white.png" alt="Evren Ucar logo" height="35">
+        </a>
+        <a class="nav-link nav-link-first" href="index.html">About Me</a><a class="nav-link" href="projects.html">Projects</a><a class="nav-link" href="things_i_do.html">Things I Do</a><a class="nav-link is-current" href="photography.html" aria-current="page">Photography</a>
+      </div>
+      <div class="sidenav_contacts">
+        <a href="mailto:evrenucar1999@gmail.com" aria-label="Email Evren Ucar">
+          <img src="icon/gmail_white.png" alt="Email icon" height="40">
+        </a>
+        <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" rel="noreferrer" aria-label="LinkedIn">
+          <img src="icon/linkedin_white.png" alt="LinkedIn icon" height="40">
+        </a>
+        <a href="https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw" target="_blank" rel="noreferrer" aria-label="YouTube">
+          <img src="icon/youtube_white.png" alt="YouTube icon" height="40">
+        </a>
+      </div>
+    </aside>
+  
+    <div class="main-shell">
+      <button
+        class="mobile-menu"
+        type="button"
+        aria-expanded="false"
+        aria-controls="sidenav_menu"
+        data-nav-toggle
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+        <span class="sr-only">Toggle navigation</span>
+      </button>
+      <main id="content" class="page-content">
+        
+    <section class="page-section page-section-first">
+      
+    <div class="section-header">
+      <p class="page-tag">Photography</p>
+      <h2 class="section-title">Analog archive</h2>
+      <p class="body-copy">Photography gives me another way to stay close to materials, light, and timing. I mostly use it as a slower way of looking.</p><p class="body-copy">This is a small analog photo selection. You can tap any image to view it larger.</p>
+    </div>
+  
+      <div class="photo-grid">
+        
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/1_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 01"
+                  data-lightbox-caption="Archive 01"
+                >
+                  <img src="random_photos/1_normal.jpg" alt="Analog photograph from Evren Ucar archive 01">
+                </button>
+                <figcaption>Archive 01</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/2_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 02"
+                  data-lightbox-caption="Archive 02"
+                >
+                  <img src="random_photos/2_normal.jpg" alt="Analog photograph from Evren Ucar archive 02">
+                </button>
+                <figcaption>Archive 02</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-vertical">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/1_vertical.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 03"
+                  data-lightbox-caption="Archive 03"
+                >
+                  <img src="random_photos/1_vertical.jpg" alt="Analog photograph from Evren Ucar archive 03">
+                </button>
+                <figcaption>Archive 03</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/3_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 04"
+                  data-lightbox-caption="Archive 04"
+                >
+                  <img src="random_photos/3_normal.jpg" alt="Analog photograph from Evren Ucar archive 04">
+                </button>
+                <figcaption>Archive 04</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-big">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/1_big.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 05"
+                  data-lightbox-caption="Archive 05"
+                >
+                  <img src="random_photos/1_big.jpg" alt="Analog photograph from Evren Ucar archive 05">
+                </button>
+                <figcaption>Archive 05</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/4_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 06"
+                  data-lightbox-caption="Archive 06"
+                >
+                  <img src="random_photos/4_normal.jpg" alt="Analog photograph from Evren Ucar archive 06">
+                </button>
+                <figcaption>Archive 06</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-vertical">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/4_vertical.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 07"
+                  data-lightbox-caption="Archive 07"
+                >
+                  <img src="random_photos/4_vertical.jpg" alt="Analog photograph from Evren Ucar archive 07">
+                </button>
+                <figcaption>Archive 07</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/5_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 08"
+                  data-lightbox-caption="Archive 08"
+                >
+                  <img src="random_photos/5_normal.jpg" alt="Analog photograph from Evren Ucar archive 08">
+                </button>
+                <figcaption>Archive 08</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/6_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 09"
+                  data-lightbox-caption="Archive 09"
+                >
+                  <img src="random_photos/6_normal.jpg" alt="Analog photograph from Evren Ucar archive 09">
+                </button>
+                <figcaption>Archive 09</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-big">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/2_big.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 10"
+                  data-lightbox-caption="Archive 10"
+                >
+                  <img src="random_photos/2_big.jpg" alt="Analog photograph from Evren Ucar archive 10">
+                </button>
+                <figcaption>Archive 10</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-horizontal">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/1_horizontal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 11"
+                  data-lightbox-caption="Archive 11"
+                >
+                  <img src="random_photos/1_horizontal.jpg" alt="Analog photograph from Evren Ucar archive 11">
+                </button>
+                <figcaption>Archive 11</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-vertical">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/2_vertical.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 12"
+                  data-lightbox-caption="Archive 12"
+                >
+                  <img src="random_photos/2_vertical.jpg" alt="Analog photograph from Evren Ucar archive 12">
+                </button>
+                <figcaption>Archive 12</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/7_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 13"
+                  data-lightbox-caption="Archive 13"
+                >
+                  <img src="random_photos/7_normal.jpg" alt="Analog photograph from Evren Ucar archive 13">
+                </button>
+                <figcaption>Archive 13</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/8_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 14"
+                  data-lightbox-caption="Archive 14"
+                >
+                  <img src="random_photos/8_normal.jpg" alt="Analog photograph from Evren Ucar archive 14">
+                </button>
+                <figcaption>Archive 14</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/9_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 15"
+                  data-lightbox-caption="Archive 15"
+                >
+                  <img src="random_photos/9_normal.jpg" alt="Analog photograph from Evren Ucar archive 15">
+                </button>
+                <figcaption>Archive 15</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-big">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/3_big.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 16"
+                  data-lightbox-caption="Archive 16"
+                >
+                  <img src="random_photos/3_big.jpg" alt="Analog photograph from Evren Ucar archive 16">
+                </button>
+                <figcaption>Archive 16</figcaption>
+              </figure>
+            
+              <figure class="photo-card photo-vertical">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/3_vertical.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 17"
+                  data-lightbox-caption="Archive 17"
+                >
+                  <img src="random_photos/3_vertical.jpg" alt="Analog photograph from Evren Ucar archive 17">
+                </button>
+                <figcaption>Archive 17</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/10_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 18"
+                  data-lightbox-caption="Archive 18"
+                >
+                  <img src="random_photos/10_normal.jpg" alt="Analog photograph from Evren Ucar archive 18">
+                </button>
+                <figcaption>Archive 18</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/11_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 19"
+                  data-lightbox-caption="Archive 19"
+                >
+                  <img src="random_photos/11_normal.jpg" alt="Analog photograph from Evren Ucar archive 19">
+                </button>
+                <figcaption>Archive 19</figcaption>
+              </figure>
+            
+              <figure class="photo-card ">
+                <button
+                  type="button"
+                  class="photo-button"
+                  data-lightbox-button
+                  data-lightbox-src="random_photos/12_normal.jpg"
+                  data-lightbox-alt="Analog photograph from Evren Ucar archive 20"
+                  data-lightbox-caption="Archive 20"
+                >
+                  <img src="random_photos/12_normal.jpg" alt="Analog photograph from Evren Ucar archive 20">
+                </button>
+                <figcaption>Archive 20</figcaption>
+              </figure>
+            
+      </div>
+      <div class="lightbox" data-lightbox hidden>
+        <button class="lightbox-close" type="button" aria-label="Close image" data-lightbox-close>Close</button>
+        <figure class="lightbox-figure">
+          <img src="" alt="" data-lightbox-image>
+          <figcaption data-lightbox-caption></figcaption>
+        </figure>
+      </div>
+    </section>
+  
+      </main>
+      <footer class="page-footer">
+        <p>evrenucar1999@gmail.com</p>
+        <p>
+          <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" rel="noreferrer">LinkedIn</a>
+          <span>|</span>
+          <a href="https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw" target="_blank" rel="noreferrer">YouTube</a>
+        </p>
+      </footer>
+    </div>
+  </body>
 </html>

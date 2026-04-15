@@ -1,0 +1,9 @@
+{
+  "name": "evren-ucar-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-site.mjs",
+    "preview": "node scripts/preview-server.mjs"
+  }
+}
