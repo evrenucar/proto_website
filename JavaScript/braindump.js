@@ -18,6 +18,163 @@ let dragRect = { x: 0, y: 0, w: 0, h: 0, startX: 0, startY: 0, active: false };
 let nodes = [];
 let edges = [];
 
+// Undo/Redo history
+let undoHistory = [];
+let historyIndex = -1;
+const MAX_HISTORY = 200;
+let isLoadingState = false; // Flag to prevent recording during load
+
+function pushAction(action) {
+  undoHistory = undoHistory.slice(0, historyIndex + 1);
+  undoHistory.push(action);
+  if (undoHistory.length > MAX_HISTORY) { undoHistory.shift(); historyIndex--; }
+  historyIndex = undoHistory.length - 1;
+}
+
+function removeNodeById(nodeId) {
+  const el = document.getElementById(nodeId);
+  if (el) el.remove();
+  nodes = nodes.filter(n => n.id !== nodeId);
+}
+
+function restoreNode(nodeData) {
+  const d = JSON.parse(JSON.stringify(nodeData));
+  const type = d.type === 'text' && d.text?.includes('<svg') ? 'draw' :
+               d.type === 'link' ? 'link' :
+               d.type === 'file' ? 'image' : d.type;
+  isLoadingState = true;
+  createNode(type, d.x, d.y, d);
+  isLoadingState = false;
+}
+
+function applyReverse(action) {
+  if (action.type === 'create') {
+    removeNodeById(action.nodeId);
+  } else if (action.type === 'delete') {
+    restoreNode(action.nodeData);
+  } else if (action.type === 'move') {
+    action.nodeIds.forEach((id, i) => {
+      const node = nodes.find(n => n.id === id);
+      const el = document.getElementById(id);
+      if (node && el) {
+        node.x = action.fromPositions[i].x;
+        node.y = action.fromPositions[i].y;
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+      }
+    });
+  } else if (action.type === 'resize') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    const el = document.getElementById(action.nodeId);
+    if (node && el) {
+      node.width = action.fromSize.w;
+      node.height = action.fromSize.h;
+      el.style.width = `${node.width}px`;
+      el.style.height = `${node.height}px`;
+    }
+  } else if (action.type === 'editText') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    const el = document.getElementById(action.nodeId);
+    if (node && el) {
+      node.text = action.oldText;
+      const ta = el.querySelector('div[contenteditable]');
+      if (ta) ta.innerText = action.oldText || 'Type here...';
+    }
+  } else if (action.type === 'batch') {
+    for (let i = action.actions.length - 1; i >= 0; i--) applyReverse(action.actions[i]);
+  }
+}
+
+function applyForward(action) {
+  if (action.type === 'create') {
+    restoreNode(action.nodeData);
+  } else if (action.type === 'delete') {
+    removeNodeById(action.nodeId);
+  } else if (action.type === 'move') {
+    action.nodeIds.forEach((id, i) => {
+      const node = nodes.find(n => n.id === id);
+      const el = document.getElementById(id);
+      if (node && el) {
+        node.x = action.toPositions[i].x;
+        node.y = action.toPositions[i].y;
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+      }
+    });
+  } else if (action.type === 'resize') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    const el = document.getElementById(action.nodeId);
+    if (node && el) {
+      node.width = action.toSize.w;
+      node.height = action.toSize.h;
+      el.style.width = `${node.width}px`;
+      el.style.height = `${node.height}px`;
+    }
+  } else if (action.type === 'editText') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    const el = document.getElementById(action.nodeId);
+    if (node && el) {
+      node.text = action.newText;
+      const ta = el.querySelector('div[contenteditable]');
+      if (ta) ta.innerText = action.newText || 'Type here...';
+    }
+  } else if (action.type === 'batch') {
+    action.actions.forEach(a => applyForward(a));
+  }
+}
+
+function undo() {
+  if (historyIndex < 0) return;
+  applyReverse(undoHistory[historyIndex]);
+  historyIndex--;
+}
+
+function redo() {
+  if (historyIndex >= undoHistory.length - 1) return;
+  historyIndex++;
+  applyForward(undoHistory[historyIndex]);
+}
+
+function deleteSelected() {
+  const selected = document.querySelectorAll('.bd-item.selected');
+  if (selected.length === 0) return;
+  const actions = [];
+  selected.forEach(el => {
+    const node = nodes.find(n => n.id === el.id);
+    if (node) {
+      actions.push({ type: 'delete', nodeId: node.id, nodeData: JSON.parse(JSON.stringify(node)) });
+      removeNodeById(node.id);
+    }
+  });
+  if (actions.length === 1) pushAction(actions[0]);
+  else if (actions.length > 1) pushAction({ type: 'batch', actions });
+}
+
+function cutSelected() {
+  const selected = document.querySelectorAll('.bd-item.selected');
+  if (selected.length === 0) return;
+  // Copy data to clipboard as JSON
+  const cutData = [];
+  selected.forEach(el => {
+    const node = nodes.find(n => n.id === el.id);
+    if (node) cutData.push(JSON.parse(JSON.stringify(node)));
+  });
+  navigator.clipboard.writeText(JSON.stringify(cutData)).catch(() => {});
+  deleteSelected();
+}
+
+function copySelected() {
+  const selected = document.querySelectorAll('.bd-item.selected');
+  if (selected.length === 0) return;
+  // Copy data to clipboard as JSON
+  const copyData = [];
+  selected.forEach(el => {
+    const node = nodes.find(n => n.id === el.id);
+    if (node) copyData.push(JSON.parse(JSON.stringify(node)));
+  });
+  navigator.clipboard.writeText(JSON.stringify(copyData)).catch(() => {});
+}
+
 // Apply Camera Transform
 function updateTransform() {
   canvas.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.z})`;
@@ -34,10 +191,20 @@ function screenToCanvas(x, y) {
   };
 }
 
+// Generate zoom-scaled pen cursor
+function getDrawCursor() {
+  const r = Math.min(Math.max(Math.round(4 * camera.z / 2), 3), 20);
+  const size = r * 2 + 4;
+  const cx = size / 2;
+  return `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="%233fdaca" stroke-width="1.5"/><circle cx="${cx}" cy="${cx}" r="1" fill="%233fdaca"/></svg>') ${cx} ${cx}, crosshair`;
+}
+
 // Handle Mouse & Touch Pan/Zoom
 viewport.addEventListener("wheel", (e) => {
   e.preventDefault(); // Default to zoom for all scroll actions
-  const zoomAmount = e.deltaY * -0.002;
+  // Trackpad pinch-to-zoom sends ctrlKey with small deltaY — use a larger multiplier
+  const sensitivity = e.ctrlKey ? -0.016 : -0.002;
+  const zoomAmount = e.deltaY * sensitivity;
   const newZ = Math.min(Math.max(camera.z + zoomAmount * camera.z, 0.1), 3);
   
   const rect = viewport.getBoundingClientRect();
@@ -51,6 +218,7 @@ viewport.addEventListener("wheel", (e) => {
   camera.y -= dy;
   camera.z = newZ;
   updateTransform();
+  if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
 }, { passive: false });
 
 let initialPinchDistance = null;
@@ -84,7 +252,7 @@ viewport.addEventListener("touchmove", (e) => {
     const dy = e.touches[0].clientY - e.touches[1].clientY;
     const distance = Math.hypot(dx, dy);
     let scale = distance / initialPinchDistance;
-    scale = 1 + (scale - 1) * 2.0; // 100% faster pinch zoom (x2)
+    scale = 1 + (scale - 1) * 8.0; // 4x faster pinch zoom
     camera.z = Math.min(Math.max(initialCameraZ * scale, 0.1), 5);
     updateTransform();
   } else if (e.touches.length === 1) {
@@ -106,19 +274,28 @@ viewport.addEventListener("touchend", () => {
   if (isDrawing) stopDrawing();
 });
 
-// Global middle click pan
+// Global middle-click, right-click, and pan-tool panning
 window.addEventListener("pointerdown", (e) => {
   const isItem = e.target.closest ? e.target.closest(".bd-item") : false;
   const isToolbar = e.target.closest ? e.target.closest(".braindump-toolbar") : false;
   const isBackgroundClick = !isItem && !isToolbar;
-  if (e.button === 1 || (e.button === 0 && isBackgroundClick && activeTool !== "draw" && activeTool !== "select" && !e.shiftKey)) {
+  // Middle-click or right-click anywhere, OR left-click with pan tool active
+  const shouldPan = e.button === 1 || e.button === 2 ||
+    (e.button === 0 && activeTool === "pan" && !isToolbar);
+  if (shouldPan) {
     if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
       e.preventDefault();
     }
     isPanning = true;
     startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
+    viewport.dataset.cursorBeforePan = viewport.style.cursor;
     viewport.style.cursor = "grabbing";
   }
+});
+
+// Prevent context menu on the viewport so right-click can pan
+viewport.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
 });
 
 viewport.addEventListener("mousedown", (e) => {
@@ -153,7 +330,11 @@ viewport.addEventListener("mousedown", (e) => {
       selectionBox.style.width = `0px`;
       selectionBox.style.height = `0px`;
       selectionBox.style.display = "block";
-    } else if (activeTool !== "pan" && activeTool !== "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
+    } else if (activeTool === "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
+      let pos = screenToCanvas(e.clientX, e.clientY);
+      createNode("text", pos.x, pos.y, { text: "", width: 250, height: 150 });
+      setActiveTool("select");
+    } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       let pos = screenToCanvas(e.clientX, e.clientY);
       createNode(activeTool, pos.x, pos.y);
       setActiveTool("select");
@@ -187,9 +368,15 @@ window.addEventListener("pointermove", (e) => {
 });
 
 window.addEventListener("pointerup", (e) => {
-  isPanning = false;
-  if (activeTool === "pan") viewport.style.cursor = "grab";
-  else if (activeTool !== "draw") viewport.style.cursor = "default";
+  if (isPanning) {
+    isPanning = false;
+    // Restore cursor to the tool's correct cursor
+    if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
+    else if (activeTool === "pan") viewport.style.cursor = "grab";
+    else viewport.style.cursor = "default";
+  } else {
+    isPanning = false;
+  }
   
   if (isDrawing) stopDrawing();
   
@@ -211,6 +398,13 @@ window.addEventListener("pointerup", (e) => {
 // Shortcuts
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
+  // Undo/Redo/Cut/Copy/Delete
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') { e.preventDefault(); cutSelected(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') { copySelected(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); return; }
+  
   if (e.key === "p" || e.key === "P") setActiveTool("draw");
   if (e.key === "t" || e.key === "T") setActiveTool("text");
   if (e.key === "v" || e.key === "V") setActiveTool("select");
@@ -229,7 +423,10 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "Space" && viewport.dataset.prevTool) {
     setActiveTool(viewport.dataset.prevTool);
     viewport.dataset.prevTool = "";
-    if (!isPanning && activeTool !== "pan") viewport.style.cursor = "default";
+    if (!isPanning) {
+      if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
+      else if (activeTool !== "pan") viewport.style.cursor = "default";
+    }
   }
 });
 
@@ -241,7 +438,7 @@ function setActiveTool(tool) {
     btn.classList.toggle("active", btn.dataset.tool === tool);
   });
   viewport.dataset.mode = tool;
-  if (tool === "draw") viewport.style.cursor = "crosshair";
+  if (tool === "draw") viewport.style.cursor = getDrawCursor();
   else if (tool === "pan") viewport.style.cursor = "grab";
   else viewport.style.cursor = "default";
 }
@@ -274,15 +471,21 @@ if (fileInput) {
 
 function exportCanvas() {
   const state = { nodes, edges };
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const jsonStr = JSON.stringify(state, null, 2);
+  // Use octet-stream to force download in all browsers including Chrome
+  const blob = new Blob([jsonStr], { type: "application/octet-stream" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = "braindump.canvas";
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Delay cleanup so browser has time to initiate the download
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
 }
 
 // Drawing logic
@@ -291,8 +494,8 @@ function startDrawing(x, y) {
   isDrawing = true;
   let pos = screenToCanvas(x, y);
   lastDrawPoint = pos;
-  minX = maxY = pos.x;
-  minY = maxY = pos.y;
+  minX = pos.x; maxX = pos.x;
+  minY = pos.y; maxY = pos.y;
   currentPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
   currentPathData = `M ${pos.x} ${pos.y}`;
   currentPath.setAttribute("d", currentPathData);
@@ -377,6 +580,10 @@ function createNode(type, x, y, data = {}) {
 
   nodes.push(nodeObj);
   renderNode(nodeObj);
+  // Record in undo history (skip during load)
+  if (!isLoadingState) {
+    pushAction({ type: 'create', nodeId: nodeObj.id, nodeData: JSON.parse(JSON.stringify(nodeObj)) });
+  }
   return nodeObj;
 }
 
@@ -398,11 +605,16 @@ function renderNode(nodeObj) {
     // Drag logic
     let isDragging = false;
     let dragStart = {x:0, y:0};
+    let dragStartPositions = []; // For undo tracking
     
     el.addEventListener("mousedown", (e) => {
-      if (activeTool !== "select" && activeTool !== "pan") return;
+      // Pan tool should never drag items — panning is handled globally
+      if (activeTool === "pan") return;
+      if (activeTool !== "select") return;
       if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
       if (e.target.classList.contains("resize-handle")) return; // handled separately
+      // Don't start drag if clicking inside an active contenteditable
+      if (e.target.isContentEditable && document.activeElement === e.target) return;
       
       e.stopPropagation();
       isDragging = true;
@@ -412,6 +624,13 @@ function renderNode(nodeObj) {
         document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
       }
       el.classList.add("selected");
+      
+      // Capture start positions for undo
+      dragStartPositions = [];
+      document.querySelectorAll('.bd-item.selected').forEach(selEl => {
+        const selNode = nodes.find(n => n.id === selEl.id);
+        if (selNode) dragStartPositions.push({ id: selNode.id, x: selNode.x, y: selNode.y });
+      });
     });
     
     window.addEventListener("mousemove", (e) => {
@@ -434,14 +653,34 @@ function renderNode(nodeObj) {
     });
     
     window.addEventListener("mouseup", () => {
+      if (isDragging && dragStartPositions.length > 0) {
+        // Check if anything actually moved
+        const movedIds = [];
+        const fromPos = [];
+        const toPos = [];
+        dragStartPositions.forEach(sp => {
+          const node = nodes.find(n => n.id === sp.id);
+          if (node && (Math.abs(node.x - sp.x) > 0.5 || Math.abs(node.y - sp.y) > 0.5)) {
+            movedIds.push(sp.id);
+            fromPos.push({ x: sp.x, y: sp.y });
+            toPos.push({ x: node.x, y: node.y });
+          }
+        });
+        if (movedIds.length > 0) {
+          pushAction({ type: 'move', nodeIds: movedIds, fromPositions: fromPos, toPositions: toPos });
+        }
+        dragStartPositions = [];
+      }
       isDragging = false;
     });
 
     // Resize logic
     let isResizing = false;
+    let resizeStartSize = { w: 0, h: 0 };
     handle.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       isResizing = true;
+      resizeStartSize = { w: nodeObj.width, h: nodeObj.height };
       document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
       el.classList.add("selected");
     });
@@ -464,6 +703,12 @@ function renderNode(nodeObj) {
     });
     
     window.addEventListener("mouseup", () => {
+      if (isResizing) {
+        // Push resize action if size actually changed
+        if (Math.abs(nodeObj.width - resizeStartSize.w) > 0.5 || Math.abs(nodeObj.height - resizeStartSize.h) > 0.5) {
+          pushAction({ type: 'resize', nodeId: nodeObj.id, fromSize: resizeStartSize, toSize: { w: nodeObj.width, h: nodeObj.height } });
+        }
+      }
       isResizing = false;
     });
   }
@@ -497,14 +742,26 @@ function renderNode(nodeObj) {
         ta.style.textAlign = "center";
         ta.style.wordBreak = "break-word";
         ta.addEventListener("input", (e) => nodeObj.text = e.target.innerText);
-        ta.addEventListener("mousedown", (e) => e.stopPropagation()); // Allow clicking into text natively
+        // Only stop propagation when actively editing (contenteditable=true)
+        ta.addEventListener("mousedown", (e) => {
+          if (ta.contentEditable === "true") e.stopPropagation();
+        });
         ta.contentEditable = "false";
         el.addEventListener("dblclick", () => {
+          ta.dataset.undoText = nodeObj.text;
           ta.contentEditable = "true";
           ta.focus();
         });
-        el.addEventListener("mousedown", () => {
-          if (document.activeElement !== ta) ta.contentEditable = "false";
+        // Clicking outside or single-clicking deactivates text editing
+        document.addEventListener("pointerdown", (e) => {
+          if (!el.contains(e.target)) {
+            if (ta.contentEditable === "true") {
+              ta.contentEditable = "false";
+              if (ta.dataset.undoText !== undefined && ta.dataset.undoText !== nodeObj.text) {
+                pushAction({ type: 'editText', nodeId: nodeObj.id, oldText: ta.dataset.undoText, newText: nodeObj.text });
+              }
+            }
+          }
         });
         
         el.insertBefore(ta, el.firstChild);
@@ -516,7 +773,7 @@ function renderNode(nodeObj) {
   } else if (nodeObj.type === "file") {
     let img = el.querySelector("img");
     if (!img) {
-      el.insertAdjacentHTML("afterbegin", `<img src="${nodeObj.file}" alt="file preview">`);
+      el.insertAdjacentHTML("afterbegin", `<img src="${nodeObj.file}" draggable="false" alt="file preview">`);
       img = el.querySelector("img");
       img.onload = () => {
         let naturalRatio = img.naturalWidth / img.naturalHeight;
@@ -548,7 +805,7 @@ function renderNode(nodeObj) {
                   el.querySelector(".bd-bookmark-desc").textContent = data.data.description;
                 }
                 if (data.data.image && data.data.image.url && !el.querySelector(".bd-bookmark-image")) {
-                  el.insertAdjacentHTML("afterbegin", `<img class="bd-bookmark-image" src="${data.data.image.url}">`);
+                  el.insertAdjacentHTML("afterbegin", `<img class="bd-bookmark-image" src="${data.data.image.url}" draggable="false">`);
                   if(!nodeObj.hasAdjustedRatio) {
                     nodeObj.height += 160; 
                     nodeObj.hasAdjustedRatio = true;
@@ -572,6 +829,40 @@ document.addEventListener("paste", (e) => {
   // Handle text / URL
   let textMatch = (e.clipboardData.getData("text") || e.clipboardData.getData("text/plain") || "").trim();
   if (textMatch) {
+    // Check if this is internal copied node data from the whiteboard
+    try {
+      if (textMatch.trim().startsWith("[{")) {
+        const parsed = JSON.parse(textMatch);
+        if (Array.isArray(parsed) && parsed[0] && parsed[0].id && parsed[0].type) {
+          const anchorX = parsed[0].x;
+          const anchorY = parsed[0].y;
+          const actions = [];
+          
+          isLoadingState = true;
+          parsed.forEach(n => {
+            let type = n.type === "text" && n.text?.includes("<svg") ? "draw" : n.type;
+            if (type === "file") type = "image";
+            
+            const offsetX = n.x - anchorX;
+            const offsetY = n.y - anchorY;
+            delete n.id; // generate new ID to avoid collisions
+            delete n.x;  // Delete original coordinates so createNode doesn't overwrite our new positions
+            delete n.y;
+            
+            let newNode = createNode(type, pos.x + offsetX, pos.y + offsetY, n);
+            actions.push({ type: 'create', nodeId: newNode.id, nodeData: JSON.parse(JSON.stringify(newNode)) });
+          });
+          isLoadingState = false;
+          
+          if (actions.length > 0) {
+            pushAction({ type: 'batch', actions: actions });
+          }
+          return;
+        }
+      }
+    } catch(e) {}
+    
+    // Regular text / URL paste
     const urlRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/i;
     if (textMatch.match(urlRegex) && !textMatch.includes(" ")) {
       if (!textMatch.startsWith("http")) textMatch = "https://" + textMatch;
@@ -600,6 +891,7 @@ document.addEventListener("paste", (e) => {
 
 // Load & Save
 function loadState(data) {
+  isLoadingState = true;
   canvas.querySelectorAll(".bd-item").forEach(n => n.remove());
   svgLayer.innerHTML = "";
   nodes = [];
@@ -615,6 +907,7 @@ function loadState(data) {
       else createNode(n.type, n.x, n.y, n);
     });
   }
+  isLoadingState = false;
 }
 
 async function loadBoard() {

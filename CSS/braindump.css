@@ -3,10 +3,17 @@
 .page-braindump {
   overflow: hidden !important;
   scrollbar-width: none !important;
+  scrollbar-gutter: auto !important;
 }
 
 .page-braindump::-webkit-scrollbar {
   display: none !important;
+}
+
+.page-braindump html,
+html.page-braindump,
+html:has(body.page-braindump) {
+  scrollbar-gutter: auto !important;
 }
 
 .page-braindump .main-shell {
@@ -48,9 +55,7 @@
   cursor: grabbing;
 }
 
-.braindump-viewport[data-mode="draw"] {
-  cursor: crosshair;
-}
+
 
 .braindump-canvas {
   position: absolute;
@@ -59,7 +64,6 @@
   width: 0;
   height: 0;
   transform-origin: 0 0;
-  will-change: transform;
 }
 
 #braindump-svg-layer {
@@ -68,6 +72,7 @@
   left: 0;
   overflow: visible;
   pointer-events: none;
+  z-index: 500;
 }
 
 #braindump-svg-layer path {
@@ -155,9 +160,13 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  outline: none !important;
   backdrop-filter: none !important;
   padding: 0 !important;
+}
+
+.bd-item.bd-layer-draw.selected {
+  outline: 2px dashed #3fdaca !important;
+  outline-offset: 2px;
 }
 
 /* Bookmark & Page Components */
