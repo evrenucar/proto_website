@@ -29,7 +29,7 @@ prioritize top to bottom.
 
 (Fixed_ISSUE)- when I zoom in text and images are blurry. Why is that
 
-(Fixed_ISSUE)- When I drah a photo if I clicked on the photo it doesn't move it around but it acts as if its dragging the image to drag and drop. That should be fixed
+(Fixed_ISSUE)- When I drah a photo if I clicked on the photo it doesn't move it around but it acts as if its dragging the image to drag and drop. That should be fixed (Also fixed for bookmark links!)
 
 (Fixed_ISSUE)- when I zoom pen pointer should match the size of the drawn line. When I zoom out the circle is still very big.
 

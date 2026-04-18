@@ -792,7 +792,7 @@ function renderNode(nodeObj) {
         <div class="bd-bookmark-content" style="display:flex; flex-direction:column; gap:4px">
           <h3 class="bd-bookmark-title">Link Preview</h3>
           <p class="bd-bookmark-desc" style="font-size:12px;opacity:0.7;margin:0"></p>
-          <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank">${nodeObj.url || '#'}</a>
+          <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank" draggable="false">${nodeObj.url || '#'}</a>
         </div>
         `);
         
