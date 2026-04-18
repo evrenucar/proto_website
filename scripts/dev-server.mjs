@@ -40,7 +40,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Static file serving
-  let filePath = path.join(rootDir, req.url === "/" ? "index.html" : req.url);
+  const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
+  let filePath = path.join(rootDir, parsedUrl.pathname === "/" ? "index.html" : parsedUrl.pathname);
   const ext = path.extname(filePath);
   const contentType = mimeTypes[ext] || "application/octet-stream";
 

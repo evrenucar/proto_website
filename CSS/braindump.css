@@ -1,11 +1,17 @@
 /* CSS exclusively for the Braindump Whiteboard page */
 
 .page-braindump {
-  overflow: hidden;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+}
+
+.page-braindump::-webkit-scrollbar {
+  display: none !important;
 }
 
 .page-braindump .main-shell {
-  padding-right: 0;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   display: block;
   height: 100vh;
 }
@@ -24,11 +30,12 @@
 }
 
 .braindump-viewport {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0; 
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
   overflow: hidden;
   background-color: #151515;
   background-image: radial-gradient(#333 1px, transparent 1px);
@@ -105,7 +112,7 @@
 }
 
 /* Text Component */
-.bd-layer-card {
+.bd-layer-text {
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   border: 1px solid #343434;
@@ -117,7 +124,7 @@
   justify-content: center;
 }
 
-.bd-layer-card textarea {
+.bd-layer-text textarea {
   width: 100%;
   height: 100%;
   background: transparent;
@@ -131,16 +138,26 @@
 }
 
 /* Image Component */
-.bd-layer-image {
+.bd-layer-image, .bd-layer-file {
   border-radius: 6px;
   overflow: hidden;
 }
 
-.bd-layer-image img {
+.bd-layer-image img, .bd-layer-file img {
   display: block;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  object-fit: fill;
+}
+
+.bd-item.bd-layer-draw {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
 }
 
 /* Bookmark & Page Components */
@@ -159,8 +176,8 @@
 
 .bd-auto-size-content {
   box-sizing: border-box;
-  width: max-content !important;
-  height: max-content !important;
+  width: max-content;
+  height: max-content;
   min-width: 250px;
   max-width: 400px;
 }
@@ -193,7 +210,7 @@
 
 /* Toolbar */
 .braindump-toolbar {
-  position: absolute;
+  position: fixed;
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);

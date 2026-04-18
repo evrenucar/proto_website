@@ -813,30 +813,44 @@ function renderPhotographyPage(photographyData) {
 
 function renderBraindumpPage() {
   return `
-    <link rel="stylesheet" href="CSS/braindump.css">
+    <link rel="stylesheet" href="CSS/braindump.css?v=5">
     <div class="braindump-viewport" id="braindump-viewport">
       <div class="braindump-canvas" id="braindump-canvas">
         <svg id="braindump-svg-layer"></svg>
       </div>
       <div class="braindump-toolbar">
-        <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">↖️</button>
-        <button type="button" data-tool="pan" aria-label="Pan (Space)" title="Pan (Space)">✋</button>
-        <button type="button" data-tool="text" aria-label="Add Text (T)" title="Text (T)">T</button>
-        <button type="button" data-tool="draw" aria-label="Draw (P)" title="Pen (P)">✎</button>
-        <button type="button" data-tool="bookmark" aria-label="Add Bookmark (L)" title="Link (L)">🔗</button>
+        <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+        </button>
+        <button type="button" data-tool="pan" aria-label="Pan (Space)" title="Pan (Space)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heroicon-hand"><path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
+        </button>
+        <button type="button" data-tool="text" aria-label="Add Text (T)" title="Text (T)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M12 4v16M9 20h6"/></svg>
+        </button>
+        <button type="button" data-tool="draw" aria-label="Draw (P)" title="Pen (P)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        </button>
+        <button type="button" data-tool="bookmark" aria-label="Add Bookmark (L)" title="Link (L)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
         <div class="braindump-toolbar-divider"></div>
-        <button type="button" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">💾</button>
-        <button type="button" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">⬇️</button>
+        <button type="button" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        </button>
+        <button type="button" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
         <label class="braindump-file-label" aria-label="Import .canvas" title="Import (.canvas)">
           <input type="file" id="braindump-import" accept=".canvas,.json" hidden>
-          ⬆️
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </label>
       </div>
       <div id="braindump-modal" class="braindump-modal" hidden>
         <!-- Dynamic content for forms -->
       </div>
     </div>
-    <script src="JavaScript/braindump.js" defer></script>
+    <script src="JavaScript/braindump.js?v=13" defer></script>
   `;
 }
 

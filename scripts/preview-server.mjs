@@ -55,6 +55,8 @@ const server = http.createServer((request, response) => {
   createReadStream(finalPath).pipe(response);
 });
 
-server.listen(port, () => {
-  console.log(`Preview server running at http://127.0.0.1:${port}`);
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Preview server running at http://0.0.0.0:${port}`);
+  console.log(`Local Access: http://127.0.0.1:${port}`);
+  console.log(`Network Access: http://192.168.2.18:${port}`);
 });

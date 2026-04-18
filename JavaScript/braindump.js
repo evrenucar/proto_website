@@ -37,8 +37,8 @@ function screenToCanvas(x, y) {
 // Handle Mouse & Touch Pan/Zoom
 viewport.addEventListener("wheel", (e) => {
   e.preventDefault(); // Default to zoom for all scroll actions
-  const zoomAmount = e.deltaY * -0.01;
-  const newZ = Math.min(Math.max(camera.z + zoomAmount * camera.z, 0.1), 5);
+  const zoomAmount = e.deltaY * -0.002;
+  const newZ = Math.min(Math.max(camera.z + zoomAmount * camera.z, 0.1), 3);
   
   const rect = viewport.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
@@ -83,7 +83,8 @@ viewport.addEventListener("touchmove", (e) => {
     const dx = e.touches[0].clientX - e.touches[1].clientX;
     const dy = e.touches[0].clientY - e.touches[1].clientY;
     const distance = Math.hypot(dx, dy);
-    const scale = distance / initialPinchDistance;
+    let scale = distance / initialPinchDistance;
+    scale = 1 + (scale - 1) * 2.0; // 100% faster pinch zoom (x2)
     camera.z = Math.min(Math.max(initialCameraZ * scale, 0.1), 5);
     updateTransform();
   } else if (e.touches.length === 1) {
@@ -105,16 +106,33 @@ viewport.addEventListener("touchend", () => {
   if (isDrawing) stopDrawing();
 });
 
+// Global middle click pan
+window.addEventListener("pointerdown", (e) => {
+  const isItem = e.target.closest ? e.target.closest(".bd-item") : false;
+  const isToolbar = e.target.closest ? e.target.closest(".braindump-toolbar") : false;
+  const isBackgroundClick = !isItem && !isToolbar;
+  if (e.button === 1 || (e.button === 0 && isBackgroundClick && activeTool !== "draw" && activeTool !== "select" && !e.shiftKey)) {
+    if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+    isPanning = true;
+    startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
+    viewport.style.cursor = "grabbing";
+  }
+});
+
 viewport.addEventListener("mousedown", (e) => {
-  if (e.button === 1 || (e.button === 0 && (e.shiftKey || activeTool === "pan"))) {
+  if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
     isPanning = true;
     startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
     viewport.style.cursor = "grabbing";
     e.preventDefault();
+  } else if (e.button === 0 && isPanning) {
+    // handled by window mousedown
   } else if (e.button === 0) {
     if (activeTool === "draw") {
       startDrawing(e.clientX, e.clientY);
-    } else if (activeTool === "select" && e.target === viewport) {
+    } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       if (!e.shiftKey) { 
         document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
       }
@@ -135,7 +153,7 @@ viewport.addEventListener("mousedown", (e) => {
       selectionBox.style.width = `0px`;
       selectionBox.style.height = `0px`;
       selectionBox.style.display = "block";
-    } else if (activeTool !== "pan" && activeTool !== "select" && e.target === viewport) {
+    } else if (activeTool !== "pan" && activeTool !== "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       let pos = screenToCanvas(e.clientX, e.clientY);
       createNode(activeTool, pos.x, pos.y);
       setActiveTool("select");
@@ -143,7 +161,12 @@ viewport.addEventListener("mousedown", (e) => {
   }
 });
 
-window.addEventListener("mousemove", (e) => {
+// Mouse position tracking for exact paste locations
+let lastMousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+window.addEventListener("pointermove", (e) => {
+  lastMousePos.x = e.clientX;
+  lastMousePos.y = e.clientY;
   if (isPanning) {
     camera.x = e.clientX - startPan.x;
     camera.y = e.clientY - startPan.y;
@@ -163,7 +186,7 @@ window.addEventListener("mousemove", (e) => {
   }
 });
 
-window.addEventListener("mouseup", (e) => {
+window.addEventListener("pointerup", (e) => {
   isPanning = false;
   if (activeTool === "pan") viewport.style.cursor = "grab";
   else if (activeTool !== "draw") viewport.style.cursor = "default";
@@ -187,7 +210,7 @@ window.addEventListener("mouseup", (e) => {
 
 // Shortcuts
 window.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
   if (e.key === "p" || e.key === "P") setActiveTool("draw");
   if (e.key === "t" || e.key === "T") setActiveTool("text");
   if (e.key === "v" || e.key === "V") setActiveTool("select");
@@ -202,10 +225,11 @@ window.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("keyup", (e) => {
-  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
   if (e.code === "Space" && viewport.dataset.prevTool) {
     setActiveTool(viewport.dataset.prevTool);
     viewport.dataset.prevTool = "";
+    if (!isPanning && activeTool !== "pan") viewport.style.cursor = "default";
   }
 });
 
@@ -262,20 +286,33 @@ function exportCanvas() {
 }
 
 // Drawing logic
+let lastDrawPoint = { x: 0, y: 0 };
 function startDrawing(x, y) {
   isDrawing = true;
   let pos = screenToCanvas(x, y);
+  lastDrawPoint = pos;
   minX = maxY = pos.x;
   minY = maxY = pos.y;
   currentPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
   currentPathData = `M ${pos.x} ${pos.y}`;
   currentPath.setAttribute("d", currentPathData);
+  currentPath.setAttribute("fill", "none");
+  currentPath.setAttribute("stroke", "#3fdaca");
+  currentPath.setAttribute("stroke-width", "4");
+  currentPath.setAttribute("stroke-linecap", "round");
+  currentPath.setAttribute("stroke-linejoin", "round");
   svgLayer.appendChild(currentPath);
 }
 
 function draw(x, y) {
   if (!isDrawing || !currentPath) return;
   let pos = screenToCanvas(x, y);
+  
+  // Throttle points to reduce DOM repaints and lag
+  let dist = Math.hypot(pos.x - lastDrawPoint.x, pos.y - lastDrawPoint.y);
+  if (dist < 4 / camera.z) return;
+  lastDrawPoint = pos;
+
   minX = Math.min(minX, pos.x); maxX = Math.max(maxX, pos.x);
   minY = Math.min(minY, pos.y); maxY = Math.max(maxY, pos.y);
   currentPathData += ` L ${pos.x} ${pos.y}`;
@@ -292,7 +329,7 @@ function stopDrawing() {
     createNode("text", minX - 5, minY - 5, { 
       width: w + 10, 
       height: h + 10, 
-      text: `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><path d="${currentPathData}"></path></svg>` 
+      text: `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><path d="${currentPathData}" fill="none" stroke="#3fdaca" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>` 
     });
     svgLayer.removeChild(currentPath);
   }
@@ -411,10 +448,17 @@ function renderNode(nodeObj) {
     
     window.addEventListener("mousemove", (e) => {
       if (!isResizing) return;
-      nodeObj.width += e.movementX / camera.z;
-      nodeObj.height += e.movementY / camera.z;
-      nodeObj.width = Math.max(nodeObj.width, 50);
-      nodeObj.height = Math.max(nodeObj.height, 50);
+      let deltaX = e.movementX / camera.z;
+      let deltaY = e.movementY / camera.z;
+      if (nodeObj.type === "file") {
+        let ratio = nodeObj.width / nodeObj.height;
+        let newWidth = Math.max(nodeObj.width + deltaX, 50);
+        nodeObj.width = newWidth;
+        nodeObj.height = newWidth / ratio;
+      } else {
+        nodeObj.width = Math.max(nodeObj.width + deltaX, 50);
+        nodeObj.height = Math.max(nodeObj.height + deltaY, 50);
+      }
       el.style.width = `${nodeObj.width}px`;
       el.style.height = `${nodeObj.height}px`;
     });
@@ -433,57 +477,105 @@ function renderNode(nodeObj) {
     if (nodeObj.text && nodeObj.text.includes("<svg")) {
       el.innerHTML = nodeObj.text;
       el.appendChild(el.querySelector(".resize-handle") || document.createElement("div"));
+      el.classList.remove("bd-layer-text");
       el.classList.add("bd-layer-draw");
       el.style.background = "transparent";
       el.style.border = "none";
     } else {
-      let ta = el.querySelector("textarea");
+      let ta = el.querySelector("div[contenteditable]");
       if (!ta) {
-        ta = document.createElement("textarea");
-        ta.placeholder = "Type here...";
-        ta.addEventListener("input", (e) => nodeObj.text = e.target.value);
+        ta = document.createElement("div");
+        ta.contentEditable = "true";
+        // Inline styles to match the centered opaque look for text boxes without relying on textarea limits
+        ta.style.width = "100%";
+        ta.style.height = "100%";
+        ta.style.outline = "none";
+        ta.style.overflow = "hidden";
+        ta.style.display = "flex";
+        ta.style.alignItems = "center";
+        ta.style.justifyContent = "center";
+        ta.style.textAlign = "center";
+        ta.style.wordBreak = "break-word";
+        ta.addEventListener("input", (e) => nodeObj.text = e.target.innerText);
+        ta.addEventListener("mousedown", (e) => e.stopPropagation()); // Allow clicking into text natively
+        ta.contentEditable = "false";
+        el.addEventListener("dblclick", () => {
+          ta.contentEditable = "true";
+          ta.focus();
+        });
+        el.addEventListener("mousedown", () => {
+          if (document.activeElement !== ta) ta.contentEditable = "false";
+        });
+        
         el.insertBefore(ta, el.firstChild);
       }
-      ta.value = nodeObj.text || "";
+      if (document.activeElement !== ta) {
+        ta.innerText = nodeObj.text || "Type here...";
+      }
     }
   } else if (nodeObj.type === "file") {
     let img = el.querySelector("img");
     if (!img) {
       el.insertAdjacentHTML("afterbegin", `<img src="${nodeObj.file}" alt="file preview">`);
+      img = el.querySelector("img");
+      img.onload = () => {
+        let naturalRatio = img.naturalWidth / img.naturalHeight;
+        if (!nodeObj.hasAdjustedRatio) {
+           nodeObj.width = Math.min(img.naturalWidth, 400);
+           nodeObj.height = nodeObj.width / naturalRatio;
+           nodeObj.hasAdjustedRatio = true;
+           el.style.width = `${nodeObj.width}px`;
+           el.style.height = `${nodeObj.height}px`;
+        }
+      };
     }
   } else if (nodeObj.type === "link") {
-    // Basic Open Graph fetch using a free proxy endpoint or native simple title.
-    // Since static site avoids backend, we render simple UI that users can click
     if (!el.querySelector(".bd-bookmark-title")) {
         el.insertAdjacentHTML("afterbegin", `
-        <h3 class="bd-bookmark-title">Link Preview</h3>
-        <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank">${nodeObj.url || '#'}</a>
+        <div class="bd-bookmark-content" style="display:flex; flex-direction:column; gap:4px">
+          <h3 class="bd-bookmark-title">Link Preview</h3>
+          <p class="bd-bookmark-desc" style="font-size:12px;opacity:0.7;margin:0"></p>
+          <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank">${nodeObj.url || '#'}</a>
+        </div>
         `);
-    }
-    if (!nodeObj.url) {
-      let url = prompt("Enter URL:");
-      if (url) {
-        nodeObj.url = url;
-        el.querySelector("a").textContent = url;
-        el.querySelector("a").href = url;
-      }
+        
+        fetch(`https://api.microlink.io/?url=${encodeURIComponent(nodeObj.url)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === "success" && data.data) {
+                el.querySelector(".bd-bookmark-title").textContent = data.data.title || "Link Preview";
+                if (data.data.description && el.querySelector(".bd-bookmark-desc")) {
+                  el.querySelector(".bd-bookmark-desc").textContent = data.data.description;
+                }
+                if (data.data.image && data.data.image.url && !el.querySelector(".bd-bookmark-image")) {
+                  el.insertAdjacentHTML("afterbegin", `<img class="bd-bookmark-image" src="${data.data.image.url}">`);
+                  if(!nodeObj.hasAdjustedRatio) {
+                    nodeObj.height += 160; 
+                    nodeObj.hasAdjustedRatio = true;
+                    el.style.height = `${nodeObj.height}px`;
+                  }
+                }
+            }
+          }).catch(err => console.log(err));
     }
   }
 }
 
 // Paste Handling
-window.addEventListener("paste", (e) => {
-  // Center of viewport in canvas coords
-  const rect = viewport.getBoundingClientRect();
-  const vcw = rect.width / 2;
-  const vch = rect.height / 2;
-  let pos = screenToCanvas(rect.left + vcw, rect.top + vch);
+document.addEventListener("paste", (e) => {
+  if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.hasAttribute("contenteditable")) {
+    return; // Don't intercept if they're actively typing !
+  }
+  // Track paste location to last mouse coordinate
+  let pos = screenToCanvas(lastMousePos.x, lastMousePos.y);
   
   // Handle text / URL
-  let textMatch = e.clipboardData.getData("text/plain");
+  let textMatch = (e.clipboardData.getData("text") || e.clipboardData.getData("text/plain") || "").trim();
   if (textMatch) {
-    if (textMatch.match(/^https?:\/\/.+$/)) {
-      createNode("link", pos.x, pos.y, { url: textMatch, width: 300, height: 120 });
+    const urlRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/i;
+    if (textMatch.match(urlRegex) && !textMatch.includes(" ")) {
+      if (!textMatch.startsWith("http")) textMatch = "https://" + textMatch;
+      createNode("bookmark", pos.x, pos.y, { url: textMatch, width: 300, height: 120 });
     } else {
       createNode("text", pos.x, pos.y, { text: textMatch, width: 300, height: 200 });
     }

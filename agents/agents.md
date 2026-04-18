@@ -52,3 +52,4 @@ Use the user's updated background where relevant:
 - Lightweight static generation is acceptable.
 - Future Notion sync support is acceptable as long as it does not change the visible design too much.
 - Always verify visual changes with Playwright before closing work.
+- CRITICAL RULE: Everytime you add a new feature, you MUST TEST it in the browser (using browser subagent if applicable) before proceeding!
