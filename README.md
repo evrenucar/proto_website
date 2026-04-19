@@ -38,7 +38,13 @@ Each manifest entry can control:
 
 The page title, long-form content, media, and last-updated time are pulled from the public shared Notion page itself.
 
+The public page can come from any Notion account or workspace, as long as the page link is public.
+
 No Notion token is required.
+
+The GitHub Action also runs `sync:notion` and `build` automatically on pushes to `main`, manual dispatch, and every hour on a schedule.
+
+The sync script now does a lightweight metadata check first and reuses cached rendered content when a Notion page `last_edited_time` has not changed.
 
 ## Commands
 

@@ -6,6 +6,12 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+concurrency:
+  group: build-site-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write

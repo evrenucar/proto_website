@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +8,7 @@ const rootDir = path.resolve(__dirname, "..");
 const sourcePath = path.join(rootDir, "src", "notion-public-pages.json");
 const outputPath = path.join(rootDir, "src", "notion-items.json");
 const notionAssetsDir = path.join(rootDir, "notion_assets");
+const syncCacheVersion = 1;
 
 function slugify(value) {
   return String(value || "")
@@ -179,6 +180,14 @@ async function notionRequest(endpoint, body) {
   return data;
 }
 
+async function removeAssetDirectory(slug) {
+  if (!slug) {
+    return;
+  }
+
+  await rm(path.join(notionAssetsDir, slug), { recursive: true, force: true });
+}
+
 function mergeRecordMaps(baseRecordMap, nextRecordMap) {
   if (!nextRecordMap) {
     return baseRecordMap;
@@ -261,6 +270,20 @@ async function loadPageRecordMap(pageId) {
   }
 
   return recordMap;
+}
+
+async function loadPageMetaBlock(pageId) {
+  const synced = await notionRequest("syncRecordValues", {
+    requests: [
+      {
+        table: "block",
+        id: pageId,
+        version: -1
+      }
+    ]
+  });
+
+  return getBlock(synced.recordMap || {}, pageId);
 }
 
 async function getSignedFileUrl(blockId, source) {
@@ -624,45 +647,53 @@ async function renderBlocks(recordMap, blockIds, context) {
   return html;
 }
 
-async function buildItem(entry) {
+async function removeGeneratedNotionOutput() {
+  await Promise.all([
+    rm(outputPath, { force: true }),
+    rm(notionAssetsDir, { recursive: true, force: true })
+  ]);
+}
+
+function getCachedSourceData(item) {
+  const cache = item?.syncCache;
+
+  if (!cache || typeof cache !== "object") {
+    return null;
+  }
+
+  const pageId = String(cache.pageId || parseNotionPageId(item?.sharedUrl || "")).trim();
+
+  if (!pageId) {
+    return null;
+  }
+
+  return {
+    pageId,
+    assetSlug: String(cache.assetSlug || item?.slug || "").trim(),
+    notionTitle: String(cache.notionTitle || "").trim(),
+    notionSummary: String(cache.notionSummary || ""),
+    notionImage: String(cache.notionImage || ""),
+    contentHtml: String(cache.contentHtml || "")
+  };
+}
+
+function buildItemFromSource(entry, sourceData) {
   const sharedUrl = entry.url || entry.sharedUrl || "";
-  const pageId = parseNotionPageId(sharedUrl);
+  const pageId = sourceData.pageId || parseNotionPageId(sharedUrl);
+  const section = normalizeSection(entry.section);
 
   if (!pageId) {
     throw new Error(`Could not parse a Notion page id from "${sharedUrl}".`);
   }
 
-  const section = normalizeSection(entry.section);
-
   if (!section) {
     throw new Error(`Entry "${sharedUrl}" is missing a valid section.`);
   }
 
-  const recordMap = await loadPageRecordMap(pageId);
-  const pageBlock = getBlock(recordMap, pageId);
-
-  if (!pageBlock) {
-    throw new Error(`Could not load the Notion page for "${sharedUrl}".`);
-  }
-
-  const title = entry.title || getPageTitle(pageBlock);
+  const title = entry.title || sourceData.notionTitle;
   const slug = slugify(entry.slug || title);
-  const summary = entry.summary || findFirstTextSnippet(recordMap, getBlockChildren(pageBlock));
-  const image =
-    entry.image ||
-    (await resolveMediaSource(
-      {
-        ...pageBlock,
-        id: pageBlock.id,
-        properties: {
-          ...pageBlock.properties,
-          source: pageBlock?.format?.page_cover ? [[pageBlock.format.page_cover]] : []
-        }
-      },
-      slug,
-      "page-cover"
-    )) ||
-    (await findFirstImage(recordMap, getBlockChildren(pageBlock), slug));
+  const summary = entry.summary || sourceData.notionSummary || "";
+  const image = entry.image || sourceData.notionImage || "";
   const actionUrl = entry.actionUrl || "";
   let actionType = normalizeActionType(entry.actionType);
   let actionLabel = entry.actionLabel || "";
@@ -699,23 +730,91 @@ async function buildItem(entry) {
     actionUrl,
     sortOrder: Number.isFinite(Number(entry.sortOrder)) ? Number(entry.sortOrder) : null,
     sharedUrl,
-    lastUpdated: formatLastUpdated(pageBlock.last_edited_time),
+    lastUpdated: sourceData.lastUpdated || "",
     detailPage: {
       title,
       description: entry.seoDescription || summary || "",
-      contentHtml: await renderBlocks(recordMap, getBlockChildren(pageBlock), {
-        slug,
-        title
-      })
+      contentHtml: sourceData.contentHtml || ""
+    },
+    syncCache: {
+      version: syncCacheVersion,
+      pageId,
+      assetSlug: sourceData.assetSlug || "",
+      notionTitle: sourceData.notionTitle || "",
+      notionSummary: sourceData.notionSummary || "",
+      notionImage: sourceData.notionImage || "",
+      contentHtml: sourceData.contentHtml || ""
     }
   };
 }
 
-async function removeGeneratedNotionOutput() {
-  await Promise.all([
-    rm(outputPath, { force: true }),
-    rm(notionAssetsDir, { recursive: true, force: true })
-  ]);
+async function buildFreshSourceData(entry, pageId) {
+  const recordMap = await loadPageRecordMap(pageId);
+  const pageBlock = getBlock(recordMap, pageId);
+
+  if (!pageBlock) {
+    throw new Error(`Could not load the Notion page for "${entry.url || entry.sharedUrl || ""}".`);
+  }
+
+  const notionTitle = getPageTitle(pageBlock);
+  const effectiveTitle = entry.title || notionTitle;
+  const assetSlug = slugify(entry.slug || effectiveTitle);
+
+  await removeAssetDirectory(assetSlug);
+
+  const notionSummary = findFirstTextSnippet(recordMap, getBlockChildren(pageBlock));
+  const notionImage =
+    (await resolveMediaSource(
+      {
+        ...pageBlock,
+        id: pageBlock.id,
+        properties: {
+          ...pageBlock.properties,
+          source: pageBlock?.format?.page_cover ? [[pageBlock.format.page_cover]] : []
+        }
+      },
+      assetSlug,
+      "page-cover"
+    )) || (await findFirstImage(recordMap, getBlockChildren(pageBlock), assetSlug));
+
+  return {
+    pageId,
+    assetSlug,
+    lastUpdated: formatLastUpdated(pageBlock.last_edited_time),
+    notionTitle,
+    notionSummary,
+    notionImage,
+    contentHtml: await renderBlocks(recordMap, getBlockChildren(pageBlock), {
+      slug: assetSlug,
+      title: effectiveTitle
+    })
+  };
+}
+
+async function cleanupUnusedAssetDirectories(currentItems) {
+  let directoryEntries = [];
+
+  try {
+    directoryEntries = await readdir(notionAssetsDir, { withFileTypes: true });
+  } catch (error) {
+    if (error && error.code !== "ENOENT") {
+      throw error;
+    }
+
+    return;
+  }
+
+  const usedAssetSlugs = new Set(
+    currentItems
+      .map((item) => item?.syncCache?.assetSlug)
+      .filter((value) => typeof value === "string" && value.trim() !== "")
+  );
+
+  await Promise.all(
+    directoryEntries
+      .filter((entry) => entry.isDirectory() && !usedAssetSlugs.has(entry.name))
+      .map((entry) => rm(path.join(notionAssetsDir, entry.name), { recursive: true, force: true }))
+  );
 }
 
 async function main() {
@@ -727,21 +826,70 @@ async function main() {
     process.exit(0);
   }
 
-  await removeGeneratedNotionOutput();
   await mkdir(notionAssetsDir, { recursive: true });
+  const previousItems = await loadJsonIfExists(outputPath);
+  const cachedItemsByPageId = new Map(
+    (Array.isArray(previousItems) ? previousItems : [])
+      .map((item) => [item?.syncCache?.pageId || parseNotionPageId(item?.sharedUrl || ""), item])
+      .filter(([pageId]) => Boolean(pageId))
+  );
 
   const items = [];
+  let reusedCount = 0;
+  let refreshedCount = 0;
 
   for (const entry of sourceEntries) {
     if (!entry || typeof entry !== "object") {
       continue;
     }
 
-    items.push(await buildItem(entry));
+    const sharedUrl = entry.url || entry.sharedUrl || "";
+    const pageId = parseNotionPageId(sharedUrl);
+
+    if (!pageId) {
+      throw new Error(`Could not parse a Notion page id from "${sharedUrl}".`);
+    }
+
+    const section = normalizeSection(entry.section);
+
+    if (!section) {
+      throw new Error(`Entry "${sharedUrl}" is missing a valid section.`);
+    }
+
+    const pageMeta = await loadPageMetaBlock(pageId);
+
+    if (!pageMeta) {
+      throw new Error(`Could not load the Notion page metadata for "${sharedUrl}".`);
+    }
+
+    const lastUpdated = formatLastUpdated(pageMeta.last_edited_time);
+    const cachedItem = cachedItemsByPageId.get(pageId);
+    const cachedSourceData = getCachedSourceData(cachedItem);
+
+    if (cachedSourceData && cachedItem?.lastUpdated === lastUpdated) {
+      items.push(
+        buildItemFromSource(entry, {
+          ...cachedSourceData,
+          pageId,
+          lastUpdated
+        })
+      );
+      reusedCount += 1;
+      continue;
+    }
+
+    items.push(await buildItemFromSource(entry, await buildFreshSourceData(entry, pageId)));
+    refreshedCount += 1;
   }
 
+  await cleanupUnusedAssetDirectories(items);
   await writeFile(outputPath, `${JSON.stringify(items, null, 2)}\n`, "utf8");
-  console.log(`Synced ${items.length} public Notion pages to ${path.relative(rootDir, outputPath)}.`);
+  console.log(
+    `Synced ${items.length} public Notion pages to ${path.relative(
+      rootDir,
+      outputPath
+    )}. Reused ${reusedCount}, refreshed ${refreshedCount}.`
+  );
 }
 
 main().catch((error) => {

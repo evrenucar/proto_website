@@ -29,6 +29,8 @@ Example:
 
 Each entry points at one public shared Notion page.
 
+That public shared page can come from any Notion account or workspace, as long as the page is publicly accessible by URL.
+
 ## Required fields
 
 - `url`
@@ -102,6 +104,29 @@ npm run build
 
 If `src/notion-public-pages.json` is missing or empty, the sync script removes old generated Notion output and exits cleanly.
 
+## Lean hourly sync
+
+The sync script now checks each public page with a lightweight metadata request first.
+
+If a page `last_edited_time` has not changed, the script reuses the cached rendered HTML and existing downloaded assets instead of pulling the full page again.
+
+That makes an hourly GitHub Actions schedule practical without re-downloading unchanged content every time.
+
 ## GitHub Action
 
-The GitHub Action runs `npm run sync:notion` on every build. No Notion token or Notion secrets are required anymore.
+The GitHub Action runs `npm run sync:notion` and `npm run build`:
+
+- on pushes to `main`
+- on pull requests
+- on manual `workflow_dispatch`
+- every hour on a schedule using GitHub Actions cron
+
+The current cron is:
+
+```yaml
+17 * * * *
+```
+
+GitHub cron uses UTC, so the scheduled sync currently runs at `:17` past every hour.
+
+No Notion token or Notion secrets are required for this public-page sync flow.
