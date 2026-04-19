@@ -3,6 +3,399 @@ const canvas = document.getElementById("braindump-canvas");
 const svgLayer = document.getElementById("braindump-svg-layer");
 const toolbarButtons = document.querySelectorAll(".braindump-toolbar button");
 const fileInput = document.getElementById("braindump-import");
+const toolbarToast = document.getElementById("braindump-toolbar-toast");
+const recommendationPanel = document.getElementById("braindump-recommend-panel");
+const recommendationSummaryInput = document.getElementById("braindump-recommend-summary");
+const recommendationSubmitButton = document.getElementById("braindump-recommend-submit");
+
+const boardConfig = {
+  slug: viewport?.dataset.boardSlug || "braindump",
+  title: viewport?.dataset.boardTitle || "Braindump",
+  sourcePath: viewport?.dataset.boardSource || "content/boards/braindump/current.canvas",
+  legacySourcePath: viewport?.dataset.boardLegacySource || "content/braindump-state.json",
+  repoPath: viewport?.dataset.boardRepoPath || "content/boards/braindump/current.canvas",
+  storageKey: viewport?.dataset.boardStorageKey || "board:braindump",
+  legacyStorageKey: viewport?.dataset.boardLegacyStorageKey || "braindump-canvas",
+  saveEndpoint: viewport?.dataset.boardSaveEndpoint || "/api/save-board",
+  allowRecommendations: viewport?.dataset.boardAllowRecommendations === "true"
+};
+
+const recommendationConfig = {
+  type: viewport?.dataset.recommendationType || "",
+  owner: viewport?.dataset.recommendationOwner || "",
+  repo: viewport?.dataset.recommendationRepo || "",
+  labels: String(viewport?.dataset.recommendationLabels || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+};
+
+let toolbarToastTimeout = null;
+let comparisonBaselineState = { nodes: [], edges: [] };
+
+function cloneState(state) {
+  return JSON.parse(JSON.stringify(state || { nodes: [], edges: [] }));
+}
+
+function setComparisonBaseline(state) {
+  comparisonBaselineState = cloneState(state);
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+      .join(",")}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function countChangedCollection(baseItems = [], currentItems = [], prefix = "item") {
+  const baseMap = new Map();
+  const currentMap = new Map();
+
+  baseItems.forEach((item, index) => {
+    const key = item?.id ? `${prefix}:${item.id}` : `${prefix}:base:${index}:${stableStringify(item)}`;
+    baseMap.set(key, stableStringify(item));
+  });
+
+  currentItems.forEach((item, index) => {
+    const key = item?.id ? `${prefix}:${item.id}` : `${prefix}:current:${index}:${stableStringify(item)}`;
+    currentMap.set(key, stableStringify(item));
+  });
+
+  const keys = new Set([...baseMap.keys(), ...currentMap.keys()]);
+  let changed = 0;
+
+  keys.forEach((key) => {
+    if (baseMap.get(key) !== currentMap.get(key)) {
+      changed += 1;
+    }
+  });
+
+  return changed;
+}
+
+function getChangedElementCount() {
+  const currentState = serializeState();
+  return (
+    countChangedCollection(comparisonBaselineState.nodes, currentState.nodes, "node") +
+    countChangedCollection(comparisonBaselineState.edges, currentState.edges, "edge")
+  );
+}
+
+function showToolbarToast(message, variant = "info") {
+  if (!toolbarToast) return;
+
+  toolbarToast.textContent = message;
+  toolbarToast.dataset.variant = variant;
+  toolbarToast.hidden = false;
+  toolbarToast.classList.add("is-visible");
+
+  if (toolbarToastTimeout) {
+    window.clearTimeout(toolbarToastTimeout);
+  }
+
+  toolbarToastTimeout = window.setTimeout(() => {
+    toolbarToast.classList.remove("is-visible");
+    toolbarToast.hidden = true;
+  }, 3200);
+}
+
+function setRecommendationPanelOpen(isOpen) {
+  if (!recommendationPanel) return;
+
+  recommendationPanel.hidden = !isOpen;
+  recommendationPanel.classList.toggle("is-open", isOpen);
+  if (isOpen) {
+    recommendationSummaryInput?.focus();
+    recommendationSummaryInput?.select();
+  }
+}
+
+function sanitizeFileSegment(value) {
+  return String(value || "board")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "board";
+}
+
+function padTimestampSegment(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatTimestamp(date = new Date()) {
+  return `${date.getFullYear()}-${padTimestampSegment(date.getMonth() + 1)}-${padTimestampSegment(date.getDate())}_${padTimestampSegment(date.getHours())}-${padTimestampSegment(date.getMinutes())}-${padTimestampSegment(date.getSeconds())}`;
+}
+
+function buildExportFilename() {
+  const boardName = sanitizeFileSegment(boardConfig.slug || boardConfig.title || document.title);
+  return `${boardName}_${formatTimestamp()}.canvas`;
+}
+
+function buildRecommendationFilename() {
+  const boardName = sanitizeFileSegment(boardConfig.slug || boardConfig.title || document.title);
+  return `${boardName}_${formatTimestamp()}.canvas.json`;
+}
+
+function getPublicPageUrl() {
+  const canonicalHref = document.querySelector('link[rel="canonical"]')?.href;
+  if (canonicalHref) {
+    return canonicalHref;
+  }
+
+  const ogUrl = document.querySelector('meta[property="og:url"]')?.content;
+  if (ogUrl) {
+    return ogUrl;
+  }
+
+  return window.location.href;
+}
+
+function getYouTubeVideoId(url) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^www\./, "");
+
+    if (hostname === "youtu.be") {
+      return parsed.pathname.slice(1) || "";
+    }
+
+    if (hostname === "youtube.com" || hostname === "m.youtube.com") {
+      if (parsed.pathname === "/watch") {
+        return parsed.searchParams.get("v") || "";
+      }
+
+      if (parsed.pathname.startsWith("/shorts/") || parsed.pathname.startsWith("/embed/")) {
+        return parsed.pathname.split("/")[2] || "";
+      }
+    }
+  } catch (error) {
+    return "";
+  }
+
+  return "";
+}
+
+function applyBookmarkPreview(nodeObj, el, preview) {
+  if (!el) return;
+
+  const titleEl = el.querySelector(".bd-bookmark-title");
+  const descEl = el.querySelector(".bd-bookmark-desc");
+  const linkEl = el.querySelector(".bd-bookmark-link");
+
+  if (preview.title) {
+    nodeObj.title = preview.title;
+    if (titleEl) titleEl.textContent = preview.title;
+  }
+
+  if (preview.description !== undefined) {
+    nodeObj.description = preview.description || "";
+    if (descEl) descEl.textContent = nodeObj.description;
+  }
+
+  if (linkEl) {
+    linkEl.href = nodeObj.url;
+    linkEl.textContent = nodeObj.url || "#";
+  }
+
+  if (preview.image) {
+    nodeObj.image = preview.image;
+    let imageEl = el.querySelector(".bd-bookmark-image");
+    if (!imageEl) {
+      el.insertAdjacentHTML(
+        "afterbegin",
+        `<img class="bd-bookmark-image" src="${nodeObj.image}" draggable="false" alt="${nodeObj.title || "Link preview"}">`
+      );
+      imageEl = el.querySelector(".bd-bookmark-image");
+      if (!nodeObj.hasAdjustedRatio) {
+        nodeObj.height += 160;
+        nodeObj.hasAdjustedRatio = true;
+        el.style.height = `${nodeObj.height}px`;
+      }
+    } else if (imageEl.getAttribute("src") !== nodeObj.image) {
+      imageEl.setAttribute("src", nodeObj.image);
+    }
+  }
+
+  persistLocalState(serializeState());
+}
+
+async function fetchBookmarkPreview(nodeObj, el) {
+  const videoId = getYouTubeVideoId(nodeObj.url);
+
+  if (videoId) {
+    const fallbackTitle = nodeObj.title || "YouTube video";
+    applyBookmarkPreview(nodeObj, el, {
+      title: fallbackTitle,
+      description: nodeObj.description || "Video recommendation",
+      image: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    });
+
+    try {
+      const response = await fetch(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(nodeObj.url)}&format=json`
+      );
+      if (!response.ok) return;
+
+      const data = await response.json();
+      applyBookmarkPreview(nodeObj, el, {
+        title: data.title || fallbackTitle,
+        description: nodeObj.description || "YouTube video",
+        image: data.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+      });
+      return;
+    } catch (error) {
+      console.warn("Failed to fetch YouTube preview", error);
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(nodeObj.url)}`);
+    const data = await response.json();
+    if (data.status !== "success" || !data.data) return;
+
+    applyBookmarkPreview(nodeObj, el, {
+      title: data.data.title || nodeObj.title || "Link Preview",
+      description: data.data.description || nodeObj.description || "",
+      image: data.data.image?.url || nodeObj.image || ""
+    });
+  } catch (error) {
+    console.warn("Failed to fetch bookmark preview", error);
+  }
+}
+
+function normalizeRecommendationSummary(value, maxLength = 50) {
+  const summary = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!summary) {
+    return "";
+  }
+
+  return summary.slice(0, maxLength).trim();
+}
+
+function buildRecommendationIssueTitle(summary) {
+  const normalizedSummary = normalizeRecommendationSummary(summary);
+  return normalizedSummary
+    ? `Recommendation: ${boardConfig.title} (${normalizedSummary})`
+    : `Recommendation: ${boardConfig.title}`;
+}
+
+function buildRecommendationIssueBody(summary, details, exportFilename) {
+  const timestamp = formatTimestamp().replace("_", " ");
+  const changedElements = getChangedElementCount();
+  const lines = [
+    "## Board",
+    boardConfig.title,
+    "",
+    "## Page",
+    getPublicPageUrl(),
+    "",
+    "## Timestamp",
+    timestamp,
+    "",
+    "## Board file",
+    exportFilename,
+    "",
+    "## Estimated changed elements",
+    String(changedElements),
+    "",
+    "## Short summary",
+    normalizeRecommendationSummary(summary) || "Describe the recommendation in one sentence.",
+    "",
+    "## Details",
+    details || "If you'd like to include further notes, add them here.",
+    "",
+    "## Attachment",
+    `Please attach the exported recommendation file \`${exportFilename}\` to this issue.`,
+    "This recommendation flow exports a `.canvas.json` file because GitHub issue attachments do not accept `.canvas` files directly.",
+    "Local import already accepts `.canvas.json` directly, so no conversion is required to bring it back into the board.",
+    "If you want to turn it back into a normal board file outside the site, remove the trailing `.json` so it ends with `.canvas`.",
+    "",
+    "## Notes",
+    "- If you already opened a recommendation issue for this board, update that issue instead of creating a new one.",
+    "- This recommendation will be reviewed before it appears on the live site."
+  ];
+
+  return lines.join("\n");
+}
+
+function buildRecommendationIssueUrl(summary, details, exportFilename) {
+  const url = new URL(
+    `https://github.com/${recommendationConfig.owner}/${recommendationConfig.repo}/issues/new`
+  );
+
+  url.searchParams.set("title", buildRecommendationIssueTitle(summary));
+  if (recommendationConfig.labels.length > 0) {
+    url.searchParams.set("labels", recommendationConfig.labels.join(","));
+  }
+  url.searchParams.set("body", buildRecommendationIssueBody(summary, details, exportFilename));
+
+  return url.toString();
+}
+
+function downloadStateFile(filename, mimeType = "application/octet-stream") {
+  const state = serializeState();
+  const jsonStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([jsonStr], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
+
+  return { filename, jsonStr };
+}
+
+function serializeState() {
+  return { nodes, edges };
+}
+
+function persistLocalState(state) {
+  const serialized = JSON.stringify(state);
+  localStorage.setItem(boardConfig.storageKey, serialized);
+  if (boardConfig.legacyStorageKey && boardConfig.legacyStorageKey !== boardConfig.storageKey) {
+    localStorage.setItem(boardConfig.legacyStorageKey, serialized);
+  }
+  return serialized;
+}
+
+function getSavedState() {
+  return (
+    localStorage.getItem(boardConfig.storageKey) ||
+    (boardConfig.legacyStorageKey ? localStorage.getItem(boardConfig.legacyStorageKey) : null)
+  );
+}
+
+async function fetchBoardState(sourcePath) {
+  if (!sourcePath) return null;
+  const response = await fetch(sourcePath, { cache: "no-store" });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+function buildSaveUrl() {
+  const url = new URL(boardConfig.saveEndpoint, window.location.origin);
+  if (boardConfig.slug) url.searchParams.set("slug", boardConfig.slug);
+  return url.toString();
+}
 
 let camera = { x: 0, y: 0, z: 1 };
 let isPanning = false;
@@ -399,6 +792,7 @@ window.addEventListener("pointerup", (e) => {
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
   // Undo/Redo/Cut/Copy/Delete
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveBoard(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') { e.preventDefault(); cutSelected(); return; }
@@ -432,7 +826,7 @@ window.addEventListener("keyup", (e) => {
 
 // Tools logic
 function setActiveTool(tool) {
-  if (tool === "export" || tool === "import" || tool === "save") return;
+  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend") return;
   activeTool = tool;
   toolbarButtons.forEach(btn => {
     btn.classList.toggle("active", btn.dataset.tool === tool);
@@ -446,9 +840,45 @@ function setActiveTool(tool) {
 toolbarButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     if (btn.dataset.tool === "save") return saveBoard();
+    if (btn.dataset.tool === "recommend") {
+      const shouldOpen = recommendationPanel?.hidden ?? true;
+      setRecommendationPanelOpen(shouldOpen);
+      return;
+    }
     if (btn.dataset.tool === "export") return exportCanvas();
     setActiveTool(btn.dataset.tool);
   });
+});
+
+if (recommendationSummaryInput) {
+  recommendationSummaryInput.addEventListener("input", () => {
+    recommendationSummaryInput.value = normalizeRecommendationSummary(recommendationSummaryInput.value);
+  });
+
+  recommendationSummaryInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitRecommendation();
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setRecommendationPanelOpen(false);
+    }
+  });
+}
+
+if (recommendationSubmitButton) {
+  recommendationSubmitButton.addEventListener("click", submitRecommendation);
+}
+
+window.addEventListener("pointerdown", (event) => {
+  if (!recommendationPanel || recommendationPanel.hidden) return;
+  const clickedRecommendButton = event.target.closest?.('[data-tool="recommend"]');
+  const clickedInsidePanel = event.target.closest?.("#braindump-recommend-panel");
+  if (!clickedRecommendButton && !clickedInsidePanel) {
+    setRecommendationPanelOpen(false);
+  }
 });
 
 if (fileInput) {
@@ -460,8 +890,11 @@ if (fileInput) {
       try {
         const data = JSON.parse(e.target.result);
         loadState(data);
+        persistLocalState(serializeState());
+        setComparisonBaseline(serializeState());
+        showToolbarToast(`Imported ${file.name}`, "success");
       } catch(err) {
-        alert("Failed to parse .canvas file");
+        showToolbarToast("Import failed. Use .canvas, .canvas.json, or .json.", "error");
       }
     };
     reader.readAsText(file);
@@ -470,22 +903,30 @@ if (fileInput) {
 }
 
 function exportCanvas() {
-  const state = { nodes, edges };
-  const jsonStr = JSON.stringify(state, null, 2);
-  // Use octet-stream to force download in all browsers including Chrome
-  const blob = new Blob([jsonStr], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "braindump.canvas";
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
-  // Delay cleanup so browser has time to initiate the download
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 200);
+  const result = downloadStateFile(buildExportFilename(), "application/octet-stream");
+  showToolbarToast(`Exported ${result.filename}`, "success");
+  return result;
+}
+
+function submitRecommendation() {
+  if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
+    showToolbarToast("Recommendations are not configured yet for this board.", "error");
+    return;
+  }
+
+  const summary = normalizeRecommendationSummary(recommendationSummaryInput?.value);
+  if (!summary) {
+    showToolbarToast("Add a short summary for the issue title.", "error");
+    recommendationSummaryInput?.focus();
+    return;
+  }
+  const recommendationFilename = buildRecommendationFilename();
+  downloadStateFile(recommendationFilename, "application/json");
+  const issueUrl = buildRecommendationIssueUrl(summary, "", recommendationFilename);
+  window.open(issueUrl, "_blank", "noopener,noreferrer");
+  setRecommendationPanelOpen(false);
+  if (recommendationSummaryInput) recommendationSummaryInput.value = "";
+  showToolbarToast(`Exported ${recommendationFilename} and opened the GitHub issue.`, "success");
 }
 
 // Drawing logic
@@ -790,30 +1231,27 @@ function renderNode(nodeObj) {
     if (!el.querySelector(".bd-bookmark-title")) {
         el.insertAdjacentHTML("afterbegin", `
         <div class="bd-bookmark-content" style="display:flex; flex-direction:column; gap:4px">
-          <h3 class="bd-bookmark-title">Link Preview</h3>
-          <p class="bd-bookmark-desc" style="font-size:12px;opacity:0.7;margin:0"></p>
+          <h3 class="bd-bookmark-title">${nodeObj.title || "Link Preview"}</h3>
+          <p class="bd-bookmark-desc" style="font-size:12px;opacity:0.7;margin:0">${nodeObj.description || ""}</p>
           <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank" draggable="false">${nodeObj.url || '#'}</a>
         </div>
         `);
-        
-        fetch(`https://api.microlink.io/?url=${encodeURIComponent(nodeObj.url)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.status === "success" && data.data) {
-                el.querySelector(".bd-bookmark-title").textContent = data.data.title || "Link Preview";
-                if (data.data.description && el.querySelector(".bd-bookmark-desc")) {
-                  el.querySelector(".bd-bookmark-desc").textContent = data.data.description;
-                }
-                if (data.data.image && data.data.image.url && !el.querySelector(".bd-bookmark-image")) {
-                  el.insertAdjacentHTML("afterbegin", `<img class="bd-bookmark-image" src="${data.data.image.url}" draggable="false">`);
-                  if(!nodeObj.hasAdjustedRatio) {
-                    nodeObj.height += 160; 
-                    nodeObj.hasAdjustedRatio = true;
-                    el.style.height = `${nodeObj.height}px`;
-                  }
-                }
-            }
-          }).catch(err => console.log(err));
+    }
+
+    if (nodeObj.image && !el.querySelector(".bd-bookmark-image")) {
+      el.insertAdjacentHTML(
+        "afterbegin",
+        `<img class="bd-bookmark-image" src="${nodeObj.image}" draggable="false" alt="${nodeObj.title || "Link preview"}">`
+      );
+      if (!nodeObj.hasAdjustedRatio) {
+        nodeObj.height += 160;
+        nodeObj.hasAdjustedRatio = true;
+        el.style.height = `${nodeObj.height}px`;
+      }
+    }
+
+    if (!nodeObj.title || (getYouTubeVideoId(nodeObj.url) && !nodeObj.image)) {
+      fetchBookmarkPreview(nodeObj, el);
     }
   }
 }
@@ -911,37 +1349,57 @@ function loadState(data) {
 }
 
 async function loadBoard() {
+  const sources = [...new Set([boardConfig.sourcePath, boardConfig.legacySourcePath].filter(Boolean))];
+
   try {
-    let res = await fetch("content/braindump-state.json");
-    if (res.ok) {
-      loadState(await res.json());
+    for (const sourcePath of sources) {
+      const data = await fetchBoardState(sourcePath);
+      if (!data) continue;
+
+      loadState(data);
+      persistLocalState(serializeState());
+      setComparisonBaseline(serializeState());
       updateTransform();
+      return true;
     }
   } catch (err) {
     console.warn("No initial board state found.", err);
   }
+
+  return false;
 }
 
 async function saveBoard() {
-  let state = { nodes, edges };
-  localStorage.setItem("braindump-canvas", JSON.stringify(state));
+  const state = serializeState();
+  const serialized = persistLocalState(state);
   try {
-    let res = await fetch("/api/save-braindump", {
+    let res = await fetch(buildSaveUrl(), {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(state)
+      body: serialized
     });
-    if (res.ok) alert("Board saved to repository!");
-    else alert("Saved to memory. Start dev-server to save to repo.");
+    if (res.ok) {
+      const result = await res.json().catch(() => null);
+      if (result?.path) showToolbarToast(`Saved to ${result.path}`, "success");
+      else showToolbarToast("Board saved to local repository copy.", "success");
+    } else {
+      showToolbarToast("Saved locally. Start dev-server to persist to the repository.", "info");
+    }
   } catch(e) {
-    alert("Saved to memory. Start dev-server to save to repo.");
+    showToolbarToast("Saved locally. Start dev-server to persist to the repository.", "info");
   }
 }
 
 // Init
 setActiveTool("select");
-let saved = localStorage.getItem("braindump-canvas");
+let saved = getSavedState();
 if (saved) {
-  try { loadState(JSON.parse(saved)); } catch(e) {}
+  try {
+    loadState(JSON.parse(saved));
+    persistLocalState(serializeState());
+    setComparisonBaseline(serializeState());
+  } catch(e) {
+    loadBoard();
+  }
 } else { loadBoard(); }
 updateTransform();

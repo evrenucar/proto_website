@@ -218,11 +218,18 @@ html:has(body.page-braindump) {
 }
 
 /* Toolbar */
-.braindump-toolbar {
+.braindump-toolbar-shell {
   position: fixed;
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.braindump-toolbar {
   display: flex;
   gap: 12px;
   background: #1a1919;
@@ -230,7 +237,6 @@ html:has(body.page-braindump) {
   border-radius: 12px;
   border: 1px solid #2d2c2c;
   box-shadow: 0 12px 30px rgba(0,0,0,0.5);
-  z-index: 10;
 }
 
 .braindump-toolbar button, .braindump-file-label {
@@ -265,9 +271,120 @@ html:has(body.page-braindump) {
   margin: 4px 6px;
 }
 
+.braindump-recommend-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(26, 25, 25, 0.96);
+  border: 1px solid #2d2c2c;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  padding: 10px 12px;
+  min-width: 320px;
+}
+
+.braindump-recommend-panel[hidden] {
+  display: none;
+}
+
+.braindump-recommend-input {
+  width: 250px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #3a3a3a;
+  background: #111;
+  color: #fafafa;
+  font: inherit;
+  outline: none;
+}
+
+.braindump-recommend-input:focus {
+  border-color: #3fdaca;
+  box-shadow: 0 0 0 3px rgba(63, 218, 202, 0.15);
+}
+
+.braindump-recommend-submit {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #3fdaca;
+  background: rgba(63, 218, 202, 0.12);
+  color: #3fdaca;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.braindump-recommend-submit:hover {
+  background: rgba(63, 218, 202, 0.22);
+  color: #fff;
+}
+
+.braindump-toolbar-toast {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  max-width: 360px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #3a3a3a;
+  background: rgba(17, 17, 17, 0.96);
+  color: #fafafa;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.4);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.braindump-toolbar-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.braindump-toolbar-toast[data-variant="success"] {
+  border-color: rgba(63, 218, 202, 0.45);
+}
+
+.braindump-toolbar-toast[data-variant="error"] {
+  border-color: rgba(240, 88, 88, 0.55);
+}
+
+.braindump-toolbar-toast[data-variant="info"] {
+  border-color: rgba(120, 120, 120, 0.55);
+}
+
 /* Mobile Adjustments */
 @media screen and (max-width: 1200px) {
   .braindump-viewport {
     left: 0;
+  }
+
+  .braindump-toolbar-shell {
+    flex-direction: column;
+    align-items: stretch;
+    width: min(calc(100vw - 24px), 640px);
+  }
+
+  .braindump-toolbar {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .braindump-recommend-panel {
+    min-width: 0;
+  }
+
+  .braindump-recommend-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .braindump-toolbar-toast {
+    position: static;
+    max-width: none;
+    margin-bottom: 8px;
   }
 }

@@ -555,5 +555,22 @@ export const seo = {
 
 export const braindumpPage = {
   title: "Braindump | Evren Ucar",
-  description: "An infinite whiteboard for ideas, sketches, and references."
+  description: "An infinite whiteboard for ideas, sketches, and references.",
+  board: {
+    slug: "braindump",
+    title: "Braindump",
+    pagePath: "braindump.html",
+    sourcePath: "content/boards/braindump/current.canvas",
+    legacySourcePath: "content/braindump-state.json",
+    storageKey: "board:braindump",
+    legacyStorageKey: "braindump-canvas",
+    saveEndpoint: "/api/save-board",
+    allowRecommendations: true,
+    recommendation: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["recommendation", "whiteboard"]
+    }
+  }
 };

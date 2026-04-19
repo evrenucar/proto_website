@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -22,6 +22,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const buildDate = new Date().toISOString().slice(0, 10);
+const boardsDir = path.join(rootDir, "content", "boards");
+const preservedBoardsDir = path.join(rootDir, ".build-preserve", "boards");
+const legacyBoardSourcePath = braindumpPage.board?.legacySourcePath
+  ? path.join(rootDir, braindumpPage.board.legacySourcePath)
+  : null;
+const preservedLegacyBoardSourcePath = path.join(
+  rootDir,
+  ".build-preserve",
+  "legacy-braindump-state.json"
+);
 const notionProjectOverridesPath = path.join(rootDir, "src", "notion-projects.json");
 const notionItemsPath = path.join(rootDir, "src", "notion-items.json");
 const photographyItemsPath = path.join(rootDir, "photography_assets", "photos.json");
@@ -811,46 +821,85 @@ function renderPhotographyPage(photographyData) {
   `;
 }
 
-function renderBraindumpPage() {
+function renderBraindumpPage(currentFile, board = braindumpPage.board) {
+  const boardSourceHref = relativeHref(currentFile, board.sourcePath);
+  const legacyBoardSourceHref = board.legacySourcePath
+    ? relativeHref(currentFile, board.legacySourcePath)
+    : "";
+  const recommendationConfig = board.recommendation || {};
+
   return `
-    <link rel="stylesheet" href="CSS/braindump.css?v=5">
-    <div class="braindump-viewport" id="braindump-viewport">
+    <link rel="stylesheet" href="CSS/braindump.css?v=6">
+    <div
+      class="braindump-viewport"
+      id="braindump-viewport"
+      data-board-slug="${escapeHtml(board.slug)}"
+      data-board-title="${escapeHtml(board.title)}"
+      data-board-source="${escapeHtml(boardSourceHref)}"
+      data-board-legacy-source="${escapeHtml(legacyBoardSourceHref)}"
+      data-board-repo-path="${escapeHtml(board.sourcePath)}"
+      data-board-storage-key="${escapeHtml(board.storageKey)}"
+      data-board-legacy-storage-key="${escapeHtml(board.legacyStorageKey || "")}"
+      data-board-save-endpoint="${escapeHtml(board.saveEndpoint || "/api/save-board")}"
+      data-board-allow-recommendations="${board.allowRecommendations ? "true" : "false"}"
+      data-recommendation-type="${escapeHtml(recommendationConfig.type || "")}"
+      data-recommendation-owner="${escapeHtml(recommendationConfig.owner || "")}"
+      data-recommendation-repo="${escapeHtml(recommendationConfig.repo || "")}"
+      data-recommendation-labels="${escapeHtml((recommendationConfig.labels || []).join(","))}"
+    >
       <div class="braindump-canvas" id="braindump-canvas">
         <svg id="braindump-svg-layer"></svg>
       </div>
-      <div class="braindump-toolbar">
-        <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
-        </button>
-        <button type="button" data-tool="pan" aria-label="Pan (Space)" title="Pan (Space)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heroicon-hand"><path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
-        </button>
-        <button type="button" data-tool="text" aria-label="Add Text (T)" title="Text (T)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M12 4v16M9 20h6"/></svg>
-        </button>
-        <button type="button" data-tool="draw" aria-label="Draw (P)" title="Pen (P)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-        </button>
-        <button type="button" data-tool="bookmark" aria-label="Add Bookmark (L)" title="Link (L)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-        </button>
-        <div class="braindump-toolbar-divider"></div>
-        <button type="button" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        </button>
-        <button type="button" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-        <label class="braindump-file-label" aria-label="Import .canvas" title="Import (.canvas)">
-          <input type="file" id="braindump-import" accept=".canvas,.json" hidden>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        </label>
+      <div class="braindump-toolbar-shell">
+        <div class="braindump-toolbar">
+          <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+          </button>
+          <button type="button" data-tool="pan" aria-label="Pan (Space)" title="Pan (Space)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heroicon-hand"><path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
+          </button>
+          <button type="button" data-tool="text" aria-label="Add Text (T)" title="Text (T)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M12 4v16M9 20h6"/></svg>
+          </button>
+          <button type="button" data-tool="draw" aria-label="Draw (P)" title="Pen (P)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+          </button>
+          <button type="button" data-tool="bookmark" aria-label="Add Bookmark (L)" title="Link (L)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </button>
+          <div class="braindump-toolbar-divider"></div>
+          <button type="button" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          </button>
+          <button type="button" data-tool="recommend" aria-label="Send recommendation" title="Send recommendation">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          </button>
+          <button type="button" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <label class="braindump-file-label" aria-label="Import .canvas or .canvas.json" title="Import (.canvas / .canvas.json)">
+            <input type="file" id="braindump-import" accept=".canvas,.canvas.json,.json" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </label>
+        </div>
+        <div class="braindump-recommend-panel" id="braindump-recommend-panel" hidden>
+          <input
+            type="text"
+            id="braindump-recommend-summary"
+            class="braindump-recommend-input"
+            maxlength="50"
+            placeholder="Short summary for issue title"
+            aria-label="Short summary for recommendation issue title"
+          >
+          <button type="button" id="braindump-recommend-submit" class="braindump-recommend-submit">Open issue</button>
+        </div>
+        <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" role="status" aria-live="polite" hidden></div>
       </div>
       <div id="braindump-modal" class="braindump-modal" hidden>
         <!-- Dynamic content for forms -->
       </div>
     </div>
-    <script src="JavaScript/braindump.js?v=13" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=19" defer></script>
   `;
 }
 
@@ -1022,6 +1071,80 @@ async function loadPhotographyItems() {
   return photographyItems
     .map((item, index) => normalizePhotographyItem(item, index))
     .filter(Boolean);
+}
+
+async function preserveBoardContent() {
+  await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
+  await mkdir(path.dirname(preservedBoardsDir), { recursive: true });
+
+  try {
+    await access(boardsDir);
+    await cp(boardsDir, preservedBoardsDir, { recursive: true, force: true });
+  } catch (error) {
+    if (error && error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  if (!legacyBoardSourcePath) return;
+
+  try {
+    await access(legacyBoardSourcePath);
+    await cp(legacyBoardSourcePath, preservedLegacyBoardSourcePath, { force: true });
+  } catch (error) {
+    if (error && error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+async function restoreBoardContent() {
+  let hasPreservedBoards = false;
+  let hasPreservedLegacyBoard = false;
+
+  try {
+    await access(preservedBoardsDir);
+    hasPreservedBoards = true;
+  } catch (error) {
+    if (error && error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  if (legacyBoardSourcePath) {
+    try {
+      await access(preservedLegacyBoardSourcePath);
+      hasPreservedLegacyBoard = true;
+    } catch (error) {
+      if (error && error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+
+  if (!hasPreservedBoards && !hasPreservedLegacyBoard) {
+    await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
+    return;
+  }
+
+  await mkdir(path.join(rootDir, "content"), { recursive: true });
+
+  if (hasPreservedBoards) {
+    await cp(preservedBoardsDir, boardsDir, { recursive: true, force: true });
+  }
+
+  if (legacyBoardSourcePath && hasPreservedLegacyBoard) {
+    try {
+      await mkdir(path.dirname(legacyBoardSourcePath), { recursive: true });
+      await cp(preservedLegacyBoardSourcePath, legacyBoardSourcePath, { force: true });
+    } catch (error) {
+      if (error && error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+
+  await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
 }
 
 async function loadLegacyProjectOverrides() {
@@ -1208,6 +1331,7 @@ ${urls}
 async function build() {
   const { projectsData, makingData, openQuestsData, photographyData, detailItems } =
     await loadContentData();
+  await preserveBoardContent();
   await rm(path.join(rootDir, "content"), { recursive: true, force: true });
 
   const pages = [
@@ -1279,7 +1403,7 @@ async function build() {
       ogImage: seo.defaultImage,
       bodyClass: "page-braindump",
       structuredData: [],
-      content: renderBraindumpPage()
+      content: renderBraindumpPage("braindump.html", braindumpPage.board)
     },
     {
       file: "photography.html",
@@ -1346,6 +1470,8 @@ async function build() {
       );
     })
   );
+
+  await restoreBoardContent();
 
   await Promise.all([
     writeFile(

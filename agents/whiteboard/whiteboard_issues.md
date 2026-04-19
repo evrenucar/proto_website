@@ -33,6 +33,8 @@ prioritize top to bottom.
 
 (Fixed_ISSUE)- when I zoom pen pointer should match the size of the drawn line. When I zoom out the circle is still very big.
 
+(OPEN_ISSUE)- youtube links don't embed well at the moment. Should be able to get the thumbnail pic and the name of the video in the embed
+
 - **DOM Bottleneck**: Currently, every drawing stroke, image, and text block is rendered as a distinct HTML DOM element (absolute-positioned `div`s with `svg` paths inside). While the distance throttling protects from instant crashes, drawing thousands of complex scribbles will inevitably lag the browser's DOM renderer. Future migration should consider standardizing these elements into an actively rendered `<canvas>` HTML node if scale increases radically.
 
 - **Save Integrity**: Progress is currently saved locally. The "direct save to repository via dev-server" is excellent for localhost editing, but external users will only be able to rely on their browser's `localStorage` unless a dedicated backend database is wired.

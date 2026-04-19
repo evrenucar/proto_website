@@ -9,6 +9,7 @@ const rootDir = path.resolve(__dirname, "..");
 const port = Number(process.env.PORT || 4173);
 
 const mimeTypes = {
+  ".canvas": "application/json; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".jpg": "image/jpeg",

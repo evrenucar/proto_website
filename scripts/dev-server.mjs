@@ -9,6 +9,7 @@ const rootDir = path.resolve(__dirname, "..");
 const PORT = 3000;
 
 const mimeTypes = {
+  ".canvas": "application/json",
   ".html": "text/html",
   ".js": "text/javascript",
   ".css": "text/css",
@@ -19,17 +20,24 @@ const mimeTypes = {
 };
 
 const server = http.createServer(async (req, res) => {
+  const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
+
   // Save API endpoint
-  if (req.method === "POST" && req.url === "/api/save-braindump") {
+  if (req.method === "POST" && (parsedUrl.pathname === "/api/save-board" || parsedUrl.pathname === "/api/save-braindump")) {
     let body = "";
     req.on("data", chunk => body += chunk.toString());
     req.on("end", async () => {
       try {
-        const filePath = path.join(rootDir, "content", "braindump-state.json");
+        const rawSlug =
+          parsedUrl.pathname === "/api/save-braindump"
+            ? "braindump"
+            : parsedUrl.searchParams.get("slug") || "braindump";
+        const slug = String(rawSlug).replace(/[^a-z0-9-]/gi, "").toLowerCase() || "braindump";
+        const filePath = path.join(rootDir, "content", "boards", slug, "current.canvas");
         await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, body, "utf8");
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ success: true }));
+        res.end(JSON.stringify({ success: true, slug, path: `content/boards/${slug}/current.canvas` }));
       } catch (err) {
         console.error("Save error:", err);
         res.writeHead(500);
@@ -40,7 +48,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Static file serving
-  const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
   let filePath = path.join(rootDir, parsedUrl.pathname === "/" ? "index.html" : parsedUrl.pathname);
   const ext = path.extname(filePath);
   const contentType = mimeTypes[ext] || "application/octet-stream";
@@ -62,5 +69,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Development server running at http://localhost:${PORT}/`);
-  console.log(`You can now save braindump boards directly to the repository.`);
+  console.log(`You can now save whiteboard boards directly to content/boards/<slug>/current.canvas.`);
 });
