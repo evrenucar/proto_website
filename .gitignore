@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.*
+
+# Claude working notes
+agents/
+
+# Temp / dev artefacts
+.tmp/
+.build-preserve/
+
+# Dev server logs
+*.log
+
+# Test / scratch code (contains plaintext email)
+testCode/
+
+# OS junk
+.DS_Store
+Thumbs.db

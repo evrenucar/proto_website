@@ -1,1 +1,0 @@
-- when I open an image. I cannot exit by clicking in the black area if I click on the left or the right of smaller images. I think the active zone is a bit larger than the image. Ideally if I click anywhere else than the image I should be able to exit the focus view.
