@@ -308,7 +308,7 @@ if (lightbox && lightboxImage && lightboxCaption && lightboxButtons.length > 0) 
   });
 
   lightbox.addEventListener("click", (event) => {
-    if (event.target === lightbox) {
+    if (!event.target.closest("[data-lightbox-image]")) {
       closeLightbox();
     }
   });

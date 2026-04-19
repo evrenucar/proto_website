@@ -31,6 +31,12 @@ const recommendationConfig = {
 };
 
 let toolbarToastTimeout = null;
+let viewportSaveTimeout = null;
+
+function scheduleViewportSave() {
+  if (viewportSaveTimeout) clearTimeout(viewportSaveTimeout);
+  viewportSaveTimeout = setTimeout(() => persistLocalState(serializeState()), 400);
+}
 let comparisonBaselineState = { nodes: [], edges: [] };
 
 function cloneState(state) {
@@ -365,7 +371,7 @@ function downloadStateFile(filename, mimeType = "application/octet-stream") {
 }
 
 function serializeState() {
-  return { nodes, edges };
+  return { nodes, edges, viewport: { x: camera.x, y: camera.y, z: camera.z } };
 }
 
 function persistLocalState(state) {
@@ -612,6 +618,7 @@ viewport.addEventListener("wheel", (e) => {
   camera.z = newZ;
   updateTransform();
   if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
+  scheduleViewportSave();
 }, { passive: false });
 
 let initialPinchDistance = null;
@@ -767,6 +774,7 @@ window.addEventListener("pointerup", (e) => {
     if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
     else if (activeTool === "pan") viewport.style.cursor = "grab";
     else viewport.style.cursor = "default";
+    scheduleViewportSave();
   } else {
     isPanning = false;
   }
@@ -910,13 +918,13 @@ function exportCanvas() {
 
 function submitRecommendation() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Recommendations are not configured yet for this board.", "error");
+    showToolbarToast("Recommendations are not set up for this board.", "error");
     return;
   }
 
   const summary = normalizeRecommendationSummary(recommendationSummaryInput?.value);
   if (!summary) {
-    showToolbarToast("Add a short summary for the issue title.", "error");
+    showToolbarToast("Add a short description for the recommendation.", "error");
     recommendationSummaryInput?.focus();
     return;
   }
@@ -926,7 +934,7 @@ function submitRecommendation() {
   window.open(issueUrl, "_blank", "noopener,noreferrer");
   setRecommendationPanelOpen(false);
   if (recommendationSummaryInput) recommendationSummaryInput.value = "";
-  showToolbarToast(`Exported ${recommendationFilename} and opened the GitHub issue.`, "success");
+  showToolbarToast(`Recommendation sent — attach ${recommendationFilename} to the form that just opened.`, "success");
 }
 
 // Drawing logic
@@ -1334,7 +1342,13 @@ function loadState(data) {
   svgLayer.innerHTML = "";
   nodes = [];
   edges = [];
-  
+
+  if (data.viewport) {
+    if (typeof data.viewport.x === 'number') camera.x = data.viewport.x;
+    if (typeof data.viewport.y === 'number') camera.y = data.viewport.y;
+    if (typeof data.viewport.z === 'number') camera.z = data.viewport.z;
+  }
+
   if (data.nodes) {
     data.nodes.forEach(n => {
       let type = n.type === "text" && n.text?.includes("<svg") ? "draw" : n.type;

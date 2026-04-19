@@ -112,86 +112,44 @@ export const homePage = {
 
 export const projects = [
   {
-    slug: "bubble",
-    title: "Bubble",
-    year: "2021",
-    category: "Product concept",
-    image: "projects/thumb_1.png",
-    alt: "Bubble project thumbnail",
-    summary:
-      "A concept project focused on a clear product idea, approachable form, and a direction that could move toward production.",
-    status: "Case study soon",
+    slug: "placeholder-1",
+    title: "Coming soon",
+    year: "",
+    category: "",
+    image: "",
+    alt: "Project placeholder",
+    summary: "Case study in progress.",
+    status: "Coming soon",
     externalUrl: "",
     span: "stack-wide"
   },
   {
-    slug: "axis",
-    title: "Axis",
-    year: "2021",
-    category: "Concept development",
-    image: "projects/thumb_2.png",
-    alt: "Axis project thumbnail",
-    summary:
-      "A project built around movement, control, and the relationship between form and mechanical behavior.",
-    status: "Case study soon",
+    slug: "placeholder-2",
+    title: "Coming soon",
+    year: "",
+    category: "",
+    image: "",
+    alt: "Project placeholder",
+    summary: "Case study in progress.",
+    status: "Coming soon",
     externalUrl: "",
     span: "stack-offset-lg"
   },
   {
-    slug: "moto-gimbal",
-    title: "Moto Gimbal",
-    year: "2021",
-    category: "Mobility accessory",
-    image: "projects/thumb_3.jpg",
-    alt: "Moto Gimbal project thumbnail",
-    summary:
-      "A motorcycle camera gimbal concept looking at mounting, stability, and a more usable filming setup on the road.",
-    status: "Case study soon",
+    slug: "placeholder-3",
+    title: "Coming soon",
+    year: "",
+    category: "",
+    image: "",
+    alt: "Project placeholder",
+    summary: "Case study in progress.",
+    status: "Coming soon",
     externalUrl: "",
-    span: "stack-emphasis"
-  },
-  {
-    slug: "mono-wheel",
-    title: "Mono Wheel",
-    year: "2020",
-    category: "Mobility concept",
-    image: "projects/thumb_4.png",
-    alt: "Mono Wheel project thumbnail",
-    summary:
-      "A mobility exploration shaped by balance, compact packaging, and the practical feel of a rideable object.",
-    status: "Case study soon",
-    externalUrl: "",
-    span: "stack-offset-sm"
-  },
-  {
-    slug: "makerlight",
-    title: "MakerLight",
-    year: "2020",
-    category: "Workshop product",
-    image: "projects/thumb_5.png",
-    alt: "MakerLight project thumbnail",
-    summary:
-      "A lighting concept for hands-on work, with attention to usability, placement, and workshop conditions.",
-    status: "Case study soon",
-    externalUrl: "",
-    span: "stack-wide stack-offset-sm"
-  },
-  {
-    slug: "wine-and-cheese-picnic-set",
-    title: "Wine and Cheese Picnic Set",
-    year: "2020",
-    category: "Lifestyle product",
-    image: "projects/thumb_6.png",
-    alt: "Wine and Cheese Picnic Set project thumbnail",
-    summary:
-      "A portable serving set shaped around carrying, setup, and the small details that make an outdoor product pleasant to use.",
-    status: "Case study soon",
-    externalUrl: "",
-    span: "stack-offset-lg"
+    span: ""
   }
 ];
 
-export const featuredProjectSlugs = ["moto-gimbal", "mono-wheel", "makerlight"];
+export const featuredProjectSlugs = ["eurocrate-storage-universal-solution", "placeholder-1", "placeholder-2"];
 
 export const makingPage = {
   title: "Things I Do | Evren Ucar",
@@ -205,151 +163,25 @@ export const makingPage = {
 
 export const makingItems = [
   {
-    title: "3DP Mk3 Stand",
-    category: "3D printed workshop tool",
-    image: "things_i_do/thumb_1.png",
-    alt: "3D printed Mk3 stand",
+    title: "Coming soon",
+    category: "",
+    image: "",
+    alt: "Placeholder",
     span: "stack-wide"
   },
   {
-    title: "Heavy Duty Wheel",
-    category: "Mechanical prototype",
-    image: "things_i_do/thumb_2.png",
-    alt: "Heavy duty wheel prototype",
+    title: "Coming soon",
+    category: "",
+    image: "",
+    alt: "Placeholder",
     span: "stack-offset-lg"
   },
   {
-    title: "Screen Holder",
-    category: "Quick fixture",
-    image: "things_i_do/thumb_3.png",
-    alt: "Screen holder prototype",
+    title: "Coming soon",
+    category: "",
+    image: "",
+    alt: "Placeholder",
     span: ""
-  },
-  {
-    title: "Stereo RaspiCAM Holder",
-    category: "Camera rig",
-    image: "things_i_do/thumb_4.jpg",
-    alt: "Stereo RaspiCAM holder",
-    span: "stack-offset-sm"
-  },
-  {
-    title: "Marker Revival",
-    category: "Repair",
-    image: "things_i_do/thumb_5.jpg",
-    alt: "Marker repair project",
-    span: "stack-wide"
-  },
-  {
-    title: "RC Rover Model",
-    category: "CAD model",
-    image: "things_i_do/thumb_22.png",
-    alt: "RC rover model",
-    span: "stack-offset-lg"
-  },
-  {
-    title: "3DP Bearing",
-    category: "Print test",
-    image: "things_i_do/thumb_7.jpg",
-    alt: "3D printed bearing",
-    span: ""
-  },
-  {
-    title: "Frutti Rendering",
-    category: "Visualization",
-    image: "things_i_do/thumb_8.jpg",
-    alt: "Frutti rendering",
-    span: "stack-offset-sm"
-  },
-  {
-    title: "METU MECH T-Shirt",
-    category: "Graphic work",
-    image: "things_i_do/thumb_9.jpg",
-    alt: "METU mechanical engineering T-shirt design",
-    span: "stack-wide"
-  },
-  {
-    title: "TOS Machine Lathe",
-    category: "Workshop process",
-    image: "things_i_do/thumb_10.jpg",
-    alt: "TOS machine lathe",
-    span: ""
-  },
-  {
-    title: "Precision Bed Levelling",
-    category: "Calibration",
-    image: "things_i_do/thumb_11.jpg",
-    alt: "Precision bed levelling",
-    span: "stack-offset-lg"
-  },
-  {
-    title: "3DP Adhesive Wallhook",
-    category: "Household fix",
-    image: "things_i_do/thumb_12.jpg",
-    alt: "3D printed adhesive wall hook",
-    span: ""
-  },
-  {
-    title: "TI-84 Restoration",
-    category: "Electronics repair",
-    image: "things_i_do/thumb_13.png",
-    alt: "TI-84 calculator restoration",
-    span: "stack-wide stack-offset-sm"
-  },
-  {
-    title: "3DP TT Paddle",
-    category: "Sports experiment",
-    image: "things_i_do/thumb_14.png",
-    alt: "3D printed table tennis paddle",
-    span: ""
-  },
-  {
-    title: "Sourdough Bread",
-    category: "Hands-on process",
-    image: "things_i_do/thumb_15.png",
-    alt: "Sourdough bread",
-    span: "stack-offset-lg"
-  },
-  {
-    title: "Metal Spinning Top",
-    category: "Turning practice",
-    image: "things_i_do/thumb_16.png",
-    alt: "Metal spinning top",
-    span: "stack-wide"
-  },
-  {
-    title: "Support Bearing Holder",
-    category: "Fixture",
-    image: "things_i_do/thumb_17.png",
-    alt: "Support bearing holder",
-    span: "stack-offset-sm"
-  },
-  {
-    title: "Cardboard Sandbox Event",
-    category: "Workshop build",
-    image: "things_i_do/thumb_18.png",
-    alt: "Cardboard sandbox event build",
-    span: ""
-  },
-  {
-    title: "OTT First Event Award 2018",
-    category: "Event object",
-    image: "things_i_do/thumb_19.png",
-    alt: "Event award object",
-    span: "stack-wide stack-offset-sm"
-  },
-  {
-    title: "3DP Lamp Repair",
-    category: "Repair",
-    image: "things_i_do/thumb_20.png",
-    alt: "3D printed lamp repair",
-    span: ""
-  },
-  {
-    title: "Nerf Marker Renderings",
-    category: "Concept rendering",
-    image: "things_i_do/thumb_21.png",
-    alt: "Marker rendering concepts",
-    span: "stack-offset-lg"
   }
 ];
 
