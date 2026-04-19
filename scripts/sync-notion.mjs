@@ -8,7 +8,32 @@ const rootDir = path.resolve(__dirname, "..");
 const sourcePath = path.join(rootDir, "src", "notion-public-pages.json");
 const outputPath = path.join(rootDir, "src", "notion-items.json");
 const notionAssetsDir = path.join(rootDir, "notion_assets");
-const syncCacheVersion = 1;
+const syncCacheVersion = 2;
+
+const defaultNotionPropertyAliases = Object.freeze({
+  publishingType: [">[Mc", "Publishing_Type", "Publishing Type", "publishing_type", "publishing type"],
+  publishingStatus: [
+    ">{Jz",
+    "Publishing_Status",
+    "Publishing Status",
+    "publishing_status",
+    "publishing status"
+  ],
+  summary: [
+    "isHq",
+    "summary",
+    "Summary",
+    "notes",
+    "Notes",
+    "links",
+    "Links",
+    "notes and links",
+    "Notes and links",
+    "notes_links"
+  ],
+  effort: ["SDhZ", "Publishing_Size", "Publishing Size", "publishing_size", "publishing size"],
+  externalUrl: ["Io_F", "External_Url", "External Url", "external_url", "external url", "link", "Link"]
+});
 
 function slugify(value) {
   return String(value || "")
@@ -40,6 +65,10 @@ function normalizeSection(value) {
 
   if (["open-quests", "open quests", "open quest", "open_quests"].includes(normalized)) {
     return "open-quests";
+  }
+
+  if (["cool-bookmarks", "cool bookmarks", "cool bookmark", "cool_bookmarks", "bookmarks"].includes(normalized)) {
+    return "cool-bookmarks";
   }
 
   return "";
@@ -119,6 +148,81 @@ function propertyValueToPlainText(value) {
     })
     .join("")
     .trim();
+}
+
+function normalizePropertyAlias(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+}
+
+function getNotionPropertyAliases(entry) {
+  const entryAliases =
+    entry?.propertyAliases && typeof entry.propertyAliases === "object" ? entry.propertyAliases : {};
+  const keys = new Set([
+    ...Object.keys(defaultNotionPropertyAliases),
+    ...Object.keys(entryAliases)
+  ]);
+
+  return Object.fromEntries(
+    Array.from(keys, (key) => {
+      const localAliases = Array.isArray(entryAliases[key])
+        ? entryAliases[key]
+        : entryAliases[key]
+          ? [entryAliases[key]]
+          : [];
+
+      return [
+        key,
+        [...localAliases, ...(defaultNotionPropertyAliases[key] || [])]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+      ];
+    })
+  );
+}
+
+function readNotionProperty(properties, aliases = []) {
+  if (!properties || typeof properties !== "object" || !Array.isArray(aliases) || aliases.length === 0) {
+    return "";
+  }
+
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(properties, alias)) {
+      const value = propertyValueToPlainText(properties[alias]);
+
+      if (value) {
+        return value;
+      }
+    }
+  }
+
+  const propertyEntries = Object.entries(properties);
+
+  for (const alias of aliases) {
+    const normalizedAlias = normalizePropertyAlias(alias);
+
+    if (!normalizedAlias) {
+      continue;
+    }
+
+    const matchedEntry = propertyEntries.find(([propertyName]) => {
+      return normalizePropertyAlias(propertyName) === normalizedAlias;
+    });
+
+    if (!matchedEntry) {
+      continue;
+    }
+
+    const value = propertyValueToPlainText(matchedEntry[1]);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
 }
 
 function fileExtensionFromUrl(url, fallback = ".bin") {
@@ -661,6 +765,10 @@ function getCachedSourceData(item) {
     return null;
   }
 
+  if (Number(cache.version) !== syncCacheVersion) {
+    return null;
+  }
+
   const pageId = String(cache.pageId || parseNotionPageId(item?.sharedUrl || "")).trim();
 
   if (!pageId) {
@@ -673,14 +781,20 @@ function getCachedSourceData(item) {
     notionTitle: String(cache.notionTitle || "").trim(),
     notionSummary: String(cache.notionSummary || ""),
     notionImage: String(cache.notionImage || ""),
-    contentHtml: String(cache.contentHtml || "")
+    contentHtml: String(cache.contentHtml || ""),
+    publishingType: String(cache.publishingType || item?.publishingType || ""),
+    publishingStatus: String(cache.publishingStatus || item?.publishingStatus || ""),
+    effort: String(cache.effort || item?.effort || ""),
+    notionExternalUrl: String(cache.notionExternalUrl || ""),
+    dateAdded: String(cache.dateAdded || item?.dateAdded || ""),
+    dateModified: String(cache.dateModified || item?.dateModified || "")
   };
 }
 
 function buildItemFromSource(entry, sourceData) {
   const sharedUrl = entry.url || entry.sharedUrl || "";
   const pageId = sourceData.pageId || parseNotionPageId(sharedUrl);
-  const section = normalizeSection(entry.section);
+  const section = normalizeSection(sourceData.publishingType || entry.section);
 
   if (!pageId) {
     throw new Error(`Could not parse a Notion page id from "${sharedUrl}".`);
@@ -694,7 +808,8 @@ function buildItemFromSource(entry, sourceData) {
   const slug = slugify(entry.slug || title);
   const summary = entry.summary || sourceData.notionSummary || "";
   const image = entry.image || sourceData.notionImage || "";
-  const actionUrl = entry.actionUrl || "";
+  const actionUrl =
+    entry.actionUrl || (section === "cool-bookmarks" ? sourceData.notionExternalUrl || "" : "");
   let actionType = normalizeActionType(entry.actionType);
   let actionLabel = entry.actionLabel || "";
 
@@ -722,6 +837,11 @@ function buildItemFromSource(entry, sourceData) {
     title,
     category: entry.category || "",
     year: entry.year ? String(entry.year) : "",
+    publishingType: sourceData.publishingType || "",
+    publishingStatus: sourceData.publishingStatus || "",
+    effort: sourceData.effort || "",
+    dateAdded: sourceData.dateAdded || "",
+    dateModified: sourceData.dateModified || sourceData.lastUpdated || "",
     image,
     alt: entry.alt || title,
     summary,
@@ -743,7 +863,13 @@ function buildItemFromSource(entry, sourceData) {
       notionTitle: sourceData.notionTitle || "",
       notionSummary: sourceData.notionSummary || "",
       notionImage: sourceData.notionImage || "",
-      contentHtml: sourceData.contentHtml || ""
+      contentHtml: sourceData.contentHtml || "",
+      publishingType: sourceData.publishingType || "",
+      publishingStatus: sourceData.publishingStatus || "",
+      effort: sourceData.effort || "",
+      notionExternalUrl: sourceData.notionExternalUrl || "",
+      dateAdded: sourceData.dateAdded || "",
+      dateModified: sourceData.dateModified || sourceData.lastUpdated || ""
     }
   };
 }
@@ -759,10 +885,13 @@ async function buildFreshSourceData(entry, pageId) {
   const notionTitle = getPageTitle(pageBlock);
   const effectiveTitle = entry.title || notionTitle;
   const assetSlug = slugify(entry.slug || effectiveTitle);
+  const propertyAliases = getNotionPropertyAliases(entry);
 
   await removeAssetDirectory(assetSlug);
 
-  const notionSummary = findFirstTextSnippet(recordMap, getBlockChildren(pageBlock));
+  const notionSummary =
+    readNotionProperty(pageBlock.properties, propertyAliases.summary) ||
+    findFirstTextSnippet(recordMap, getBlockChildren(pageBlock));
   const notionImage =
     (await resolveMediaSource(
       {
@@ -780,10 +909,16 @@ async function buildFreshSourceData(entry, pageId) {
   return {
     pageId,
     assetSlug,
+    dateAdded: formatLastUpdated(pageBlock.created_time),
+    dateModified: formatLastUpdated(pageBlock.last_edited_time),
     lastUpdated: formatLastUpdated(pageBlock.last_edited_time),
     notionTitle,
     notionSummary,
     notionImage,
+    publishingType: readNotionProperty(pageBlock.properties, propertyAliases.publishingType),
+    publishingStatus: readNotionProperty(pageBlock.properties, propertyAliases.publishingStatus),
+    effort: readNotionProperty(pageBlock.properties, propertyAliases.effort),
+    notionExternalUrl: readNotionProperty(pageBlock.properties, propertyAliases.externalUrl),
     contentHtml: await renderBlocks(recordMap, getBlockChildren(pageBlock), {
       slug: assetSlug,
       title: effectiveTitle

@@ -491,133 +491,149 @@ function getResolvedItemHref(item) {
   return "";
 }
 
-function renderCardAction(item) {
-  const href = getResolvedItemHref(item);
-
-  if ((item.actionType === "page" || item.actionType === "external") && href) {
-    return `<a class="action-link" href="${href}"${
-      isExternalUrl(href) ? ' target="_blank" rel="noreferrer"' : ""
-    }>${escapeHtml(item.actionLabel || "Open page")}</a>`;
-  }
-
-  if (item.actionType === "status" && item.actionLabel) {
-    return `<span class="status-label">${escapeHtml(item.actionLabel)}</span>`;
-  }
-
-  return "";
+function sectionToCssToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", "-");
 }
 
-function renderThumbMedia(item) {
+function humanizeToken(value) {
+  const text = String(value || "")
+    .trim()
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
+
+  if (!text) {
+    return "";
+  }
+
+  return text.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getDisplayFieldEntry(item, fieldName) {
+  if (!fieldName) {
+    return null;
+  }
+
+  switch (fieldName) {
+    case "publishingType":
+      return item.publishingTypeLabel
+        ? { key: fieldName, label: "Type", value: item.publishingTypeLabel }
+        : null;
+    case "publishingStatus":
+      return item.publishingStatus
+        ? { key: fieldName, label: "Status", value: item.publishingStatus }
+        : null;
+    case "category":
+      return item.category ? { key: fieldName, label: "Category", value: item.category } : null;
+    case "year":
+      return item.year ? { key: fieldName, label: "Year", value: item.year } : null;
+    case "effort":
+      return item.effort ? { key: fieldName, label: "Scale", value: item.effort } : null;
+    case "dateAdded":
+      return item.dateAddedLabel ? { key: fieldName, label: "Added", value: item.dateAddedLabel } : null;
+    case "dateModified":
+    case "lastUpdated":
+      return item.lastUpdatedLabel ? { key: fieldName, label: "Updated", value: item.lastUpdatedLabel } : null;
+    case "notionLink":
+      return item.sharedUrl
+        ? { key: fieldName, label: "Notion", value: "Open in Notion", href: item.sharedUrl }
+        : null;
+    case "externalLink":
+      return item.actionType === "external" && item.actionUrl
+        ? { key: fieldName, label: "Link", value: "Open source", href: item.actionUrl }
+        : null;
+    default:
+      return null;
+  }
+}
+
+function getCardMetaEntries(item) {
+  return item.cardFields
+    .filter((fieldName) => fieldName !== "summary")
+    .map((fieldName) => getDisplayFieldEntry(item, fieldName))
+    .filter(Boolean);
+}
+
+function renderCardMedia(item) {
+  const mediaLabel = escapeHtml(item.publishingTypeLabel || getSectionLabel(item.section));
+
   if (item.image) {
-    return `<img src="${item.image}" alt="${escapeHtml(item.alt || item.title)}" loading="lazy">`;
+    return `
+      <div class="content-card-media">
+        <img src="${item.image}" alt="${escapeHtml(item.alt || item.title)}" loading="eager" decoding="async">
+      </div>
+    `;
   }
 
   return `
-    <div class="work-thumb-empty">
-      <span>${escapeHtml(item.title)}</span>
+    <div class="content-card-media content-card-media-empty" aria-hidden="true">
+      <span>${mediaLabel}</span>
     </div>
   `;
 }
 
-function renderThumbShell({ href, overlayHtml, item, linkClass = "work-thumb-link" }) {
-  const media = renderThumbMedia(item);
-
-  if (href) {
-    return `<a class="${linkClass}" href="${href}"${
-      isExternalUrl(href) ? ' target="_blank" rel="noreferrer"' : ""
-    }>${media}${overlayHtml}</a>`;
-  }
-
-  return `${media}${overlayHtml}`;
-}
-
-function renderProjectCard(project, detailed = true) {
-  const actionHtml = renderCardAction(project);
-  const thumbHref = getResolvedItemHref(project);
-  const metaParts = [];
-
-  if (hasCardField(project, "category") && project.category) {
-    metaParts.push(escapeHtml(project.category));
-  }
-
-  if (hasCardField(project, "year") && project.year) {
-    metaParts.push(`<span>${escapeHtml(project.year)}</span>`);
-  }
+function renderContentCard(item) {
+  const href = getResolvedItemHref(item);
+  const sectionClass = sectionToCssToken(item.section);
+  const variantClass = sectionToCssToken(item.cardVariant || "text");
+  const metaEntries = getCardMetaEntries(item);
+  const summary =
+    hasCardField(item, "summary") && (item.summary || item.copy || "")
+      ? `<p class="content-card-summary">${escapeHtml(item.summary || item.copy || "")}</p>`
+      : "";
+  const innerHtml = `
+    ${
+      variantClass !== "text"
+        ? renderCardMedia(item)
+        : ""
+    }
+    <div class="content-card-body">
+      ${
+        metaEntries.length > 0
+          ? `<div class="content-card-meta">${metaEntries
+              .map(
+                (entry) =>
+                  `<span class="content-card-pill content-card-pill--${escapeHtml(
+                    sectionToCssToken(entry.key)
+                  )}"><strong>${escapeHtml(entry.label)}</strong><span>${escapeHtml(entry.value)}</span></span>`
+              )
+              .join("")}</div>`
+          : ""
+      }
+      <h3 class="content-card-title">${escapeHtml(item.title)}</h3>
+      ${summary}
+    </div>
+  `;
 
   return `
-    <article class="work-card${detailed ? "" : " work-card-compact"}${
-      project.layoutClass ? ` ${escapeHtml(project.layoutClass)}` : ""
-    }" data-card-size="${escapeHtml(project.cardSize || "")}">
-      <div class="work-thumb">
-        ${renderThumbShell({
-          href: thumbHref,
-          item: project,
-          overlayHtml: `
-            <div class="work-overlay">
-              <h3>${escapeHtml(project.title)}</h3>
-              ${metaParts.length > 0 ? `<p>${metaParts.join("")}</p>` : ""}
-            </div>
-          `
-        })}
-      </div>
+    <article class="content-card content-card--${escapeHtml(sectionClass)} content-card--${escapeHtml(
+      variantClass
+    )}${item.layoutClass ? ` ${escapeHtml(item.layoutClass)}` : ""}" data-card-size="${escapeHtml(
+      item.cardSize || ""
+    )}">
       ${
-        detailed
-          ? `<div class="work-details">
-              ${
-                hasCardField(project, "summary") && project.summary
-                  ? `<p>${escapeHtml(project.summary)}</p>`
-                  : ""
-              }
-              ${actionHtml ? `<div class="work-actions">${actionHtml}</div>` : ""}
-            </div>`
-          : ""
+        href
+          ? `<a class="content-card-link" href="${href}"${
+              isExternalUrl(href) ? ' target="_blank" rel="noreferrer"' : ""
+            }>${innerHtml}</a>`
+          : `<div class="content-card-link is-static">${innerHtml}</div>`
       }
     </article>
   `;
 }
 
-function renderMakingCard(item) {
-  const href = getResolvedItemHref(item);
+function renderProjectCard(project) {
+  return renderContentCard(project);
+}
 
-  return `
-    <article class="mini-card${item.layoutClass ? ` ${escapeHtml(item.layoutClass)}` : ""}" data-card-size="${escapeHtml(
-      item.cardSize || ""
-    )}">
-      <div class="work-thumb">
-        ${renderThumbShell({
-          href,
-          item,
-          linkClass: "mini-card-link",
-          overlayHtml: `
-            <div class="work-overlay work-overlay-small">
-              <h3>${escapeHtml(item.title)}</h3>
-              ${hasCardField(item, "category") && item.category ? `<p>${escapeHtml(item.category)}</p>` : ""}
-            </div>
-          `
-        })}
-      </div>
-    </article>
-  `;
+function renderMakingCard(item) {
+  return renderContentCard(item);
 }
 
 function renderTextCards(items) {
-  return items
-    .map((item) => {
-      const actionHtml = renderCardAction(item);
-
-      return `
-        <article class="text-card" data-card-size="${escapeHtml(item.cardSize || "")}">
-          <h3>${escapeHtml(item.title)}</h3>
-          ${
-            hasCardField(item, "summary") && (item.summary || item.copy || "")
-              ? `<p>${escapeHtml(item.summary || item.copy || "")}</p>`
-              : ""
-          }
-          ${actionHtml ? `<div class="text-card-actions">${actionHtml}</div>` : ""}
-        </article>
-      `;
-    })
-    .join("");
+  return items.map((item) => renderContentCard(item)).join("");
 }
 
 function renderPhotoCard(photo) {
@@ -655,33 +671,37 @@ function renderInfoPage({ tag, title, intro, items }) {
 }
 
 function renderDetailPage(item, currentFile) {
-  const metaParts = [];
-
-  if (hasDetailMeta(item, "lastUpdated") && item.lastUpdatedLabel) {
-    metaParts.push(`
-      <div class="detail-meta-item">
-        <span>Last updated</span>
-        <strong>${escapeHtml(item.lastUpdatedLabel)}</strong>
-      </div>
-    `);
-  }
-
-  if (hasDetailMeta(item, "notionLink") && item.sharedUrl) {
-    metaParts.push(`
-      <div class="detail-meta-item detail-meta-link">
-        <a class="action-link" href="${item.sharedUrl}" target="_blank" rel="noreferrer">Open in Notion</a>
-      </div>
-    `);
-  }
+  const detailMetaEntries = item.detailVisibility.showMeta
+    .map((fieldName) => getDisplayFieldEntry(item, fieldName))
+    .filter(Boolean);
+  const sectionClass = sectionToCssToken(item.section);
 
   return `
-    <article class="page-section page-section-first detail-page">
-      ${renderSectionHeader(
-        getSectionLabel(item.section),
+    <article class="page-section page-section-first detail-page detail-page--${escapeHtml(sectionClass)}">
+      <div class="detail-page-intro">
+        ${renderSectionHeader(
+        item.publishingTypeLabel || getSectionLabel(item.section),
         item.detailPage?.title || item.title,
         item.summary ? [item.summary] : []
       )}
-      ${metaParts.length > 0 ? `<div class="detail-meta">${metaParts.join("")}</div>` : ""}
+        ${
+          detailMetaEntries.length > 0
+            ? `<div class="detail-meta">${detailMetaEntries
+                .map((entry) =>
+                  entry.href
+                    ? `<div class="detail-meta-item detail-meta-link"><span>${escapeHtml(
+                        entry.label
+                      )}</span><a class="action-link" href="${entry.href}" target="_blank" rel="noreferrer">${escapeHtml(
+                        entry.value
+                      )}</a></div>`
+                    : `<div class="detail-meta-item"><span>${escapeHtml(entry.label)}</span><strong>${escapeHtml(
+                        entry.value
+                      )}</strong></div>`
+                )
+                .join("")}</div>`
+            : ""
+        }
+      </div>
       ${
         item.detailVisibility.showHero && item.image
           ? `<figure class="detail-hero"><img src="${relativeHref(currentFile, item.image)}" alt="${escapeHtml(
@@ -1010,10 +1030,6 @@ function hasCardField(item, fieldName) {
   return item.cardFields.includes(fieldName);
 }
 
-function hasDetailMeta(item, fieldName) {
-  return item.detailVisibility.showMeta.includes(fieldName);
-}
-
 function normalizePageDatabaseItem(item) {
   const normalizedSection = normalizeSection(item.section);
 
@@ -1030,6 +1046,9 @@ function normalizePageDatabaseItem(item) {
   const title = content.title || item.title || "";
   const slug = slugify(item.id || item.slug || title);
   const summary = content.summary || item.summary || item.copy || "";
+  const publishingType = meta.publishingType || item.publishingType || getSectionLabel(normalizedSection);
+  const dateAdded = meta.dateAdded || item.dateAdded || "";
+  const dateModified = meta.dateModified || item.dateModified || item.lastUpdated || "";
   const actionUrl = click.url || item.externalUrl || item.actionUrl || "";
   let actionType = normalizeActionType(click.mode || item.actionType);
   let actionLabel = click.label || item.actionLabel || item.status || "";
@@ -1058,11 +1077,16 @@ function normalizePageDatabaseItem(item) {
     slug,
     sourceType: item.source?.type || "local",
     title,
+    publishingType,
+    publishingTypeLabel: humanizeToken(publishingType) || getSectionLabel(normalizedSection),
+    publishingStatus: meta.publishingStatus || item.publishingStatus || "",
+    effort: meta.effort || item.effort || "",
     category: meta.category || item.category || "",
     year: meta.year || (item.year ? String(item.year) : ""),
-    dateAdded: meta.dateAdded || "",
-    dateModified: meta.dateModified || "",
-    notionLastEdited: meta.notionLastEdited || "",
+    dateAdded,
+    dateAddedLabel: formatDateLabel(dateAdded),
+    dateModified,
+    notionLastEdited: meta.notionLastEdited || dateModified,
     image: content.image || item.image || "",
     alt: content.alt || item.alt || title,
     summary,
@@ -1071,8 +1095,8 @@ function normalizePageDatabaseItem(item) {
     actionUrl,
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
     sharedUrl: item.sharedUrl || "",
-    lastUpdated: meta.dateModified || item.lastUpdated || "",
-    lastUpdatedLabel: formatDateLabel(meta.dateModified || item.lastUpdated),
+    lastUpdated: dateModified,
+    lastUpdatedLabel: formatDateLabel(dateModified),
     detailPage,
     detailPagePath: detailPage ? contentPagePath(normalizedSection, slug) : "",
     cardVariant: card.variant || collectionConfig.cardVariant || "",
@@ -1097,6 +1121,9 @@ function normalizeNotionItem(item) {
         ...item.detailPage
       }
     : null;
+  const publishingType = item.publishingType || getSectionLabel(section);
+  const dateAdded = item.dateAdded || "";
+  const dateModified = item.dateModified || item.lastUpdated || "";
   let actionType = normalizeActionType(item.actionType);
   let actionLabel = item.actionLabel || "";
   const actionUrl = item.actionUrl || "";
@@ -1124,11 +1151,16 @@ function normalizeNotionItem(item) {
     slug,
     sourceType: item.source?.type || "notion-public",
     title: item.title,
+    publishingType,
+    publishingTypeLabel: humanizeToken(publishingType) || getSectionLabel(section),
+    publishingStatus: item.publishingStatus || "",
+    effort: item.effort || "",
     category: item.category || "",
     year: item.year ? String(item.year) : "",
-    dateAdded: item.dateAdded || "",
-    dateModified: item.dateModified || "",
-    notionLastEdited: item.lastUpdated || "",
+    dateAdded,
+    dateAddedLabel: formatDateLabel(dateAdded),
+    dateModified,
+    notionLastEdited: dateModified,
     image: item.image || "",
     alt: item.alt || item.title,
     summary: item.summary || "",
@@ -1137,8 +1169,8 @@ function normalizeNotionItem(item) {
     actionUrl,
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
     sharedUrl: item.sharedUrl || "",
-    lastUpdated: item.lastUpdated || "",
-    lastUpdatedLabel: formatDateLabel(item.lastUpdated),
+    lastUpdated: dateModified,
+    lastUpdatedLabel: formatDateLabel(dateModified),
     detailPage,
     detailPagePath,
     cardVariant: item.card?.variant || collectionConfig.cardVariant || "",
@@ -1386,7 +1418,10 @@ async function loadContentData() {
     filterBySection(localItems, "open-quests"),
     filterBySection(notionItems, "open-quests")
   );
-  const coolBookmarksData = filterBySection(localItems, "cool-bookmarks");
+  const coolBookmarksData = mergeItems(
+    filterBySection(localItems, "cool-bookmarks"),
+    filterBySection(notionItems, "cool-bookmarks")
+  );
   const detailItems = [...projectsData, ...makingData, ...openQuestsData, ...coolBookmarksData].filter(
     (item) => item.detailPage?.contentHtml
   );

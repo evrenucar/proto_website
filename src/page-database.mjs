@@ -1,37 +1,37 @@
 export const featuredProjectIds = [
   "eurocrate-storage-universal-solution",
-  "placeholder-1",
-  "placeholder-2"
+  "project-box-system",
+  "cyberdeck-small-modular-pc"
 ];
 
 export const pageDatabaseCollections = {
   projects: {
     cardVariant: "media",
     defaultCardSize: "lg",
-    defaultCardFields: ["category", "year", "summary"],
+    defaultCardFields: ["publishingStatus", "category", "summary"],
     defaultDetailVisibility: {
       showHero: true,
-      showMeta: ["lastUpdated", "notionLink"],
+      showMeta: ["publishingType", "publishingStatus", "dateAdded", "lastUpdated", "notionLink"],
       showComments: false
     }
   },
   things_i_do: {
     cardVariant: "media-compact",
     defaultCardSize: "md",
-    defaultCardFields: ["category"],
+    defaultCardFields: ["publishingStatus", "summary"],
     defaultDetailVisibility: {
       showHero: true,
-      showMeta: ["lastUpdated", "notionLink"],
+      showMeta: ["publishingType", "publishingStatus", "dateAdded", "lastUpdated", "notionLink"],
       showComments: false
     }
   },
   "open-quests": {
     cardVariant: "text",
     defaultCardSize: "md",
-    defaultCardFields: ["summary"],
+    defaultCardFields: ["publishingStatus", "summary"],
     defaultDetailVisibility: {
       showHero: false,
-      showMeta: ["lastUpdated", "notionLink"],
+      showMeta: ["publishingType", "publishingStatus", "dateAdded", "lastUpdated", "notionLink"],
       showComments: false
     }
   },
@@ -48,98 +48,6 @@ export const pageDatabaseCollections = {
 };
 
 export const pageDatabaseItems = [
-  {
-    id: "placeholder-1",
-    section: "projects",
-    source: {
-      type: "local"
-    },
-    content: {
-      title: "Coming soon",
-      summary: "Case study in progress.",
-      image: "",
-      alt: "Project placeholder"
-    },
-    meta: {
-      category: "",
-      year: ""
-    },
-    card: {
-      size: "lg",
-      fields: ["category", "year", "summary"],
-      click: {
-        mode: "status",
-        label: "Coming soon",
-        url: ""
-      },
-      layoutClass: "stack-wide"
-    },
-    detail: {
-      enabled: false,
-      showComments: false
-    }
-  },
-  {
-    id: "placeholder-2",
-    section: "projects",
-    source: {
-      type: "local"
-    },
-    content: {
-      title: "Coming soon",
-      summary: "Case study in progress.",
-      image: "",
-      alt: "Project placeholder"
-    },
-    meta: {
-      category: "",
-      year: ""
-    },
-    card: {
-      size: "lg",
-      fields: ["category", "year", "summary"],
-      click: {
-        mode: "status",
-        label: "Coming soon",
-        url: ""
-      },
-      layoutClass: "stack-offset-lg"
-    },
-    detail: {
-      enabled: false,
-      showComments: false
-    }
-  },
-  {
-    id: "placeholder-3",
-    section: "projects",
-    source: {
-      type: "local"
-    },
-    content: {
-      title: "Coming soon",
-      summary: "Case study in progress.",
-      image: "",
-      alt: "Project placeholder"
-    },
-    meta: {
-      category: "",
-      year: ""
-    },
-    card: {
-      size: "lg",
-      fields: ["category", "year", "summary"],
-      click: {
-        mode: "status",
-        label: "Coming soon",
-        url: ""
-      }
-    },
-    detail: {
-      enabled: false,
-      showComments: false
-    }
-  },
   {
     id: "thing-placeholder-1",
     section: "things_i_do",
