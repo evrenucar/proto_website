@@ -4,19 +4,21 @@ import { fileURLToPath } from "node:url";
 import {
   bookmarksPage,
   braindumpPage,
-  featuredProjectSlugs,
   homePage,
-  makingItems,
   makingPage,
   navigation,
   openQuestsPage,
   photographyItems,
   photographyPage,
   placeholderPage,
-  projects,
   seo,
   site
 } from "../src/site-data.mjs";
+import {
+  featuredProjectIds,
+  pageDatabaseCollections,
+  pageDatabaseItems
+} from "../src/page-database.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +50,10 @@ const sectionMeta = {
   "open-quests": {
     label: "Open-Quests",
     heading: "Ongoing builds and questions"
+  },
+  "cool-bookmarks": {
+    label: "Cool bookmarks",
+    heading: "References worth keeping close"
   }
 };
 
@@ -58,6 +64,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function trimGeneratedWhitespace(value) {
+  return String(value || "").replace(/[ \t]+\n/g, "\n");
 }
 
 function pageTitle(title) {
@@ -84,6 +94,10 @@ function normalizeSection(value) {
 
   if (["open-quests", "open quests", "open quest", "open_quests"].includes(normalized)) {
     return "open-quests";
+  }
+
+  if (["cool-bookmarks", "cool bookmarks", "cool bookmark", "cool_bookmarks", "bookmarks"].includes(normalized)) {
+    return "cool-bookmarks";
   }
 
   return "";
@@ -213,6 +227,10 @@ function sectionToNavFile(section) {
 
   if (section === "open-quests") {
     return "open-quests.html";
+  }
+
+  if (section === "cool-bookmarks") {
+    return "cool-bookmarks.html";
   }
 
   return "";
@@ -516,9 +534,20 @@ function renderThumbShell({ href, overlayHtml, item, linkClass = "work-thumb-lin
 function renderProjectCard(project, detailed = true) {
   const actionHtml = renderCardAction(project);
   const thumbHref = getResolvedItemHref(project);
+  const metaParts = [];
+
+  if (hasCardField(project, "category") && project.category) {
+    metaParts.push(escapeHtml(project.category));
+  }
+
+  if (hasCardField(project, "year") && project.year) {
+    metaParts.push(`<span>${escapeHtml(project.year)}</span>`);
+  }
 
   return `
-    <article class="work-card${detailed ? "" : " work-card-compact"}">
+    <article class="work-card${detailed ? "" : " work-card-compact"}${
+      project.layoutClass ? ` ${escapeHtml(project.layoutClass)}` : ""
+    }" data-card-size="${escapeHtml(project.cardSize || "")}">
       <div class="work-thumb">
         ${renderThumbShell({
           href: thumbHref,
@@ -526,7 +555,7 @@ function renderProjectCard(project, detailed = true) {
           overlayHtml: `
             <div class="work-overlay">
               <h3>${escapeHtml(project.title)}</h3>
-              <p>${escapeHtml(project.category || "")}<span>${escapeHtml(project.year || "")}</span></p>
+              ${metaParts.length > 0 ? `<p>${metaParts.join("")}</p>` : ""}
             </div>
           `
         })}
@@ -534,7 +563,11 @@ function renderProjectCard(project, detailed = true) {
       ${
         detailed
           ? `<div class="work-details">
-              ${project.summary ? `<p>${escapeHtml(project.summary)}</p>` : ""}
+              ${
+                hasCardField(project, "summary") && project.summary
+                  ? `<p>${escapeHtml(project.summary)}</p>`
+                  : ""
+              }
               ${actionHtml ? `<div class="work-actions">${actionHtml}</div>` : ""}
             </div>`
           : ""
@@ -547,7 +580,9 @@ function renderMakingCard(item) {
   const href = getResolvedItemHref(item);
 
   return `
-    <article class="mini-card">
+    <article class="mini-card${item.layoutClass ? ` ${escapeHtml(item.layoutClass)}` : ""}" data-card-size="${escapeHtml(
+      item.cardSize || ""
+    )}">
       <div class="work-thumb">
         ${renderThumbShell({
           href,
@@ -556,7 +591,7 @@ function renderMakingCard(item) {
           overlayHtml: `
             <div class="work-overlay work-overlay-small">
               <h3>${escapeHtml(item.title)}</h3>
-              <p>${escapeHtml(item.category || "")}</p>
+              ${hasCardField(item, "category") && item.category ? `<p>${escapeHtml(item.category)}</p>` : ""}
             </div>
           `
         })}
@@ -571,9 +606,13 @@ function renderTextCards(items) {
       const actionHtml = renderCardAction(item);
 
       return `
-        <article class="text-card">
+        <article class="text-card" data-card-size="${escapeHtml(item.cardSize || "")}">
           <h3>${escapeHtml(item.title)}</h3>
-          <p>${escapeHtml(item.summary || item.copy || "")}</p>
+          ${
+            hasCardField(item, "summary") && (item.summary || item.copy || "")
+              ? `<p>${escapeHtml(item.summary || item.copy || "")}</p>`
+              : ""
+          }
           ${actionHtml ? `<div class="text-card-actions">${actionHtml}</div>` : ""}
         </article>
       `;
@@ -618,7 +657,7 @@ function renderInfoPage({ tag, title, intro, items }) {
 function renderDetailPage(item, currentFile) {
   const metaParts = [];
 
-  if (item.lastUpdatedLabel) {
+  if (hasDetailMeta(item, "lastUpdated") && item.lastUpdatedLabel) {
     metaParts.push(`
       <div class="detail-meta-item">
         <span>Last updated</span>
@@ -627,7 +666,7 @@ function renderDetailPage(item, currentFile) {
     `);
   }
 
-  if (item.sharedUrl) {
+  if (hasDetailMeta(item, "notionLink") && item.sharedUrl) {
     metaParts.push(`
       <div class="detail-meta-item detail-meta-link">
         <a class="action-link" href="${item.sharedUrl}" target="_blank" rel="noreferrer">Open in Notion</a>
@@ -644,7 +683,7 @@ function renderDetailPage(item, currentFile) {
       )}
       ${metaParts.length > 0 ? `<div class="detail-meta">${metaParts.join("")}</div>` : ""}
       ${
-        item.image
+        item.detailVisibility.showHero && item.image
           ? `<figure class="detail-hero"><img src="${relativeHref(currentFile, item.image)}" alt="${escapeHtml(
               item.alt || item.title
             )}"></figure>`
@@ -657,8 +696,8 @@ function renderDetailPage(item, currentFile) {
   `;
 }
 
-function renderHomePage({ projectsData, makingData, openQuestsData, photographyData }) {
-  const featuredProjects = featuredProjectSlugs
+function renderHomePage({ projectsData, makingData, openQuestsData, coolBookmarksData, photographyData }) {
+  const featuredProjects = featuredProjectIds
     .map((slug) => projectsData.find((project) => project.slug === slug))
     .filter(Boolean);
   const makingPreview = makingData.slice(0, 6);
@@ -760,7 +799,7 @@ function renderHomePage({ projectsData, makingData, openQuestsData, photographyD
     <section class="page-section">
       ${renderSectionHeader("Cool bookmarks", "References worth keeping close", bookmarksPage.intro.slice(0, 1))}
       <div class="text-grid">
-        ${renderTextCards(bookmarksPage.items)}
+        ${renderTextCards(coolBookmarksData)}
       </div>
     </section>
 
@@ -929,44 +968,118 @@ function normalizeActionType(value) {
     return "status";
   }
 
+  if (["none", "disabled", "off"].includes(normalized)) {
+    return "none";
+  }
+
   return "";
 }
 
-function normalizeBaseItem(item, section) {
-  const normalizedSection = normalizeSection(section);
-  const slug = slugify(item.slug || item.title);
-  const summary = item.summary || item.copy || "";
-  const actionUrl = item.externalUrl || item.actionUrl || "";
-  let actionType = normalizeActionType(item.actionType);
-  let actionLabel = item.actionLabel || item.status || "";
+function getCollectionConfig(section) {
+  return pageDatabaseCollections[section] || {};
+}
+
+function normalizeFieldList(values, fallback = []) {
+  const sourceValues = Array.isArray(values) && values.length > 0 ? values : fallback;
+
+  return sourceValues
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+function normalizeDetailVisibility(detailConfig, collectionConfig) {
+  const collectionVisibility = collectionConfig.defaultDetailVisibility || {};
+
+  return {
+    showHero:
+      typeof detailConfig?.showHero === "boolean"
+        ? detailConfig.showHero
+        : collectionVisibility.showHero !== false,
+    showMeta: normalizeFieldList(
+      detailConfig?.showMeta,
+      normalizeFieldList(collectionVisibility.showMeta)
+    ),
+    showComments:
+      typeof detailConfig?.showComments === "boolean"
+        ? detailConfig.showComments
+        : Boolean(collectionVisibility.showComments)
+  };
+}
+
+function hasCardField(item, fieldName) {
+  return item.cardFields.includes(fieldName);
+}
+
+function hasDetailMeta(item, fieldName) {
+  return item.detailVisibility.showMeta.includes(fieldName);
+}
+
+function normalizePageDatabaseItem(item) {
+  const normalizedSection = normalizeSection(item.section);
+
+  if (!normalizedSection) {
+    return null;
+  }
+
+  const collectionConfig = getCollectionConfig(normalizedSection);
+  const content = item.content || {};
+  const meta = item.meta || {};
+  const card = item.card || {};
+  const click = card.click || {};
+  const detail = item.detail || {};
+  const title = content.title || item.title || "";
+  const slug = slugify(item.id || item.slug || title);
+  const summary = content.summary || item.summary || item.copy || "";
+  const actionUrl = click.url || item.externalUrl || item.actionUrl || "";
+  let actionType = normalizeActionType(click.mode || item.actionType);
+  let actionLabel = click.label || item.actionLabel || item.status || "";
 
   if (!actionType) {
     if (actionUrl) {
       actionType = isExternalUrl(actionUrl) ? "external" : "page";
     } else if (actionLabel) {
       actionType = "status";
+    } else {
+      actionType = detail.enabled ? "page" : "none";
     }
   }
 
+  const detailPage =
+    detail.enabled && detail.pageContentHtml
+      ? {
+          title: detail.title || title,
+          description: detail.description || summary || "",
+          contentHtml: detail.pageContentHtml
+        }
+      : null;
+
   return {
-    ...item,
     section: normalizedSection,
     slug,
-    title: item.title,
-    category: item.category || "",
-    year: item.year ? String(item.year) : "",
-    image: item.image || "",
-    alt: item.alt || item.title,
+    sourceType: item.source?.type || "local",
+    title,
+    category: meta.category || item.category || "",
+    year: meta.year || (item.year ? String(item.year) : ""),
+    dateAdded: meta.dateAdded || "",
+    dateModified: meta.dateModified || "",
+    notionLastEdited: meta.notionLastEdited || "",
+    image: content.image || item.image || "",
+    alt: content.alt || item.alt || title,
     summary,
     actionLabel,
     actionType,
     actionUrl,
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
     sharedUrl: item.sharedUrl || "",
-    lastUpdated: item.lastUpdated || "",
-    lastUpdatedLabel: formatDateLabel(item.lastUpdated),
-    detailPage: item.detailPage || null,
-    detailPagePath: item.detailPage?.contentHtml ? contentPagePath(normalizedSection, slug) : ""
+    lastUpdated: meta.dateModified || item.lastUpdated || "",
+    lastUpdatedLabel: formatDateLabel(meta.dateModified || item.lastUpdated),
+    detailPage,
+    detailPagePath: detailPage ? contentPagePath(normalizedSection, slug) : "",
+    cardVariant: card.variant || collectionConfig.cardVariant || "",
+    cardSize: card.size || collectionConfig.defaultCardSize || "",
+    cardFields: normalizeFieldList(card.fields, normalizeFieldList(collectionConfig.defaultCardFields)),
+    layoutClass: card.layoutClass || item.span || "",
+    detailVisibility: normalizeDetailVisibility(detail, collectionConfig)
   };
 }
 
@@ -977,6 +1090,7 @@ function normalizeNotionItem(item) {
     return null;
   }
 
+  const collectionConfig = getCollectionConfig(section);
   const slug = slugify(item.slug);
   const detailPage = item.detailPage?.contentHtml
     ? {
@@ -1002,14 +1116,19 @@ function normalizeNotionItem(item) {
   }
 
   const detailPagePath = detailPage ? contentPagePath(section, slug) : "";
+  const detailVisibility = normalizeDetailVisibility(item.detail || {}, collectionConfig);
 
   return {
     ...item,
     section,
     slug,
+    sourceType: item.source?.type || "notion-public",
     title: item.title,
     category: item.category || "",
     year: item.year ? String(item.year) : "",
+    dateAdded: item.dateAdded || "",
+    dateModified: item.dateModified || "",
+    notionLastEdited: item.lastUpdated || "",
     image: item.image || "",
     alt: item.alt || item.title,
     summary: item.summary || "",
@@ -1021,7 +1140,12 @@ function normalizeNotionItem(item) {
     lastUpdated: item.lastUpdated || "",
     lastUpdatedLabel: formatDateLabel(item.lastUpdated),
     detailPage,
-    detailPagePath
+    detailPagePath,
+    cardVariant: item.card?.variant || collectionConfig.cardVariant || "",
+    cardSize: item.card?.size || collectionConfig.defaultCardSize || "",
+    cardFields: normalizeFieldList(item.card?.fields, normalizeFieldList(collectionConfig.defaultCardFields)),
+    layoutClass: item.card?.layoutClass || item.span || "",
+    detailVisibility
   };
 }
 
@@ -1247,18 +1371,23 @@ function filterBySection(items, section) {
 }
 
 async function loadContentData() {
-  const baseProjects = projects.map((item) => normalizeBaseItem(item, "projects"));
-  const baseMakingItems = makingItems.map((item) => normalizeBaseItem(item, "things_i_do"));
-  const baseOpenQuests = openQuestsPage.items.map((item) => normalizeBaseItem(item, "open-quests"));
+  const localItems = pageDatabaseItems.map(normalizePageDatabaseItem).filter(Boolean);
   const legacyProjectOverrides = await loadLegacyProjectOverrides();
   const notionItems = await loadNotionItems();
   const photographyData = await loadPhotographyItems();
 
   const notionProjects = [...legacyProjectOverrides, ...filterBySection(notionItems, "projects")];
-  const projectsData = mergeItems(baseProjects, notionProjects);
-  const makingData = mergeItems(baseMakingItems, filterBySection(notionItems, "things_i_do"));
-  const openQuestsData = mergeItems(baseOpenQuests, filterBySection(notionItems, "open-quests"));
-  const detailItems = [...projectsData, ...makingData, ...openQuestsData].filter(
+  const projectsData = mergeItems(filterBySection(localItems, "projects"), notionProjects);
+  const makingData = mergeItems(
+    filterBySection(localItems, "things_i_do"),
+    filterBySection(notionItems, "things_i_do")
+  );
+  const openQuestsData = mergeItems(
+    filterBySection(localItems, "open-quests"),
+    filterBySection(notionItems, "open-quests")
+  );
+  const coolBookmarksData = filterBySection(localItems, "cool-bookmarks");
+  const detailItems = [...projectsData, ...makingData, ...openQuestsData, ...coolBookmarksData].filter(
     (item) => item.detailPage?.contentHtml
   );
 
@@ -1266,6 +1395,7 @@ async function loadContentData() {
     projectsData,
     makingData,
     openQuestsData,
+    coolBookmarksData,
     photographyData,
     detailItems
   };
@@ -1329,7 +1459,7 @@ ${urls}
 }
 
 async function build() {
-  const { projectsData, makingData, openQuestsData, photographyData, detailItems } =
+  const { projectsData, makingData, openQuestsData, coolBookmarksData, photographyData, detailItems } =
     await loadContentData();
   await preserveBoardContent();
   await rm(path.join(rootDir, "content"), { recursive: true, force: true });
@@ -1346,6 +1476,7 @@ async function build() {
         projectsData,
         makingData,
         openQuestsData,
+        coolBookmarksData,
         photographyData
       })
     },
@@ -1393,7 +1524,7 @@ async function build() {
         tag: "Cool bookmarks",
         title: "References worth keeping close",
         intro: bookmarksPage.intro,
-        items: bookmarksPage.items
+        items: coolBookmarksData
       })
     },
     {
@@ -1455,17 +1586,19 @@ async function build() {
       await mkdir(path.dirname(outputPath), { recursive: true });
       await writeFile(
         outputPath,
-        renderShell({
-          currentFile: page.file,
-          currentNavFile: page.currentNavFile,
-          metaTitle: page.title,
-          metaDescription: page.description,
-          bodyClass: page.bodyClass,
-          ogImage: page.ogImage,
-          robots: page.robots,
-          structuredData: page.structuredData,
-          content: page.content
-        }),
+        trimGeneratedWhitespace(
+          renderShell({
+            currentFile: page.file,
+            currentNavFile: page.currentNavFile,
+            metaTitle: page.title,
+            metaDescription: page.description,
+            bodyClass: page.bodyClass,
+            ogImage: page.ogImage,
+            robots: page.robots,
+            structuredData: page.structuredData,
+            content: page.content
+          })
+        ),
         "utf8"
       );
     })

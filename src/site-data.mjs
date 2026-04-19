@@ -110,47 +110,6 @@ export const homePage = {
   ]
 };
 
-export const projects = [
-  {
-    slug: "placeholder-1",
-    title: "Coming soon",
-    year: "",
-    category: "",
-    image: "",
-    alt: "Project placeholder",
-    summary: "Case study in progress.",
-    status: "Coming soon",
-    externalUrl: "",
-    span: "stack-wide"
-  },
-  {
-    slug: "placeholder-2",
-    title: "Coming soon",
-    year: "",
-    category: "",
-    image: "",
-    alt: "Project placeholder",
-    summary: "Case study in progress.",
-    status: "Coming soon",
-    externalUrl: "",
-    span: "stack-offset-lg"
-  },
-  {
-    slug: "placeholder-3",
-    title: "Coming soon",
-    year: "",
-    category: "",
-    image: "",
-    alt: "Project placeholder",
-    summary: "Case study in progress.",
-    status: "Coming soon",
-    externalUrl: "",
-    span: ""
-  }
-];
-
-export const featuredProjectSlugs = ["eurocrate-storage-universal-solution", "placeholder-1", "placeholder-2"];
-
 export const makingPage = {
   title: "Things I Do | Evren Ucar",
   description:
@@ -161,30 +120,6 @@ export const makingPage = {
   ]
 };
 
-export const makingItems = [
-  {
-    title: "Coming soon",
-    category: "",
-    image: "",
-    alt: "Placeholder",
-    span: "stack-wide"
-  },
-  {
-    title: "Coming soon",
-    category: "",
-    image: "",
-    alt: "Placeholder",
-    span: "stack-offset-lg"
-  },
-  {
-    title: "Coming soon",
-    category: "",
-    image: "",
-    alt: "Placeholder",
-    span: ""
-  }
-];
-
 export const openQuestsPage = {
   title: "Open Quests | Evren Ucar",
   description:
@@ -192,23 +127,6 @@ export const openQuestsPage = {
   intro: [
     "This page is for the ideas and builds that are still open. Some are practical workshop projects. Some are just questions that keep pulling me back in.",
     "It is meant to stay rough and active instead of pretending everything is already wrapped up."
-  ],
-  items: [
-    {
-      title: "Darkroom build",
-      copy:
-        "An ongoing build at OMA Collective, balancing layout, workflow, and the practical details that make the room usable."
-    },
-    {
-      title: "Small metal casting kiln",
-      copy:
-        "Still being shaped through material choices, insulation decisions, and a lot of real-world trial and error."
-    },
-    {
-      title: "Workshop process notes",
-      copy:
-        "A growing place for the smaller questions around prototyping, fabrication, fixtures, and useful ways of testing ideas quickly."
-    }
   ]
 };
 
@@ -219,23 +137,6 @@ export const bookmarksPage = {
   intro: [
     "This page will collect the links I keep coming back to, without turning into a messy dump.",
     "For now I am setting up the buckets first, then I will fill them with the useful stuff."
-  ],
-  items: [
-    {
-      title: "Tools and references",
-      copy:
-        "Useful pages for fabrication, prototyping, and figuring out practical details without overcomplicating them."
-    },
-    {
-      title: "People and projects",
-      copy:
-        "Studios, makers, and side projects worth revisiting when I want to see how other people solve things."
-    },
-    {
-      title: "Materials and processes",
-      copy:
-        "Pages I want close by while learning more about analog work, metals, workshop setups, and physical making."
-    }
   ]
 };
 
