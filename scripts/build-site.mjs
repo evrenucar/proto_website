@@ -56,6 +56,7 @@ const sectionMeta = {
     heading: "References worth keeping close"
   }
 };
+const EMPTY_FIELD_VALUE = "none";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -96,7 +97,23 @@ function normalizeSection(value) {
     return "open-quests";
   }
 
-  if (["cool-bookmarks", "cool bookmarks", "cool bookmark", "cool_bookmarks", "bookmarks"].includes(normalized)) {
+  if (
+    [
+      "cool-bookmarks",
+      "cool bookmarks",
+      "cool bookmark",
+      "cool_bookmarks",
+      "bookmarks",
+      "bookmark",
+      "web-app",
+      "web app",
+      "website",
+      "reference",
+      "references",
+      "resource",
+      "resources"
+    ].includes(normalized)
+  ) {
     return "cool-bookmarks";
   }
 
@@ -511,6 +528,18 @@ function humanizeToken(value) {
   return text.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function createDisplayEntry({ key, label, value = "", href = "" }) {
+  const trimmedValue = String(value ?? "").trim();
+
+  return {
+    key,
+    label,
+    value: trimmedValue || EMPTY_FIELD_VALUE,
+    href,
+    isEmpty: !trimmedValue
+  };
+}
+
 function getDisplayFieldEntry(item, fieldName) {
   if (!fieldName) {
     return null;
@@ -518,32 +547,62 @@ function getDisplayFieldEntry(item, fieldName) {
 
   switch (fieldName) {
     case "publishingType":
-      return item.publishingTypeLabel
-        ? { key: fieldName, label: "Type", value: item.publishingTypeLabel }
-        : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Type",
+        value: item.publishingTypeLabel || item.publishingType || ""
+      });
     case "publishingStatus":
-      return item.publishingStatus
-        ? { key: fieldName, label: "Status", value: item.publishingStatus }
-        : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Status",
+        value: item.publishingStatus || ""
+      });
     case "category":
-      return item.category ? { key: fieldName, label: "Category", value: item.category } : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Category",
+        value: item.category || ""
+      });
     case "year":
-      return item.year ? { key: fieldName, label: "Year", value: item.year } : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Year",
+        value: item.year || ""
+      });
     case "effort":
-      return item.effort ? { key: fieldName, label: "Scale", value: item.effort } : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Scale",
+        value: item.effort || ""
+      });
     case "dateAdded":
-      return item.dateAddedLabel ? { key: fieldName, label: "Added", value: item.dateAddedLabel } : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Added",
+        value: item.dateAddedLabel || ""
+      });
     case "dateModified":
     case "lastUpdated":
-      return item.lastUpdatedLabel ? { key: fieldName, label: "Updated", value: item.lastUpdatedLabel } : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Last updated",
+        value: item.lastUpdatedLabel || ""
+      });
     case "notionLink":
-      return item.sharedUrl
-        ? { key: fieldName, label: "Notion", value: "Open in Notion", href: item.sharedUrl }
-        : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Notion",
+        value: item.sharedUrl ? "Open in Notion" : "",
+        href: item.sharedUrl || ""
+      });
     case "externalLink":
-      return item.actionType === "external" && item.actionUrl
-        ? { key: fieldName, label: "Link", value: "Open source", href: item.actionUrl }
-        : null;
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Link",
+        value: item.actionType === "external" && item.actionUrl ? "Open source" : "",
+        href: item.actionType === "external" ? item.actionUrl || "" : ""
+      });
     default:
       return null;
   }
@@ -551,18 +610,23 @@ function getDisplayFieldEntry(item, fieldName) {
 
 function getCardMetaEntries(item) {
   return item.cardFields
-    .filter((fieldName) => fieldName !== "summary")
+    .filter((fieldName) => !["summary", "lastUpdated"].includes(fieldName))
     .map((fieldName) => getDisplayFieldEntry(item, fieldName))
     .filter(Boolean);
 }
 
-function renderCardMedia(item) {
+function getCardFooterEntries(item) {
+  return [getDisplayFieldEntry(item, "lastUpdated")].filter(Boolean);
+}
+
+function renderCardMedia(item, currentFile = "") {
   const mediaLabel = escapeHtml(item.publishingTypeLabel || getSectionLabel(item.section));
+  const imageHref = currentFile ? relativeHref(currentFile, item.image) : item.image;
 
   if (item.image) {
     return `
       <div class="content-card-media">
-        <img src="${item.image}" alt="${escapeHtml(item.alt || item.title)}" loading="eager" decoding="async">
+        <img src="${imageHref}" alt="${escapeHtml(item.alt || item.title)}" loading="eager" decoding="async">
       </div>
     `;
   }
@@ -574,21 +638,24 @@ function renderCardMedia(item) {
   `;
 }
 
-function renderContentCard(item) {
+function renderCardSeparator() {
+  return `<span class="content-card-separator" aria-hidden="true"></span>`;
+}
+
+function renderContentCard(item, currentFile = "") {
   const href = getResolvedItemHref(item);
+  const resolvedHref = currentFile ? relativeHref(currentFile, href) : href;
   const sectionClass = sectionToCssToken(item.section);
   const variantClass = sectionToCssToken(item.cardVariant || "text");
   const metaEntries = getCardMetaEntries(item);
-  const summary =
-    hasCardField(item, "summary") && (item.summary || item.copy || "")
-      ? `<p class="content-card-summary">${escapeHtml(item.summary || item.copy || "")}</p>`
-      : "";
-  const innerHtml = `
-    ${
-      variantClass !== "text"
-        ? renderCardMedia(item)
-        : ""
-    }
+  const footerEntries = getCardFooterEntries(item);
+  const summaryValue = String(item.summary || item.copy || "").trim();
+  const summary = hasCardField(item, "summary")
+    ? `<p class="content-card-summary${summaryValue ? "" : " is-empty"}">${escapeHtml(
+        summaryValue || EMPTY_FIELD_VALUE
+      )}</p>`
+    : "";
+  const bodyHtml = `
     <div class="content-card-body">
       ${
         metaEntries.length > 0
@@ -597,15 +664,33 @@ function renderContentCard(item) {
                 (entry) =>
                   `<span class="content-card-pill content-card-pill--${escapeHtml(
                     sectionToCssToken(entry.key)
-                  )}"><strong>${escapeHtml(entry.label)}</strong><span>${escapeHtml(entry.value)}</span></span>`
+                  )}${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(entry.label)}</strong><span>${escapeHtml(
+                    entry.value
+                  )}</span></span>`
               )
               .join("")}</div>`
           : ""
       }
       <h3 class="content-card-title">${escapeHtml(item.title)}</h3>
       ${summary}
+      ${
+        footerEntries.length > 0
+          ? `<div class="content-card-footer">${footerEntries
+              .map(
+                (entry) =>
+                  `<p class="content-card-footnote${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(
+                    entry.label
+                  )}</strong><span>${escapeHtml(entry.value)}</span></p>`
+              )
+              .join("")}</div>`
+          : ""
+      }
     </div>
   `;
+  const innerHtml =
+    variantClass === "text"
+      ? `${renderCardSeparator()}${bodyHtml}`
+      : `${renderCardMedia(item, currentFile)}${renderCardSeparator()}${bodyHtml}`;
 
   return `
     <article class="content-card content-card--${escapeHtml(sectionClass)} content-card--${escapeHtml(
@@ -614,9 +699,9 @@ function renderContentCard(item) {
       item.cardSize || ""
     )}">
       ${
-        href
-          ? `<a class="content-card-link" href="${href}"${
-              isExternalUrl(href) ? ' target="_blank" rel="noreferrer"' : ""
+        resolvedHref
+          ? `<a class="content-card-link" href="${resolvedHref}"${
+              isExternalUrl(resolvedHref) ? ' target="_blank" rel="noreferrer"' : ""
             }>${innerHtml}</a>`
           : `<div class="content-card-link is-static">${innerHtml}</div>`
       }
@@ -624,16 +709,16 @@ function renderContentCard(item) {
   `;
 }
 
-function renderProjectCard(project) {
-  return renderContentCard(project);
+function renderProjectCard(project, currentFile = "") {
+  return renderContentCard(project, currentFile);
 }
 
-function renderMakingCard(item) {
-  return renderContentCard(item);
+function renderMakingCard(item, currentFile = "") {
+  return renderContentCard(item, currentFile);
 }
 
-function renderTextCards(items) {
-  return items.map((item) => renderContentCard(item)).join("");
+function renderTextCards(items, currentFile = "") {
+  return items.map((item) => renderContentCard(item, currentFile)).join("");
 }
 
 function renderPhotoCard(photo) {
@@ -659,18 +744,81 @@ function renderPhotoGrid(items) {
   return items.map((photo) => renderPhotoCard(photo)).join("");
 }
 
-function renderInfoPage({ tag, title, intro, items }) {
+function renderInfoPage(currentFile, { tag, title, intro, items }) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader(tag, title, intro)}
       <div class="text-grid">
-        ${renderTextCards(items)}
+        ${renderTextCards(items, currentFile)}
       </div>
     </section>
   `;
 }
 
-function renderDetailPage(item, currentFile) {
+function renderIcon(name) {
+  switch (name) {
+    case "arrow-up":
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19V5"></path>
+          <path d="m6 11 6-6 6 6"></path>
+        </svg>
+      `;
+    case "arrow-left":
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"></path>
+          <path d="m11 18-6-6 6-6"></path>
+        </svg>
+      `;
+    default:
+      return "";
+  }
+}
+
+function renderDetailActions(item, currentFile) {
+  const fallbackHref = relativeHref(currentFile, sectionToNavFile(item.section));
+
+  return `
+    <div class="detail-action-row">
+      <a class="detail-nav-link" href="#content">
+        <span class="detail-nav-icon">${renderIcon("arrow-up")}</span>
+        <span>Go back to top</span>
+      </a>
+      <a
+        class="detail-nav-link"
+        href="${fallbackHref}"
+        data-history-back
+        data-fallback-href="${fallbackHref}"
+      >
+        <span class="detail-nav-icon">${renderIcon("arrow-left")}</span>
+        <span>Go back</span>
+      </a>
+    </div>
+  `;
+}
+
+function renderDetailRelatedItems(currentFile, item, relatedItems) {
+  if (!Array.isArray(relatedItems) || relatedItems.length === 0) {
+    return "";
+  }
+
+  return `
+    <section class="detail-related-section">
+      <div class="section-header">
+        <p class="page-tag">${escapeHtml(getSectionLabel(item.section))}</p>
+        <h2 class="section-title">More ${escapeHtml(getSectionLabel(item.section).toLowerCase())}</h2>
+      </div>
+      <div class="detail-related-grid">
+        ${relatedItems
+          .map((relatedItem) => renderContentCard({ ...relatedItem, cardSize: "sm" }, currentFile))
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderDetailPage(item, currentFile, relatedItems = []) {
   const detailMetaEntries = item.detailVisibility.showMeta
     .map((fieldName) => getDisplayFieldEntry(item, fieldName))
     .filter(Boolean);
@@ -688,13 +836,15 @@ function renderDetailPage(item, currentFile) {
           detailMetaEntries.length > 0
             ? `<div class="detail-meta">${detailMetaEntries
                 .map((entry) =>
-                  entry.href
+                  entry.href && !entry.isEmpty
                     ? `<div class="detail-meta-item detail-meta-link"><span>${escapeHtml(
                         entry.label
                       )}</span><a class="action-link" href="${entry.href}" target="_blank" rel="noreferrer">${escapeHtml(
                         entry.value
                       )}</a></div>`
-                    : `<div class="detail-meta-item"><span>${escapeHtml(entry.label)}</span><strong>${escapeHtml(
+                    : `<div class="detail-meta-item${entry.isEmpty ? " is-empty" : ""}"><span>${escapeHtml(
+                        entry.label
+                      )}</span><strong>${escapeHtml(
                         entry.value
                       )}</strong></div>`
                 )
@@ -712,11 +862,15 @@ function renderDetailPage(item, currentFile) {
       <div class="article-content">
         ${resolveInlineContentPaths(currentFile, item.detailPage?.contentHtml || "")}
       </div>
+      <div class="detail-endcap">
+        ${renderDetailRelatedItems(currentFile, item, relatedItems)}
+        ${renderDetailActions(item, currentFile)}
+      </div>
     </article>
   `;
 }
 
-function renderHomePage({ projectsData, makingData, openQuestsData, coolBookmarksData, photographyData }) {
+function renderHomePage(currentFile, { projectsData, makingData, openQuestsData, coolBookmarksData, photographyData }) {
   const featuredProjects = featuredProjectIds
     .map((slug) => projectsData.find((project) => project.slug === slug))
     .filter(Boolean);
@@ -791,14 +945,14 @@ function renderHomePage({ projectsData, makingData, openQuestsData, coolBookmark
         "The longer case studies are still being rebuilt. For now the short summaries stay on the main project page."
       ])}
       <div class="work-grid">
-        ${featuredProjects.map((project) => renderProjectCard(project, true)).join("")}
+        ${featuredProjects.map((project) => renderProjectCard(project, currentFile)).join("")}
       </div>
     </section>
 
     <section class="page-section">
       ${renderSectionHeader("Things i do", "Smaller builds and experiments", makingPage.intro.slice(0, 1))}
       <div class="mini-grid">
-        ${makingPreview.map((item) => renderMakingCard(item)).join("")}
+        ${makingPreview.map((item) => renderMakingCard(item, currentFile)).join("")}
       </div>
     </section>
 
@@ -812,14 +966,14 @@ function renderHomePage({ projectsData, makingData, openQuestsData, coolBookmark
     <section class="page-section">
       ${renderSectionHeader("Open-Quests", "Ongoing builds and questions", openQuestsPage.intro.slice(0, 1))}
       <div class="text-grid">
-        ${renderTextCards(openQuestsData)}
+        ${renderTextCards(openQuestsData, currentFile)}
       </div>
     </section>
 
     <section class="page-section">
       ${renderSectionHeader("Cool bookmarks", "References worth keeping close", bookmarksPage.intro.slice(0, 1))}
       <div class="text-grid">
-        ${renderTextCards(coolBookmarksData)}
+        ${renderTextCards(coolBookmarksData, currentFile)}
       </div>
     </section>
 
@@ -839,14 +993,14 @@ function renderHomePage({ projectsData, makingData, openQuestsData, coolBookmark
   `;
 }
 
-function renderProjectsPage(projectsData) {
+function renderProjectsPage(currentFile, projectsData) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader("Projects", "Project work", [
         "A selection of product and concept work. The long writeups are still being rebuilt, so this page stays short and direct for now."
       ])}
       <div class="work-grid">
-        ${projectsData.map((project) => renderProjectCard(project, true)).join("")}
+        ${projectsData.map((project) => renderProjectCard(project, currentFile)).join("")}
       </div>
     </section>
 
@@ -858,12 +1012,12 @@ function renderProjectsPage(projectsData) {
   `;
 }
 
-function renderMakingPage(makingData) {
+function renderMakingPage(currentFile, makingData) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader("Things I do", "Smaller builds and experiments", makingPage.intro)}
       <div class="mini-grid">
-        ${makingData.map((item) => renderMakingCard(item)).join("")}
+        ${makingData.map((item) => renderMakingCard(item, currentFile)).join("")}
       </div>
     </section>
   `;
@@ -1338,7 +1492,41 @@ async function loadNotionItems() {
   return items.map(normalizeNotionItem).filter(Boolean);
 }
 
+function getDateSortValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function shouldSortNewestFirst(section) {
+  return ["projects", "things_i_do", "open-quests"].includes(section);
+}
+
 function sortContentItems(a, b) {
+  const section = a.section || b.section || "";
+  const dateA = getDateSortValue(a.lastUpdated || a.dateModified);
+  const dateB = getDateSortValue(b.lastUpdated || b.dateModified);
+  const hasDateA = dateA !== null;
+  const hasDateB = dateB !== null;
+
+  if (shouldSortNewestFirst(section)) {
+    if (hasDateA && hasDateB && dateA !== dateB) {
+      return dateB - dateA;
+    }
+
+    if (hasDateA && !hasDateB) {
+      return -1;
+    }
+
+    if (!hasDateA && hasDateB) {
+      return 1;
+    }
+  }
+
   const hasOrderA = Number.isFinite(a.sortOrder);
   const hasOrderB = Number.isFinite(b.sortOrder);
 
@@ -1400,6 +1588,13 @@ function mergeItems(baseItems, overrideItems) {
 
 function filterBySection(items, section) {
   return items.filter((item) => item.section === section);
+}
+
+function getSiblingItems(item, collectionItems, maxItems = 3) {
+  return collectionItems
+    .filter((candidate) => candidate.slug !== item.slug)
+    .filter((candidate) => Boolean(getResolvedItemHref(candidate)))
+    .slice(0, maxItems);
 }
 
 async function loadContentData() {
@@ -1507,7 +1702,7 @@ async function build() {
       ogImage: homePage.hero.image.src,
       bodyClass: "page-home",
       structuredData: [websiteSchema, personSchema],
-      content: renderHomePage({
+      content: renderHomePage("index.html", {
         projectsData,
         makingData,
         openQuestsData,
@@ -1523,7 +1718,7 @@ async function build() {
       ogImage: projectsData[0]?.image || seo.defaultImage,
       bodyClass: "page-projects",
       structuredData: [websiteSchema, collectionSchema],
-      content: renderProjectsPage(projectsData)
+      content: renderProjectsPage("projects.html", projectsData)
     },
     {
       file: "things_i_do.html",
@@ -1532,7 +1727,7 @@ async function build() {
       ogImage: makingData[0]?.image || seo.defaultImage,
       bodyClass: "page-making",
       structuredData: [websiteSchema],
-      content: renderMakingPage(makingData)
+      content: renderMakingPage("things_i_do.html", makingData)
     },
     {
       file: "open-quests.html",
@@ -1541,7 +1736,7 @@ async function build() {
       ogImage: seo.defaultImage,
       bodyClass: "page-open-quests",
       structuredData: [websiteSchema],
-      content: renderInfoPage({
+      content: renderInfoPage("open-quests.html", {
         tag: "Open-Quests",
         title: "Ongoing builds and questions",
         intro: openQuestsPage.intro,
@@ -1555,7 +1750,7 @@ async function build() {
       ogImage: seo.defaultImage,
       bodyClass: "page-bookmarks",
       structuredData: [websiteSchema],
-      content: renderInfoPage({
+      content: renderInfoPage("cool-bookmarks.html", {
         tag: "Cool bookmarks",
         title: "References worth keeping close",
         intro: bookmarksPage.intro,
@@ -1588,7 +1783,19 @@ async function build() {
       ogImage: item.image || seo.defaultImage,
       bodyClass: "page-detail",
       structuredData: [websiteSchema],
-      content: renderDetailPage(item, contentPagePath(item.section, item.slug))
+      content: renderDetailPage(
+        item,
+        contentPagePath(item.section, item.slug),
+        getSiblingItems(
+          item,
+          {
+            projects: projectsData,
+            things_i_do: makingData,
+            "open-quests": openQuestsData,
+            "cool-bookmarks": coolBookmarksData
+          }[item.section] || []
+        )
+      )
     })),
     {
       file: "coming_soon.html",

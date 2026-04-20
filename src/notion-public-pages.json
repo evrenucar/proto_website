@@ -53,5 +53,11 @@
     "actionLabel": "Read case study",
     "actionType": "page",
     "sortOrder": 60
+  },
+  {
+    "url": "https://evrenucar.notion.site/Material-Properties-Database-47feb86b042f4990a860b568af41bbf4?source=copy_link",
+    "section": "cool-bookmarks",
+    "slug": "material-properties-database",
+    "sortOrder": 10
   }
 ]

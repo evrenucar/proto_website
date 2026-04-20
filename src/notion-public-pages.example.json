@@ -63,11 +63,19 @@
     "url": "https://example.notion.site/useful-workshop-links-12341234123412341234123412341234",
     "section": "cool-bookmarks",
     "slug": "useful-workshop-links",
-    "actionType": "external",
-    "sortOrder": 100,
+    "sortOrder": 100
+  },
+  {
+    "url": "https://example.notion.site/reference-page-from-a-different-database-56785678567856785678567856785678",
+    "section": "cool-bookmarks",
+    "slug": "reference-page-from-a-different-database",
+    "sortOrder": 110,
     "propertyAliases": {
       "summary": ["Summary", "card_copy"],
-      "externalUrl": ["Source URL", "Link"]
+      "externalUrl": ["Source URL", "Link"],
+      "publishingType": ["Bookmark Type"],
+      "publishingStatus": ["Review State"],
+      "category": ["Tags"]
     }
   }
 ]

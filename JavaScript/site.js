@@ -283,6 +283,7 @@ const lightboxImage = lightbox?.querySelector("[data-lightbox-image]");
 const lightboxCaption = lightbox?.querySelector("[data-lightbox-caption]");
 const lightboxClose = lightbox?.querySelector("[data-lightbox-close]");
 const lightboxButtons = document.querySelectorAll("[data-lightbox-button]");
+const historyBackLinks = document.querySelectorAll("[data-history-back]");
 
 function closeLightbox() {
   if (!lightbox || !lightboxImage || !lightboxCaption) {
@@ -323,5 +324,24 @@ if (lightbox && lightboxImage && lightboxCaption && lightboxButtons.length > 0) 
 
       closeLightbox();
     }
+  });
+}
+
+if (historyBackLinks.length > 0) {
+  historyBackLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const fallbackHref = link.getAttribute("data-fallback-href") || link.getAttribute("href") || "index.html";
+
+      if (window.history.length > 1) {
+        event.preventDefault();
+        window.history.back();
+        return;
+      }
+
+      if (fallbackHref) {
+        event.preventDefault();
+        window.location.href = fallbackHref;
+      }
+    });
   });
 }

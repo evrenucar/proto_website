@@ -8,12 +8,13 @@ const rootDir = path.resolve(__dirname, "..");
 const sourcePath = path.join(rootDir, "src", "notion-public-pages.json");
 const outputPath = path.join(rootDir, "src", "notion-items.json");
 const notionAssetsDir = path.join(rootDir, "notion_assets");
-const syncCacheVersion = 2;
+const syncCacheVersion = 3;
 
 const defaultNotionPropertyAliases = Object.freeze({
-  publishingType: [">[Mc", "Publishing_Type", "Publishing Type", "publishing_type", "publishing type"],
+  publishingType: [">[Mc", "A|cR", "Publishing_Type", "Publishing Type", "publishing_type", "publishing type"],
   publishingStatus: [
     ">{Jz",
+    "CEpZ",
     "Publishing_Status",
     "Publishing Status",
     "publishing_status",
@@ -32,7 +33,9 @@ const defaultNotionPropertyAliases = Object.freeze({
     "notes_links"
   ],
   effort: ["SDhZ", "Publishing_Size", "Publishing Size", "publishing_size", "publishing size"],
-  externalUrl: ["Io_F", "External_Url", "External Url", "external_url", "external url", "link", "Link"]
+  externalUrl: ["Io_F", "Z]sx", "External_Url", "External Url", "external_url", "external url", "link", "Link"],
+  category: ["e]w[", "category", "Category", "tags", "Tags", "topics", "Topics"],
+  year: ["year", "Year"]
 });
 
 function slugify(value) {
@@ -67,7 +70,23 @@ function normalizeSection(value) {
     return "open-quests";
   }
 
-  if (["cool-bookmarks", "cool bookmarks", "cool bookmark", "cool_bookmarks", "bookmarks"].includes(normalized)) {
+  if (
+    [
+      "cool-bookmarks",
+      "cool bookmarks",
+      "cool bookmark",
+      "cool_bookmarks",
+      "bookmarks",
+      "bookmark",
+      "web-app",
+      "web app",
+      "website",
+      "reference",
+      "references",
+      "resource",
+      "resources"
+    ].includes(normalized)
+  ) {
     return "cool-bookmarks";
   }
 
@@ -784,6 +803,8 @@ function getCachedSourceData(item) {
     contentHtml: String(cache.contentHtml || ""),
     publishingType: String(cache.publishingType || item?.publishingType || ""),
     publishingStatus: String(cache.publishingStatus || item?.publishingStatus || ""),
+    category: String(cache.category || item?.category || ""),
+    year: String(cache.year || item?.year || ""),
     effort: String(cache.effort || item?.effort || ""),
     notionExternalUrl: String(cache.notionExternalUrl || ""),
     dateAdded: String(cache.dateAdded || item?.dateAdded || ""),
@@ -794,7 +815,7 @@ function getCachedSourceData(item) {
 function buildItemFromSource(entry, sourceData) {
   const sharedUrl = entry.url || entry.sharedUrl || "";
   const pageId = sourceData.pageId || parseNotionPageId(sharedUrl);
-  const section = normalizeSection(sourceData.publishingType || entry.section);
+  const section = normalizeSection(sourceData.publishingType) || normalizeSection(entry.section);
 
   if (!pageId) {
     throw new Error(`Could not parse a Notion page id from "${sharedUrl}".`);
@@ -809,7 +830,10 @@ function buildItemFromSource(entry, sourceData) {
   const summary = entry.summary || sourceData.notionSummary || "";
   const image = entry.image || sourceData.notionImage || "";
   const actionUrl =
-    entry.actionUrl || (section === "cool-bookmarks" ? sourceData.notionExternalUrl || "" : "");
+    entry.actionUrl ||
+    (section === "cool-bookmarks" || normalizeActionType(entry.actionType) === "external"
+      ? sourceData.notionExternalUrl || ""
+      : "");
   let actionType = normalizeActionType(entry.actionType);
   let actionLabel = entry.actionLabel || "";
 
@@ -835,8 +859,8 @@ function buildItemFromSource(entry, sourceData) {
     slug,
     section,
     title,
-    category: entry.category || "",
-    year: entry.year ? String(entry.year) : "",
+    category: sourceData.category || "",
+    year: entry.year ? String(entry.year) : sourceData.year || "",
     publishingType: sourceData.publishingType || "",
     publishingStatus: sourceData.publishingStatus || "",
     effort: sourceData.effort || "",
@@ -866,6 +890,8 @@ function buildItemFromSource(entry, sourceData) {
       contentHtml: sourceData.contentHtml || "",
       publishingType: sourceData.publishingType || "",
       publishingStatus: sourceData.publishingStatus || "",
+      category: sourceData.category || "",
+      year: sourceData.year || "",
       effort: sourceData.effort || "",
       notionExternalUrl: sourceData.notionExternalUrl || "",
       dateAdded: sourceData.dateAdded || "",
@@ -917,6 +943,8 @@ async function buildFreshSourceData(entry, pageId) {
     notionImage,
     publishingType: readNotionProperty(pageBlock.properties, propertyAliases.publishingType),
     publishingStatus: readNotionProperty(pageBlock.properties, propertyAliases.publishingStatus),
+    category: readNotionProperty(pageBlock.properties, propertyAliases.category),
+    year: readNotionProperty(pageBlock.properties, propertyAliases.year),
     effort: readNotionProperty(pageBlock.properties, propertyAliases.effort),
     notionExternalUrl: readNotionProperty(pageBlock.properties, propertyAliases.externalUrl),
     contentHtml: await renderBlocks(recordMap, getBlockChildren(pageBlock), {

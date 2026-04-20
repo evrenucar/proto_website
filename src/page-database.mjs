@@ -7,8 +7,8 @@ export const featuredProjectIds = [
 export const pageDatabaseCollections = {
   projects: {
     cardVariant: "media",
-    defaultCardSize: "lg",
-    defaultCardFields: ["publishingStatus", "category", "summary"],
+    defaultCardSize: "md",
+    defaultCardFields: ["publishingStatus", "category", "summary", "lastUpdated"],
     defaultDetailVisibility: {
       showHero: true,
       showMeta: ["publishingType", "publishingStatus", "dateAdded", "lastUpdated", "notionLink"],
@@ -18,7 +18,7 @@ export const pageDatabaseCollections = {
   things_i_do: {
     cardVariant: "media-compact",
     defaultCardSize: "md",
-    defaultCardFields: ["publishingStatus", "summary"],
+    defaultCardFields: ["publishingStatus", "summary", "lastUpdated"],
     defaultDetailVisibility: {
       showHero: true,
       showMeta: ["publishingType", "publishingStatus", "dateAdded", "lastUpdated", "notionLink"],
@@ -26,9 +26,9 @@ export const pageDatabaseCollections = {
     }
   },
   "open-quests": {
-    cardVariant: "text",
+    cardVariant: "media-split",
     defaultCardSize: "md",
-    defaultCardFields: ["publishingStatus", "summary"],
+    defaultCardFields: ["publishingStatus", "summary", "lastUpdated"],
     defaultDetailVisibility: {
       showHero: false,
       showMeta: ["publishingType", "publishingStatus", "dateAdded", "lastUpdated", "notionLink"],
@@ -38,10 +38,10 @@ export const pageDatabaseCollections = {
   "cool-bookmarks": {
     cardVariant: "text",
     defaultCardSize: "sm",
-    defaultCardFields: ["summary"],
+    defaultCardFields: ["publishingType", "publishingStatus", "category", "lastUpdated"],
     defaultDetailVisibility: {
       showHero: false,
-      showMeta: ["dateAdded"],
+      showMeta: ["publishingType", "publishingStatus", "category", "dateAdded", "lastUpdated", "notionLink", "externalLink"],
       showComments: false
     }
   }
@@ -65,7 +65,7 @@ export const pageDatabaseItems = [
     },
     card: {
       size: "md",
-      fields: ["category"],
+      fields: ["publishingStatus", "category", "summary"],
       click: {
         mode: "none",
         label: "",
@@ -95,7 +95,7 @@ export const pageDatabaseItems = [
     },
     card: {
       size: "md",
-      fields: ["category"],
+      fields: ["publishingStatus", "category", "summary"],
       click: {
         mode: "none",
         label: "",
@@ -125,7 +125,7 @@ export const pageDatabaseItems = [
     },
     card: {
       size: "md",
-      fields: ["category"],
+      fields: ["publishingStatus", "category", "summary"],
       click: {
         mode: "none",
         label: "",
@@ -151,7 +151,7 @@ export const pageDatabaseItems = [
     meta: {},
     card: {
       size: "md",
-      fields: ["summary"],
+      fields: ["publishingStatus", "summary"],
       click: {
         mode: "none",
         label: "",
@@ -177,7 +177,7 @@ export const pageDatabaseItems = [
     meta: {},
     card: {
       size: "md",
-      fields: ["summary"],
+      fields: ["publishingStatus", "summary"],
       click: {
         mode: "none",
         label: "",
@@ -203,7 +203,7 @@ export const pageDatabaseItems = [
     meta: {},
     card: {
       size: "md",
-      fields: ["summary"],
+      fields: ["publishingStatus", "summary"],
       click: {
         mode: "none",
         label: "",
