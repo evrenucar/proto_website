@@ -2,6 +2,9 @@ html {
   min-height: 100%;
   background-color: #222222;
   scrollbar-gutter: stable;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 :root {
@@ -15,7 +18,9 @@ body {
   background-color: #222222;
   color: #fafafa;
   font-family: sans-serif;
+  max-width: 100%;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body.lightbox-open {
@@ -181,6 +186,9 @@ button {
   flex-direction: column;
   padding-left: clamp(270px, 24vw, 360px);
   padding-right: 7vw;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   transition: padding-left 0.22s ease;
 }
 
@@ -278,10 +286,14 @@ button {
 .page-bottom-ticker {
   position: relative;
   left: 50%;
-  width: calc(100vw + var(--scrollbar-compensation, 0px));
+  width: 100vw;
+  width: 100dvw;
   margin-top: 8px;
-  margin-left: -50vw;
-  margin-right: calc(-50vw - var(--scrollbar-compensation, 0px));
+  margin-left: 0;
+  margin-right: 0;
+  transform: translateX(-50%);
+  max-width: 100vw;
+  max-width: 100dvw;
   overflow: hidden;
   background: #3fdaca;
 }
@@ -1170,16 +1182,16 @@ html.nav-pos-left .mobile-menu {
 
 .detail-meta {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 18px;
   margin-bottom: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: visible;
 }
 
 .detail-meta-item {
-  min-width: max-content;
+  min-width: 0;
+  max-width: 100%;
   padding: 10px 12px;
   background-color: rgba(255, 255, 255, 0.03);
   border: 1px solid #343434;
@@ -1196,9 +1208,11 @@ html.nav-pos-left .mobile-menu {
 }
 
 .detail-meta-item strong {
+  display: block;
   color: #fafafa;
   font-weight: 600;
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .detail-meta-link {
@@ -1207,6 +1221,14 @@ html.nav-pos-left .mobile-menu {
   align-items: flex-start;
   justify-content: center;
   gap: 6px;
+}
+
+.detail-meta-link--compact {
+  gap: 0;
+}
+
+.detail-meta-link .action-link {
+  max-width: 100%;
 }
 
 .detail-hero {
@@ -1308,37 +1330,97 @@ html.nav-pos-left .mobile-menu {
   margin-top: 22px;
 }
 
+.detail-related-section {
+  padding-top: 24px;
+  border-top: 1px solid #343434;
+}
+
+.detail-related-title {
+  margin: 0 0 16px;
+  color: #fafafa;
+  font-size: clamp(20px, 1.8vw, 25px);
+  line-height: 1.12;
+}
+
 .detail-related-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  grid-auto-rows: 1fr;
 }
 
 .detail-related-grid .content-card {
   min-height: 0;
+  height: 100%;
+  display: flex;
+}
+
+.detail-related-grid .content-card-link,
+.detail-related-grid .content-card-link.is-static {
+  min-height: 100%;
+}
+
+.detail-related-grid .content-card-media {
+  aspect-ratio: 16 / 8.5;
 }
 
 .detail-related-grid .content-card-body {
-  gap: 10px;
-  padding: 14px 14px 16px;
+  gap: 8px;
+  padding: 12px 12px 13px;
+}
+
+.detail-related-grid .content-card-meta {
+  gap: 4px;
+}
+
+.detail-related-grid .content-card-pill {
+  padding: 3px 6px;
+}
+
+.detail-related-grid .content-card-summary {
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .detail-related-grid .content-card-title {
-  font-size: clamp(18px, 1.6vw, 22px);
+  min-height: 2.4em;
+  font-size: clamp(15px, 1.35vw, 18px);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.detail-related-grid .content-card-footer {
+  padding-top: 8px;
+}
+
+.detail-related-grid .content-card-footnote {
+  font-size: 9px;
 }
 
 .detail-related-grid .content-card--projects .content-card-pill strong {
-  font-size: 8px;
+  font-size: 7px;
 }
 
 .detail-related-grid .content-card--projects .content-card-pill span {
-  font-size: 9px;
+  font-size: 8px;
 }
 
 .detail-action-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-end;
+}
+
+html.nav-pos-left .detail-action-row {
+  justify-content: flex-start;
 }
 
 .detail-nav-link {
@@ -1678,6 +1760,7 @@ html.nav-pos-left .mobile-menu {
   .page-content,
   .page-footer {
     width: 80%;
+    overflow-x: hidden;
   }
 
   .mobile-menu {
@@ -1814,6 +1897,12 @@ html.nav-pos-left .mobile-menu {
   }
 
   .photo-grid-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (min-width: 701px) and (max-width: 920px) {
+  .detail-related-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -142,6 +142,21 @@ html:has(body.page-braindump) {
   outline: none;
 }
 
+.bd-text-editor {
+  position: relative;
+  color: inherit;
+  font: inherit;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.bd-text-editor.is-empty::before {
+  content: attr(data-placeholder);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 /* Image Component */
 .bd-layer-image, .bd-layer-file {
   border-radius: 6px;
@@ -355,6 +370,130 @@ html:has(body.page-braindump) {
   border-color: rgba(120, 120, 120, 0.55);
 }
 
+.braindump-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 8, 8, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.braindump-modal[hidden] {
+  display: none;
+}
+
+.braindump-modal-panel {
+  width: min(100%, 560px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  padding: 28px;
+  background: #161616;
+  color: #fafafa;
+}
+
+.braindump-modal-title {
+  margin: 0 0 10px;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.braindump-modal-description {
+  margin: 0 0 18px;
+  color: rgba(250, 250, 250, 0.75);
+  line-height: 1.5;
+}
+
+.braindump-modal-file-note {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(63, 218, 202, 0.22);
+  border-radius: 3px;
+  background: #1b1b1b;
+  color: rgba(250, 250, 250, 0.88);
+}
+
+.braindump-modal-file-note code {
+  color: #fafafa;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.braindump-modal-steps {
+  margin: 0;
+  padding-left: 1.35rem;
+  display: grid;
+  gap: 12px;
+  line-height: 1.55;
+}
+
+.braindump-modal-steps li::marker {
+  color: #3fdaca;
+  font-weight: 700;
+}
+
+.braindump-modal-checkbox {
+  margin-top: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: rgba(250, 250, 250, 0.86);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.braindump-modal-checkbox input {
+  margin-top: 0.18rem;
+  accent-color: #3fdaca;
+}
+
+.braindump-file-emphasis {
+  color: #3fdaca;
+  font-weight: 800;
+}
+
+.braindump-modal-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.braindump-modal-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 3px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.braindump-modal-button-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(250, 250, 250, 0.84);
+}
+
+.braindump-modal-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fafafa;
+}
+
+.braindump-modal-button-primary {
+  border: 1px solid rgba(63, 218, 202, 0.44);
+  background: rgba(63, 218, 202, 0.16);
+  color: #3fdaca;
+}
+
+.braindump-modal-button-primary:hover {
+  background: rgba(63, 218, 202, 0.24);
+  color: #fff;
+}
+
 /* Mobile Adjustments */
 @media screen and (max-width: 1200px) {
   .braindump-viewport {
@@ -386,5 +525,21 @@ html:has(body.page-braindump) {
     position: static;
     max-width: none;
     margin-bottom: 8px;
+  }
+
+  .braindump-modal {
+    padding: 16px;
+  }
+
+  .braindump-modal-panel {
+    padding: 22px;
+  }
+
+  .braindump-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .braindump-modal-button {
+    width: 100%;
   }
 }

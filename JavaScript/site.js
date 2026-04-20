@@ -7,7 +7,23 @@ const copyEmailButtons = document.querySelectorAll("[data-copy-email]");
 const copyToast = document.querySelector("[data-copy-toast]");
 const desktopNavStorageKey = "evren-site:desktop-nav-collapsed";
 const mobileNavStorageKey = "evren-site:mobile-nav-open";
+const defaultCopyToastMessage = "Email copied to clipboard.";
+const copyToastMessages = Object.freeze([
+  ...Array(60).fill(defaultCopyToastMessage),
+  "Don't forget to ask how I'm doing :)",
+  "Please also attach a picture of your cat.",
+  "New contact unlocked!",
+  "Inbox coordinates acquired.",
+  "The email has left the workshop.",
+  "Message route plotted.",
+  "Tiny communication bridge deployed.",
+  "Your next great email starts now.",
+  "Signal acquired. Time to say hello.",
+  "Clipboard stocked and ready."
+]);
 let copyToastTimer = 0;
+let lockedNavigationScrollY = 0;
+let isNavigationScrollLocked = false;
 
 function getScrollbarCompensation() {
   return Math.max(0, window.innerWidth - document.documentElement.clientWidth);
@@ -15,6 +31,37 @@ function getScrollbarCompensation() {
 
 function syncLayoutMetrics() {
   document.documentElement.style.setProperty("--scrollbar-compensation", `${getScrollbarCompensation()}px`);
+}
+
+function lockNavigationScroll() {
+  if (isNavigationScrollLocked) {
+    return;
+  }
+
+  lockedNavigationScrollY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${lockedNavigationScrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+  document.body.style.overflow = "hidden";
+  isNavigationScrollLocked = true;
+}
+
+function unlockNavigationScroll() {
+  if (!isNavigationScrollLocked) {
+    return;
+  }
+
+  const nextScrollY = lockedNavigationScrollY;
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  document.body.style.overflow = document.body.classList.contains("lightbox-open") ? "hidden" : "";
+  isNavigationScrollLocked = false;
+  window.scrollTo(0, nextScrollY);
 }
 
 function setNavigationOpen(isOpen, options = {}) {
@@ -34,6 +81,12 @@ function setNavigationOpen(isOpen, options = {}) {
   if (navBackdrop) {
     navBackdrop.hidden = !isOpen;
     navBackdrop.classList.toggle("is-visible", isOpen);
+  }
+
+  if (isOpen && !isDesktopViewport()) {
+    lockNavigationScroll();
+  } else {
+    unlockNavigationScroll();
   }
 }
 
@@ -270,6 +323,11 @@ function showCopyToast(message) {
   }, 2000);
 }
 
+function getRandomCopyToastMessage() {
+  const index = Math.floor(Math.random() * copyToastMessages.length);
+  return copyToastMessages[index] || defaultCopyToastMessage;
+}
+
 if (copyEmailButtons.length > 0) {
   copyEmailButtons.forEach((button) => {
     button.addEventListener("click", async () => {
@@ -279,7 +337,7 @@ if (copyEmailButtons.length > 0) {
       const email = `${user}@${domain}`;
       const copied = await copyText(email);
 
-      showCopyToast(copied ? "Email copied to clipboard." : "Clipboard copy failed.");
+      showCopyToast(copied ? getRandomCopyToastMessage() : "Clipboard copy failed.");
     });
   });
 }

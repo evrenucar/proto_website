@@ -7,6 +7,11 @@ const toolbarToast = document.getElementById("braindump-toolbar-toast");
 const recommendationPanel = document.getElementById("braindump-recommend-panel");
 const recommendationSummaryInput = document.getElementById("braindump-recommend-summary");
 const recommendationSubmitButton = document.getElementById("braindump-recommend-submit");
+const recommendationModal = document.getElementById("braindump-modal");
+const recommendationModalFilename = document.getElementById("braindump-recommend-file-name");
+const recommendationModalCancelButton = document.getElementById("braindump-modal-cancel");
+const recommendationModalConfirmButton = document.getElementById("braindump-modal-confirm");
+const recommendationModalDismissCheckbox = document.getElementById("braindump-modal-dismiss");
 
 const boardConfig = {
   slug: viewport?.dataset.boardSlug || "braindump",
@@ -32,6 +37,8 @@ const recommendationConfig = {
 
 let toolbarToastTimeout = null;
 let viewportSaveTimeout = null;
+let pendingRecommendation = null;
+const RECOMMENDATION_MODAL_DISMISS_SUFFIX = ":recommendation-modal-dismissed";
 
 function scheduleViewportSave() {
   if (viewportSaveTimeout) clearTimeout(viewportSaveTimeout);
@@ -123,6 +130,84 @@ function setRecommendationPanelOpen(isOpen) {
     recommendationSummaryInput?.focus();
     recommendationSummaryInput?.select();
   }
+}
+
+function setRecommendationModalOpen(isOpen) {
+  if (!recommendationModal) return;
+
+  recommendationModal.hidden = !isOpen;
+  recommendationModal.classList.toggle("is-open", isOpen);
+  if (isOpen) {
+    if (recommendationModalDismissCheckbox) {
+      recommendationModalDismissCheckbox.checked = shouldSkipRecommendationModal();
+    }
+    recommendationModalConfirmButton?.focus();
+  }
+}
+
+function getRecommendationModalDismissKey() {
+  return `${boardConfig.storageKey}${RECOMMENDATION_MODAL_DISMISS_SUFFIX}`;
+}
+
+function shouldSkipRecommendationModal() {
+  try {
+    return localStorage.getItem(getRecommendationModalDismissKey()) === "true";
+  } catch (error) {
+    return false;
+  }
+}
+
+function setRecommendationModalDismissed(shouldDismiss) {
+  try {
+    const key = getRecommendationModalDismissKey();
+    if (shouldDismiss) {
+      localStorage.setItem(key, "true");
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch (error) {
+    // Ignore storage failures and keep default modal behavior.
+  }
+}
+
+function openRecommendationIssue(issueUrl, recommendationFilename) {
+  window.open(issueUrl, "_blank", "noopener,noreferrer");
+  showToolbarToast(`Recommendation sent — attach ${recommendationFilename} to the form that just opened.`, "success");
+}
+
+function closeRecommendationModal() {
+  pendingRecommendation = null;
+  setRecommendationModalOpen(false);
+}
+
+function openRecommendationModal(issueUrl, filename) {
+  if (!recommendationModal) {
+    openRecommendationIssue(issueUrl, filename);
+    return;
+  }
+
+  pendingRecommendation = { issueUrl, filename };
+  if (recommendationModalFilename) {
+    recommendationModalFilename.textContent = filename;
+  }
+  setRecommendationModalOpen(true);
+}
+
+function confirmRecommendationNavigation() {
+  if (!pendingRecommendation?.issueUrl) {
+    closeRecommendationModal();
+    return;
+  }
+
+  const { issueUrl, filename } = pendingRecommendation;
+  const shouldDismiss = recommendationModalDismissCheckbox?.checked === true;
+  setRecommendationModalDismissed(shouldDismiss);
+  pendingRecommendation = null;
+  setRecommendationModalOpen(false);
+  if (recommendationSummaryInput) {
+    recommendationSummaryInput.value = "";
+  }
+  openRecommendationIssue(issueUrl, filename);
 }
 
 function sanitizeFileSegment(value) {
@@ -325,8 +410,8 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     "",
     "## Attachment",
     `Please attach the exported recommendation file \`${exportFilename}\` to this issue.`,
-    "This recommendation flow exports a `.canvas.json` file because GitHub issue attachments do not accept `.canvas` files directly.",
-    "Local import already accepts `.canvas.json` directly, so no conversion is required to bring it back into the board.",
+    "This recommendation flow exports a **.canvas.json file** because GitHub issue attachments do not accept `.canvas` files directly.",
+    "Local import already accepts the **.canvas.json file** directly, so no conversion is required to bring it back into the board.",
     "If you want to turn it back into a normal board file outside the site, remove the trailing `.json` so it ends with `.canvas`.",
     "",
     "## Notes",
@@ -349,6 +434,33 @@ function buildRecommendationIssueUrl(summary, details, exportFilename) {
   url.searchParams.set("body", buildRecommendationIssueBody(summary, details, exportFilename));
 
   return url.toString();
+}
+
+function beginRecommendationFlow() {
+  if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
+    showToolbarToast("Recommendations are not set up for this board.", "error");
+    return;
+  }
+
+  const summary = normalizeRecommendationSummary(recommendationSummaryInput?.value);
+  if (!summary) {
+    showToolbarToast("Add a short description for the recommendation.", "error");
+    recommendationSummaryInput?.focus();
+    return;
+  }
+
+  const recommendationFilename = buildRecommendationFilename();
+  const issueUrl = buildRecommendationIssueUrl(summary, "", recommendationFilename);
+  downloadStateFile(recommendationFilename, "application/json");
+  setRecommendationPanelOpen(false);
+  if (shouldSkipRecommendationModal()) {
+    if (recommendationSummaryInput) {
+      recommendationSummaryInput.value = "";
+    }
+    openRecommendationIssue(issueUrl, recommendationFilename);
+  } else {
+    openRecommendationModal(issueUrl, recommendationFilename);
+  }
 }
 
 function downloadStateFile(filename, mimeType = "application/octet-stream") {
@@ -422,6 +534,78 @@ let undoHistory = [];
 let historyIndex = -1;
 const MAX_HISTORY = 200;
 let isLoadingState = false; // Flag to prevent recording during load
+const TEXT_NODE_PLACEHOLDER = "Type here...";
+
+function normalizeTextEditorValue(value) {
+  const normalized = String(value ?? "")
+    .replace(/\r/g, "")
+    .replace(/\u200B/g, "")
+    .replace(/\u00A0/g, " ");
+
+  if (normalized === "\n") return "";
+  return normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized;
+}
+
+function syncTextEditorValue(editor, text = "") {
+  const normalizedText = normalizeTextEditorValue(text);
+  if (editor.innerText !== normalizedText) {
+    editor.innerText = normalizedText;
+  }
+  editor.classList.toggle("is-empty", normalizedText.length === 0);
+  return normalizedText;
+}
+
+function placeCaretAtEnd(editor) {
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function beginTextEditing(nodeObj, editor, options = {}) {
+  if (!nodeObj || !editor || editor.contentEditable === "true") return;
+
+  editor.dataset.undoText = nodeObj.text || "";
+  editor.contentEditable = "true";
+  syncTextEditorValue(editor, nodeObj.text || "");
+  editor.focus();
+
+  if (options.placeCaretAtEnd) {
+    placeCaretAtEnd(editor);
+  }
+}
+
+function finishTextEditing(nodeObj, editor) {
+  if (!nodeObj || !editor || editor.contentEditable !== "true") return;
+
+  const oldText = editor.dataset.undoText || "";
+  const newText = syncTextEditorValue(editor, editor.innerText);
+  nodeObj.text = newText;
+  editor.contentEditable = "false";
+  delete editor.dataset.undoText;
+
+  if (oldText !== newText) {
+    pushAction({ type: "editText", nodeId: nodeObj.id, oldText, newText });
+  }
+}
+
+function focusTextEditor(nodeId, options = {}) {
+  const nodeObj = nodes.find(n => n.id === nodeId);
+  const el = document.getElementById(nodeId);
+  const editor = el?.querySelector(".bd-text-editor");
+
+  if (!nodeObj || !el || !editor || nodeObj.type !== "text" || nodeObj.text?.includes("<svg")) {
+    return;
+  }
+
+  document.querySelectorAll(".bd-item").forEach(item => item.classList.remove("selected"));
+  el.classList.add("selected");
+  beginTextEditing(nodeObj, editor, options);
+}
 
 function pushAction(action) {
   undoHistory = undoHistory.slice(0, historyIndex + 1);
@@ -476,8 +660,8 @@ function applyReverse(action) {
     const el = document.getElementById(action.nodeId);
     if (node && el) {
       node.text = action.oldText;
-      const ta = el.querySelector('div[contenteditable]');
-      if (ta) ta.innerText = action.oldText || 'Type here...';
+      const ta = el.querySelector(".bd-text-editor");
+      if (ta) syncTextEditorValue(ta, action.oldText || "");
     }
   } else if (action.type === 'batch') {
     for (let i = action.actions.length - 1; i >= 0; i--) applyReverse(action.actions[i]);
@@ -514,8 +698,8 @@ function applyForward(action) {
     const el = document.getElementById(action.nodeId);
     if (node && el) {
       node.text = action.newText;
-      const ta = el.querySelector('div[contenteditable]');
-      if (ta) ta.innerText = action.newText || 'Type here...';
+      const ta = el.querySelector(".bd-text-editor");
+      if (ta) syncTextEditorValue(ta, action.newText || "");
     }
   } else if (action.type === 'batch') {
     action.actions.forEach(a => applyForward(a));
@@ -732,7 +916,8 @@ viewport.addEventListener("mousedown", (e) => {
       selectionBox.style.display = "block";
     } else if (activeTool === "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       let pos = screenToCanvas(e.clientX, e.clientY);
-      createNode("text", pos.x, pos.y, { text: "", width: 250, height: 150 });
+      const newNode = createNode("text", pos.x, pos.y, { text: "", width: 250, height: 150 });
+      window.requestAnimationFrame(() => focusTextEditor(newNode.id, { placeCaretAtEnd: true }));
       setActiveTool("select");
     } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       let pos = screenToCanvas(e.clientX, e.clientY);
@@ -866,7 +1051,7 @@ if (recommendationSummaryInput) {
   recommendationSummaryInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      submitRecommendation();
+      beginRecommendationFlow();
     }
 
     if (event.key === "Escape") {
@@ -877,7 +1062,23 @@ if (recommendationSummaryInput) {
 }
 
 if (recommendationSubmitButton) {
-  recommendationSubmitButton.addEventListener("click", submitRecommendation);
+  recommendationSubmitButton.addEventListener("click", beginRecommendationFlow);
+}
+
+if (recommendationModalCancelButton) {
+  recommendationModalCancelButton.addEventListener("click", closeRecommendationModal);
+}
+
+if (recommendationModalConfirmButton) {
+  recommendationModalConfirmButton.addEventListener("click", confirmRecommendationNavigation);
+}
+
+if (recommendationModal) {
+  recommendationModal.addEventListener("click", (event) => {
+    if (event.target === recommendationModal) {
+      closeRecommendationModal();
+    }
+  });
 }
 
 window.addEventListener("pointerdown", (event) => {
@@ -886,6 +1087,13 @@ window.addEventListener("pointerdown", (event) => {
   const clickedInsidePanel = event.target.closest?.("#braindump-recommend-panel");
   if (!clickedRecommendButton && !clickedInsidePanel) {
     setRecommendationPanelOpen(false);
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && recommendationModal && !recommendationModal.hidden) {
+    event.preventDefault();
+    closeRecommendationModal();
   }
 });
 
@@ -1055,43 +1263,37 @@ function renderNode(nodeObj) {
     let isDragging = false;
     let dragStart = {x:0, y:0};
     let dragStartPositions = []; // For undo tracking
-    
-    el.addEventListener("mousedown", (e) => {
-      // Pan tool should never drag items — panning is handled globally
-      if (activeTool === "pan") return;
-      if (activeTool !== "select") return;
-      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
-      if (e.target.classList.contains("resize-handle")) return; // handled separately
-      // Don't start drag if clicking inside an active contenteditable
-      if (e.target.isContentEditable && document.activeElement === e.target) return;
-      
-      e.stopPropagation();
+
+    function beginNodeDrag(clientX, clientY, shiftKey = false) {
+      if (activeTool === "pan") return false;
+      if (activeTool !== "select") return false;
+
       isDragging = true;
-      dragStart = { x: e.clientX, y: e.clientY };
-      
-      if (!e.shiftKey && !el.classList.contains("selected")) {
+      dragStart = { x: clientX, y: clientY };
+
+      if (!shiftKey && !el.classList.contains("selected")) {
         document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
       }
       el.classList.add("selected");
-      
-      // Capture start positions for undo
+
       dragStartPositions = [];
-      document.querySelectorAll('.bd-item.selected').forEach(selEl => {
+      document.querySelectorAll(".bd-item.selected").forEach(selEl => {
         const selNode = nodes.find(n => n.id === selEl.id);
         if (selNode) dragStartPositions.push({ id: selNode.id, x: selNode.x, y: selNode.y });
       });
-    });
-    
-    window.addEventListener("mousemove", (e) => {
+
+      return true;
+    }
+
+    function moveSelectedNodes(clientX, clientY) {
       if (!isDragging) return;
-      e.preventDefault();
-      const dx = (e.clientX - dragStart.x) / camera.z;
-      const dy = (e.clientY - dragStart.y) / camera.z;
-      dragStart = { x: e.clientX, y: e.clientY };
-      
-      // Move all selected nodes
+
+      const dx = (clientX - dragStart.x) / camera.z;
+      const dy = (clientY - dragStart.y) / camera.z;
+      dragStart = { x: clientX, y: clientY };
+
       document.querySelectorAll(".bd-item.selected").forEach(selEl => {
-        let selNode = nodes.find(n => n.id === selEl.id);
+        const selNode = nodes.find(n => n.id === selEl.id);
         if (selNode) {
           selNode.x += dx;
           selNode.y += dy;
@@ -1099,11 +1301,10 @@ function renderNode(nodeObj) {
           selEl.style.top = `${selNode.y}px`;
         }
       });
-    });
-    
-    window.addEventListener("mouseup", () => {
+    }
+
+    function finishNodeDrag() {
       if (isDragging && dragStartPositions.length > 0) {
-        // Check if anything actually moved
         const movedIds = [];
         const fromPos = [];
         const toPos = [];
@@ -1118,26 +1319,72 @@ function renderNode(nodeObj) {
         if (movedIds.length > 0) {
           pushAction({ type: 'move', nodeIds: movedIds, fromPositions: fromPos, toPositions: toPos });
         }
-        dragStartPositions = [];
       }
+      dragStartPositions = [];
       isDragging = false;
+    }
+    
+    el.addEventListener("mousedown", (e) => {
+      // Pan tool should never drag items — panning is handled globally
+      if (activeTool === "pan") return;
+      if (activeTool !== "select") return;
+      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+      if (e.target.classList.contains("resize-handle")) return; // handled separately
+      // Don't start drag if clicking inside an active contenteditable
+      if (e.target.isContentEditable && document.activeElement === e.target) return;
+      
+      if (!beginNodeDrag(e.clientX, e.clientY, e.shiftKey)) return;
+      e.stopPropagation();
     });
+
+    el.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+      if (e.target.classList.contains("resize-handle")) return; // handled separately
+      if (e.target.isContentEditable && document.activeElement === e.target) return;
+
+      const touch = e.touches[0];
+      if (!beginNodeDrag(touch.clientX, touch.clientY, false)) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, { passive: false });
+    
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      moveSelectedNodes(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("touchmove", (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      e.preventDefault();
+      moveSelectedNodes(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    window.addEventListener("mouseup", finishNodeDrag);
+    window.addEventListener("touchend", finishNodeDrag);
+    window.addEventListener("touchcancel", finishNodeDrag);
 
     // Resize logic
     let isResizing = false;
     let resizeStartSize = { w: 0, h: 0 };
-    handle.addEventListener("mousedown", (e) => {
-      e.stopPropagation();
+    let resizeStartPoint = { x: 0, y: 0 };
+
+    function beginNodeResize(clientX, clientY) {
       isResizing = true;
       resizeStartSize = { w: nodeObj.width, h: nodeObj.height };
+      resizeStartPoint = { x: clientX, y: clientY };
       document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
       el.classList.add("selected");
-    });
-    
-    window.addEventListener("mousemove", (e) => {
+    }
+
+    function resizeNode(clientX, clientY) {
       if (!isResizing) return;
-      let deltaX = e.movementX / camera.z;
-      let deltaY = e.movementY / camera.z;
+
+      let deltaX = (clientX - resizeStartPoint.x) / camera.z;
+      let deltaY = (clientY - resizeStartPoint.y) / camera.z;
+      resizeStartPoint = { x: clientX, y: clientY };
+
       if (nodeObj.type === "file") {
         let ratio = nodeObj.width / nodeObj.height;
         let newWidth = Math.max(nodeObj.width + deltaX, 50);
@@ -1149,9 +1396,9 @@ function renderNode(nodeObj) {
       }
       el.style.width = `${nodeObj.width}px`;
       el.style.height = `${nodeObj.height}px`;
-    });
-    
-    window.addEventListener("mouseup", () => {
+    }
+
+    function finishNodeResize() {
       if (isResizing) {
         // Push resize action if size actually changed
         if (Math.abs(nodeObj.width - resizeStartSize.w) > 0.5 || Math.abs(nodeObj.height - resizeStartSize.h) > 0.5) {
@@ -1159,7 +1406,34 @@ function renderNode(nodeObj) {
         }
       }
       isResizing = false;
+    }
+
+    handle.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      beginNodeResize(e.clientX, e.clientY);
     });
+
+    handle.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginNodeResize(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isResizing) return;
+      resizeNode(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("touchmove", (e) => {
+      if (!isResizing || e.touches.length !== 1) return;
+      e.preventDefault();
+      resizeNode(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    window.addEventListener("mouseup", finishNodeResize);
+    window.addEventListener("touchend", finishNodeResize);
+    window.addEventListener("touchcancel", finishNodeResize);
   }
 
   el.style.left = `${nodeObj.x}px`;
@@ -1176,9 +1450,11 @@ function renderNode(nodeObj) {
       el.style.background = "transparent";
       el.style.border = "none";
     } else {
-      let ta = el.querySelector("div[contenteditable]");
+      let ta = el.querySelector(".bd-text-editor");
       if (!ta) {
         ta = document.createElement("div");
+        ta.className = "bd-text-editor";
+        ta.dataset.placeholder = TEXT_NODE_PLACEHOLDER;
         ta.contentEditable = "true";
         // Inline styles to match the centered opaque look for text boxes without relying on textarea limits
         ta.style.width = "100%";
@@ -1190,33 +1466,24 @@ function renderNode(nodeObj) {
         ta.style.justifyContent = "center";
         ta.style.textAlign = "center";
         ta.style.wordBreak = "break-word";
-        ta.addEventListener("input", (e) => nodeObj.text = e.target.innerText);
+        ta.addEventListener("input", () => {
+          nodeObj.text = normalizeTextEditorValue(ta.innerText);
+          ta.classList.toggle("is-empty", nodeObj.text.length === 0);
+        });
         // Only stop propagation when actively editing (contenteditable=true)
         ta.addEventListener("mousedown", (e) => {
           if (ta.contentEditable === "true") e.stopPropagation();
         });
+        ta.addEventListener("blur", () => finishTextEditing(nodeObj, ta));
         ta.contentEditable = "false";
         el.addEventListener("dblclick", () => {
-          ta.dataset.undoText = nodeObj.text;
-          ta.contentEditable = "true";
-          ta.focus();
-        });
-        // Clicking outside or single-clicking deactivates text editing
-        document.addEventListener("pointerdown", (e) => {
-          if (!el.contains(e.target)) {
-            if (ta.contentEditable === "true") {
-              ta.contentEditable = "false";
-              if (ta.dataset.undoText !== undefined && ta.dataset.undoText !== nodeObj.text) {
-                pushAction({ type: 'editText', nodeId: nodeObj.id, oldText: ta.dataset.undoText, newText: nodeObj.text });
-              }
-            }
-          }
+          beginTextEditing(nodeObj, ta);
         });
         
         el.insertBefore(ta, el.firstChild);
       }
       if (document.activeElement !== ta) {
-        ta.innerText = nodeObj.text || "Type here...";
+        syncTextEditorValue(ta, nodeObj.text || "");
       }
     }
   } else if (nodeObj.type === "file") {

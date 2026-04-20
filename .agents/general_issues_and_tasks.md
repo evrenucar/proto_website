@@ -1,0 +1,3 @@
+- when I open an image. I cannot exit by clicking in the black area if I click on the left or the right of smaller images. I think the active zone is a bit larger than the image. Ideally if I click anywhere else than the image I should be able to exit the focus view.
+
+- page database and Notion content system planning now lives in `agents/page_database/page_database_plan.md` and `agents/page_database/page_database_tasks.md`.

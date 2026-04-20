@@ -1,5 +1,6 @@
 import http from "node:http";
 import { createReadStream, existsSync, statSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,6 +27,13 @@ function resolveRequestPath(urlPath) {
   const cleanPath = urlPath.split("?")[0];
   const target = cleanPath === "/" ? "index.html" : cleanPath.replace(/^\/+/, "");
   return path.join(rootDir, target);
+}
+
+function getNetworkAccessUrls() {
+  return Object.values(os.networkInterfaces())
+    .flatMap((entries) => entries || [])
+    .filter((entry) => entry && entry.family === "IPv4" && !entry.internal)
+    .map((entry) => `http://${entry.address}:${port}`);
 }
 
 const server = http.createServer((request, response) => {
@@ -59,5 +67,8 @@ const server = http.createServer((request, response) => {
 server.listen(port, "0.0.0.0", () => {
   console.log(`Preview server running at http://0.0.0.0:${port}`);
   console.log(`Local Access: http://127.0.0.1:${port}`);
-  console.log(`Network Access: http://192.168.2.18:${port}`);
+
+  for (const url of getNetworkAccessUrls()) {
+    console.log(`Network Access: ${url}`);
+  }
 });

@@ -44,7 +44,7 @@
     </script>
 
 
-    <script src="JavaScript/site.js?v=2" defer></script>
+    <script src="JavaScript/site.js?v=4" defer></script>
   </head>
   <body class="page-braindump">
     <a class="skip-link" href="#content">Skip to content</a>
@@ -161,11 +161,42 @@
         </div>
         <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" role="status" aria-live="polite" hidden></div>
       </div>
-      <div id="braindump-modal" class="braindump-modal" hidden>
-        <!-- Dynamic content for forms -->
+      <div
+        id="braindump-modal"
+        class="braindump-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="braindump-modal-title"
+        aria-describedby="braindump-modal-description"
+        hidden
+      >
+        <div class="braindump-modal-panel">
+          <h2 id="braindump-modal-title" class="braindump-modal-title">Before you open GitHub</h2>
+          <p id="braindump-modal-description" class="braindump-modal-description">
+            Follow these steps so the recommendation is submitted correctly.
+          </p>
+          <p class="braindump-modal-file-note">
+            Downloaded file:
+            <code id="braindump-recommend-file-name"></code>
+          </p>
+          <ol class="braindump-modal-steps">
+            <li>A <strong class="braindump-file-emphasis">.canvas.json file</strong> has been downloaded automatically.</li>
+            <li>Log in to GitHub so you can send the recommendation.</li>
+            <li>Fill out the information on the GitHub form and modify it if necessary.</li>
+            <li>Do not forget to attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>.</li>
+          </ol>
+          <label class="braindump-modal-checkbox" for="braindump-modal-dismiss">
+            <input type="checkbox" id="braindump-modal-dismiss">
+            <span>OK, please don't show this again on this board</span>
+          </label>
+          <div class="braindump-modal-actions">
+            <button type="button" id="braindump-modal-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+            <button type="button" id="braindump-modal-confirm" class="braindump-modal-button braindump-modal-button-primary">OK, open GitHub</button>
+          </div>
+        </div>
       </div>
     </div>
-    <script src="JavaScript/braindump.js?v=19" defer></script>
+    <script src="JavaScript/braindump.js?v=21" defer></script>
 
       </main>
 

@@ -478,7 +478,7 @@ function renderShell({
     <link rel="manifest" href="${relativeHref(currentFile, "favicon/site.webmanifest")}" />
     ${renderInitialNavigationStateScript()}
     ${schemaBlocks}
-    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=2" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=4" defer></script>
   </head>
   <body class="${escapeHtml(bodyClass)}">
     <a class="skip-link" href="#content">Skip to content</a>
@@ -681,6 +681,13 @@ function renderIcon(name) {
           <path d="m6 11 6-6 6 6"></path>
         </svg>
       `;
+    case "arrow-up-double":
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m6 15 6-6 6 6"></path>
+          <path d="m6 21 6-6 6 6"></path>
+        </svg>
+      `;
     case "arrow-left":
       return `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -878,8 +885,8 @@ function renderDetailActions(item, currentFile) {
   return `
     <div class="detail-action-row">
       <a class="detail-nav-link" href="#content">
-        <span class="detail-nav-icon">${renderIcon("arrow-up")}</span>
-        <span>Go back to top</span>
+        <span class="detail-nav-icon">${renderIcon("arrow-up-double")}</span>
+        <span>Back to the top</span>
       </a>
       <a
         class="detail-nav-link"
@@ -901,10 +908,9 @@ function renderDetailRelatedItems(currentFile, item, relatedItems) {
 
   return `
     <section class="detail-related-section">
-      <div class="section-header">
-        <p class="page-tag">${escapeHtml(getSectionLabel(item.section))}</p>
-        <h2 class="section-title">More ${escapeHtml(getSectionLabel(item.section).toLowerCase())}</h2>
-      </div>
+      <h2 class="detail-related-title">${escapeHtml(
+        item.section === "projects" ? "Other projects" : `Other ${getSectionLabel(item.section).toLowerCase()}`
+      )}</h2>
       <div class="detail-related-grid">
         ${relatedItems
           .map((relatedItem) => renderContentCard({ ...relatedItem, cardSize: "sm" }, currentFile))
@@ -933,9 +939,13 @@ function renderDetailPage(item, currentFile, relatedItems = []) {
             ? `<div class="detail-meta">${detailMetaEntries
                 .map((entry) =>
                   entry.href && !entry.isEmpty
-                    ? `<div class="detail-meta-item detail-meta-link"><span>${escapeHtml(
-                        entry.label
-                      )}</span><a class="action-link" href="${entry.href}" target="_blank" rel="noreferrer">${escapeHtml(
+                    ? `<div class="detail-meta-item detail-meta-link${
+                        entry.key === "notionLink" ? " detail-meta-link--compact" : ""
+                      }">${
+                        entry.key === "notionLink"
+                          ? ""
+                          : `<span>${escapeHtml(entry.label)}</span>`
+                      }<a class="action-link" href="${entry.href}" target="_blank" rel="noreferrer">${escapeHtml(
                         entry.value
                       )}</a></div>`
                     : `<div class="detail-meta-item${entry.isEmpty ? " is-empty" : ""}"><span>${escapeHtml(
@@ -1204,11 +1214,42 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         </div>
         <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" role="status" aria-live="polite" hidden></div>
       </div>
-      <div id="braindump-modal" class="braindump-modal" hidden>
-        <!-- Dynamic content for forms -->
+      <div
+        id="braindump-modal"
+        class="braindump-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="braindump-modal-title"
+        aria-describedby="braindump-modal-description"
+        hidden
+      >
+        <div class="braindump-modal-panel">
+          <h2 id="braindump-modal-title" class="braindump-modal-title">Before you open GitHub</h2>
+          <p id="braindump-modal-description" class="braindump-modal-description">
+            Follow these steps so the recommendation is submitted correctly.
+          </p>
+          <p class="braindump-modal-file-note">
+            Downloaded file:
+            <code id="braindump-recommend-file-name"></code>
+          </p>
+          <ol class="braindump-modal-steps">
+            <li>A <strong class="braindump-file-emphasis">.canvas.json file</strong> has been downloaded automatically.</li>
+            <li>Log in to GitHub so you can send the recommendation.</li>
+            <li>Fill out the information on the GitHub form and modify it if necessary.</li>
+            <li>Do not forget to attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>.</li>
+          </ol>
+          <label class="braindump-modal-checkbox" for="braindump-modal-dismiss">
+            <input type="checkbox" id="braindump-modal-dismiss">
+            <span>OK, please don't show this again on this board</span>
+          </label>
+          <div class="braindump-modal-actions">
+            <button type="button" id="braindump-modal-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+            <button type="button" id="braindump-modal-confirm" class="braindump-modal-button braindump-modal-button-primary">OK, open GitHub</button>
+          </div>
+        </div>
       </div>
     </div>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=19" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=21" defer></script>
   `;
 }
 

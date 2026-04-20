@@ -8,7 +8,7 @@ const rootDir = path.resolve(__dirname, "..");
 const sourcePath = path.join(rootDir, "src", "notion-public-pages.json");
 const outputPath = path.join(rootDir, "src", "notion-items.json");
 const notionAssetsDir = path.join(rootDir, "notion_assets");
-const syncCacheVersion = 7;
+const syncCacheVersion = 8;
 
 const defaultNotionPropertyAliases = Object.freeze({
   publishingType: [">[Mc", "A|cR", "Publishing_Type", "Publishing Type", "publishing_type", "publishing type"],
@@ -371,6 +371,33 @@ function extractYouTubeVideoId(urlString) {
   }
 
   return "";
+}
+
+function buildYouTubeEmbedUrl(urlString) {
+  const videoId = extractYouTubeVideoId(urlString);
+
+  if (!videoId) {
+    return "";
+  }
+
+  try {
+    const sourceUrl = new URL(urlString);
+    const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
+    const playlistId = sourceUrl.searchParams.get("list");
+    const startSeconds = extractMediaStartSeconds(urlString);
+
+    if (playlistId) {
+      embedUrl.searchParams.set("list", playlistId);
+    }
+
+    if (startSeconds > 0) {
+      embedUrl.searchParams.set("start", String(startSeconds));
+    }
+
+    return embedUrl.toString();
+  } catch (error) {
+    return `https://www.youtube-nocookie.com/embed/${videoId}`;
+  }
 }
 
 function parseTimestampValue(value) {
@@ -937,7 +964,13 @@ function renderExternalEmbed(source) {
   }
 
   if (/youtube\.com|youtu\.be/i.test(source)) {
-    return `<div class="article-embed"><iframe src="${source}" loading="lazy" allowfullscreen title="Embedded video"></iframe></div>`;
+    const embedSource = buildYouTubeEmbedUrl(source);
+
+    if (!embedSource) {
+      return `<p><a href="${source}" target="_blank" rel="noreferrer">${escapeHtml(source)}</a></p>`;
+    }
+
+    return `<div class="article-embed"><iframe src="${embedSource}" loading="lazy" allowfullscreen title="Embedded video" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe></div>`;
   }
 
   if (/vimeo\.com/i.test(source)) {
