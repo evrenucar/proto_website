@@ -278,10 +278,10 @@ button {
 .page-bottom-ticker {
   position: relative;
   left: 50%;
-  width: 100vw;
+  width: calc(100vw + var(--scrollbar-compensation, 0px));
   margin-top: 8px;
   margin-left: -50vw;
-  margin-right: -50vw;
+  margin-right: calc(-50vw - var(--scrollbar-compensation, 0px));
   overflow: hidden;
   background: #3fdaca;
 }
@@ -490,6 +490,7 @@ html.nav-pos-left .mobile-menu {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  align-items: stretch;
 }
 
 .text-card {
@@ -553,6 +554,7 @@ html.nav-pos-left .mobile-menu {
 
 .content-card--cool-bookmarks {
   --collection-accent: #8fb5ea;
+  height: 100%;
   background:
     radial-gradient(circle at top left, rgba(143, 181, 234, 0.14), transparent 48%),
     linear-gradient(180deg, #232933 0%, #181b20 100%);
@@ -594,11 +596,44 @@ html.nav-pos-left .mobile-menu {
   aspect-ratio: 5 / 4;
 }
 
+.content-card--cool-bookmarks .content-card-media {
+  height: clamp(108px, 11vw, 148px);
+  aspect-ratio: auto;
+}
+
 .content-card-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.28s ease, filter 0.28s ease;
+}
+
+.content-card-media-badge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(18, 20, 24, 0.78);
+  color: #fafafa;
+  font-size: 10px;
+  line-height: 1;
+  backdrop-filter: blur(12px);
+}
+
+.content-card-media-badge-icon {
+  display: inline-flex;
+  width: 11px;
+  height: 11px;
+}
+
+.content-card-media-badge-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .content-card:hover .content-card-media img,
@@ -656,9 +691,9 @@ html.nav-pos-left .mobile-menu {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  min-width: min(100%, 132px);
+  min-width: 0;
   max-width: 100%;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
@@ -666,7 +701,7 @@ html.nav-pos-left .mobile-menu {
 
 .content-card-pill strong {
   color: rgba(250, 250, 250, 0.6);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -675,8 +710,32 @@ html.nav-pos-left .mobile-menu {
 .content-card-pill span {
   min-width: 0;
   color: #fafafa;
-  font-size: 12px;
+  font-size: 11px;
   overflow-wrap: anywhere;
+}
+
+.content-card-tag-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.content-card-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #edf4ff;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.content-card-tag.is-empty {
+  color: rgba(250, 250, 250, 0.58);
 }
 
 .content-card-pill.is-empty span,
@@ -713,15 +772,15 @@ html.nav-pos-left .mobile-menu {
 
 .content-card--projects .content-card-pill {
   min-width: 0;
-  padding: 4px 8px;
+  padding: 3px 7px;
 }
 
 .content-card--projects .content-card-pill strong {
-  font-size: 9px;
+  font-size: 8px;
 }
 
 .content-card--projects .content-card-pill span {
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .content-card--projects .content-card-title {
@@ -801,6 +860,61 @@ html.nav-pos-left .mobile-menu {
 
 .content-card--text .content-card-link {
   gap: 0;
+}
+
+.content-card--cool-bookmarks .content-card-body {
+  gap: 12px;
+}
+
+.content-card--cool-bookmarks .content-card-body--bookmark {
+  gap: 11px;
+}
+
+.content-card--cool-bookmarks .content-card-pill {
+  gap: 4px;
+  padding: 3px 6px;
+}
+
+.content-card--cool-bookmarks .content-card-pill strong {
+  font-size: 7px;
+}
+
+.content-card--cool-bookmarks .content-card-pill span {
+  font-size: 8px;
+}
+
+.content-card--cool-bookmarks .content-card-meta {
+  gap: 6px;
+  min-height: 28px;
+  align-content: flex-start;
+}
+
+.content-card--cool-bookmarks .content-card-summary {
+  min-height: 3.3em;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.content-card--cool-bookmarks .content-card-tag-strip {
+  padding: 8px 10px 9px;
+  min-height: 37px;
+  align-items: center;
+}
+
+.content-card--cool-bookmarks .content-card-tag {
+  padding: 3px 7px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.content-card--cool-bookmarks .content-card-title {
+  min-height: 2.2em;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .work-grid {
@@ -1683,6 +1797,11 @@ html.nav-pos-left .mobile-menu {
 
   .content-card--media-split .content-card-media {
     flex-basis: 36%;
+  }
+
+  .content-card--cool-bookmarks .content-card-media {
+    height: clamp(120px, 34vw, 156px);
+    max-height: none;
   }
 
   .detail-related-grid {

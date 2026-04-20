@@ -8,7 +8,7 @@ const rootDir = path.resolve(__dirname, "..");
 const sourcePath = path.join(rootDir, "src", "notion-public-pages.json");
 const outputPath = path.join(rootDir, "src", "notion-items.json");
 const notionAssetsDir = path.join(rootDir, "notion_assets");
-const syncCacheVersion = 3;
+const syncCacheVersion = 7;
 
 const defaultNotionPropertyAliases = Object.freeze({
   publishingType: [">[Mc", "A|cR", "Publishing_Type", "Publishing Type", "publishing_type", "publishing type"],
@@ -139,6 +139,14 @@ function parseNotionPageId(value) {
 
 function normalizeTextEncoding(value) {
   const text = String(value || "");
+  if (/[\u00f0\u00c3\u00c2\u00e2]/.test(text)) {
+    try {
+      const decoded = Buffer.from(text, "latin1").toString("utf8");
+      return decoded.includes("\uFFFD") ? text : decoded;
+    } catch (error) {
+      return text;
+    }
+  }
 
   if (!/[Ãâ]/.test(text)) {
     return text;
@@ -252,6 +260,214 @@ function fileExtensionFromUrl(url, fallback = ".bin") {
   } catch (error) {
     return fallback;
   }
+}
+
+function fileExtensionFromContentType(contentType) {
+  const normalized = String(contentType || "").trim().toLowerCase();
+
+  if (normalized.includes("image/jpeg")) {
+    return ".jpg";
+  }
+
+  if (normalized.includes("image/png")) {
+    return ".png";
+  }
+
+  if (normalized.includes("image/webp")) {
+    return ".webp";
+  }
+
+  if (normalized.includes("image/gif")) {
+    return ".gif";
+  }
+
+  if (normalized.includes("image/svg+xml")) {
+    return ".svg";
+  }
+
+  if (normalized.includes("video/mp4")) {
+    return ".mp4";
+  }
+
+  return "";
+}
+
+function decodeHtmlEntityString(value) {
+  return String(value || "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">");
+}
+
+function resolveAbsoluteUrl(baseUrl, value) {
+  try {
+    return new URL(value, baseUrl).toString();
+  } catch (error) {
+    return "";
+  }
+}
+
+function extractMetaContent(html, attributeName, attributeValues) {
+  const source = String(html || "");
+
+  for (const attributeValue of attributeValues) {
+    const escapedValue = String(attributeValue || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const contentFirstPattern = new RegExp(
+      `<meta[^>]*content=(["'])(.*?)\\1[^>]*${attributeName}=(["'])${escapedValue}\\3[^>]*>`,
+      "i"
+    );
+    const attributeFirstPattern = new RegExp(
+      `<meta[^>]*${attributeName}=(["'])${escapedValue}\\1[^>]*content=(["'])(.*?)\\2[^>]*>`,
+      "i"
+    );
+    const contentFirstMatch = source.match(contentFirstPattern);
+
+    if (contentFirstMatch?.[2]) {
+      return decodeHtmlEntityString(contentFirstMatch[2]);
+    }
+
+    const attributeFirstMatch = source.match(attributeFirstPattern);
+
+    if (attributeFirstMatch?.[3]) {
+      return decodeHtmlEntityString(attributeFirstMatch[3]);
+    }
+  }
+
+  return "";
+}
+
+function extractOpenGraphImageUrl(html, pageUrl) {
+  const rawUrl =
+    extractMetaContent(html, "property", ["og:image", "og:image:url", "og:image:secure_url"]) ||
+    extractMetaContent(html, "name", ["twitter:image", "twitter:image:src"]);
+
+  return rawUrl ? resolveAbsoluteUrl(pageUrl, rawUrl) : "";
+}
+
+function extractYouTubeVideoId(urlString) {
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.replace(/^www\./i, "").toLowerCase();
+
+    if (hostname === "youtu.be") {
+      return url.pathname.split("/").filter(Boolean)[0] || "";
+    }
+
+    if (hostname.endsWith("youtube.com")) {
+      if (url.pathname === "/watch") {
+        return url.searchParams.get("v") || "";
+      }
+
+      const pathSegments = url.pathname.split("/").filter(Boolean);
+
+      if (["embed", "shorts", "live"].includes(pathSegments[0])) {
+        return pathSegments[1] || "";
+      }
+    }
+  } catch (error) {
+    return "";
+  }
+
+  return "";
+}
+
+function parseTimestampValue(value) {
+  const text = String(value || "").trim().toLowerCase();
+
+  if (!text) {
+    return 0;
+  }
+
+  if (/^\d+$/.test(text)) {
+    return Number(text);
+  }
+
+  let totalSeconds = 0;
+
+  for (const match of text.matchAll(/(\d+)(h|m|s)/g)) {
+    const amount = Number(match[1]);
+
+    if (!Number.isFinite(amount)) {
+      continue;
+    }
+
+    if (match[2] === "h") {
+      totalSeconds += amount * 3600;
+    }
+
+    if (match[2] === "m") {
+      totalSeconds += amount * 60;
+    }
+
+    if (match[2] === "s") {
+      totalSeconds += amount;
+    }
+  }
+
+  if (totalSeconds > 0) {
+    return totalSeconds;
+  }
+
+  const colonParts = text.split(":").map((part) => Number(part));
+
+  if (colonParts.every((part) => Number.isFinite(part))) {
+    return colonParts.reduce((accumulator, part) => accumulator * 60 + part, 0);
+  }
+
+  return 0;
+}
+
+function extractMediaStartSeconds(urlString) {
+  try {
+    const url = new URL(urlString);
+    const candidates = [
+      url.searchParams.get("t"),
+      url.searchParams.get("start"),
+      url.searchParams.get("time_continue")
+    ];
+
+    if (url.hash) {
+      const hash = url.hash.replace(/^#/, "");
+      const hashParams = new URLSearchParams(hash.includes("=") ? hash : `t=${hash}`);
+      candidates.push(hashParams.get("t"), hashParams.get("start"));
+    }
+
+    for (const candidate of candidates) {
+      const seconds = parseTimestampValue(candidate);
+
+      if (seconds > 0) {
+        return seconds;
+      }
+    }
+  } catch (error) {
+    return 0;
+  }
+
+  return 0;
+}
+
+function formatDurationLabel(totalSeconds) {
+  const seconds = Number(totalSeconds);
+
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return "";
+  }
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+function extractMediaStartLabel(urlString) {
+  return formatDurationLabel(extractMediaStartSeconds(urlString));
 }
 
 function sanitizeFileName(value) {
@@ -414,7 +630,10 @@ async function getSignedFileUrl(blockId, source) {
     return "";
   }
 
-  if (!source.startsWith("attachment:")) {
+  if (
+    !source.startsWith("attachment:") &&
+    !/secure\.notion-static\.com|amazonaws\.com\/secure\.notion-static/i.test(source)
+  ) {
     return source;
   }
 
@@ -440,7 +659,8 @@ async function downloadAsset(url, slug, fileNameHint) {
     throw new Error(`Asset download failed: ${response.status} ${url}`);
   }
 
-  const extension = fileExtensionFromUrl(url);
+  const extension =
+    fileExtensionFromUrl(url, "") || fileExtensionFromContentType(response.headers.get("content-type")) || ".bin";
   const assetDir = path.join(notionAssetsDir, slug);
   const relativeDir = `notion_assets/${slug}`;
   const safeName = `${sanitizeFileName(fileNameHint)}${extension}`;
@@ -450,6 +670,58 @@ async function downloadAsset(url, slug, fileNameHint) {
   await writeFile(localPath, Buffer.from(await response.arrayBuffer()));
 
   return `${relativeDir}/${safeName}`.replaceAll("\\", "/");
+}
+
+async function fetchExternalPreviewImage(url, slug) {
+  if (!isExternalUrl(url)) {
+    return "";
+  }
+
+  const youtubeVideoId = extractYouTubeVideoId(url);
+
+  if (youtubeVideoId) {
+    const thumbnailUrl = `https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+
+    try {
+      return await downloadAsset(thumbnailUrl, slug, "external-preview");
+    } catch (error) {
+      return thumbnailUrl;
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (compatible; EvrenSiteBot/1.0; +https://evrenucar.com)"
+      }
+    });
+
+    if (!response.ok) {
+      return "";
+    }
+
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+
+    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
+      return "";
+    }
+
+    const html = await response.text();
+    const previewImageUrl = extractOpenGraphImageUrl(html, url);
+
+    if (!previewImageUrl) {
+      return "";
+    }
+
+    try {
+      return await downloadAsset(previewImageUrl, slug, "external-preview");
+    } catch (error) {
+      return previewImageUrl;
+    }
+  } catch (error) {
+    return "";
+  }
 }
 
 async function resolveMediaSource(block, slug, fileNameHint) {
@@ -463,7 +735,10 @@ async function resolveMediaSource(block, slug, fileNameHint) {
     return "";
   }
 
-  if (source.startsWith("attachment:")) {
+  if (
+    source.startsWith("attachment:") ||
+    /secure\.notion-static\.com|amazonaws\.com\/secure\.notion-static/i.test(source)
+  ) {
     const signedUrl = await getSignedFileUrl(block.id, source);
 
     if (!signedUrl) {
@@ -471,6 +746,18 @@ async function resolveMediaSource(block, slug, fileNameHint) {
     }
 
     return downloadAsset(signedUrl, slug, fileNameHint);
+  }
+
+  if (
+    block?.type === "image" ||
+    /secure\.notion-static\.com|amazonaws\.com\/secure\.notion-static/i.test(source) ||
+    /\.(png|jpe?g|webp|gif|svg|mp4|webm|ogg)(\?|$)/i.test(source)
+  ) {
+    try {
+      return await downloadAsset(source, slug, fileNameHint);
+    } catch (error) {
+      return source;
+    }
   }
 
   return source;
@@ -580,6 +867,34 @@ async function findFirstImage(recordMap, blockIds, slug) {
 
     if (Array.isArray(block.content) && block.content.length > 0) {
       const nested = await findFirstImage(recordMap, block.content, slug);
+
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  return "";
+}
+
+function findFirstExternalBookmarkUrl(recordMap, blockIds) {
+  for (const blockId of blockIds) {
+    const block = getBlock(recordMap, blockId);
+
+    if (!block) {
+      continue;
+    }
+
+    if (block.type === "bookmark" || block.type === "embed") {
+      const source = propertyValueToPlainText(block?.properties?.source);
+
+      if (isExternalUrl(source)) {
+        return source;
+      }
+    }
+
+    if (Array.isArray(block.content) && block.content.length > 0) {
+      const nested = findFirstExternalBookmarkUrl(recordMap, block.content);
 
       if (nested) {
         return nested;
@@ -800,6 +1115,7 @@ function getCachedSourceData(item) {
     notionTitle: String(cache.notionTitle || "").trim(),
     notionSummary: String(cache.notionSummary || ""),
     notionImage: String(cache.notionImage || ""),
+    externalPreviewImage: String(cache.externalPreviewImage || ""),
     contentHtml: String(cache.contentHtml || ""),
     publishingType: String(cache.publishingType || item?.publishingType || ""),
     publishingStatus: String(cache.publishingStatus || item?.publishingStatus || ""),
@@ -807,6 +1123,7 @@ function getCachedSourceData(item) {
     year: String(cache.year || item?.year || ""),
     effort: String(cache.effort || item?.effort || ""),
     notionExternalUrl: String(cache.notionExternalUrl || ""),
+    mediaStartLabel: String(cache.mediaStartLabel || item?.mediaStartLabel || ""),
     dateAdded: String(cache.dateAdded || item?.dateAdded || ""),
     dateModified: String(cache.dateModified || item?.dateModified || "")
   };
@@ -828,7 +1145,7 @@ function buildItemFromSource(entry, sourceData) {
   const title = entry.title || sourceData.notionTitle;
   const slug = slugify(entry.slug || title);
   const summary = entry.summary || sourceData.notionSummary || "";
-  const image = entry.image || sourceData.notionImage || "";
+  const image = entry.image || sourceData.notionImage || sourceData.externalPreviewImage || "";
   const actionUrl =
     entry.actionUrl ||
     (section === "cool-bookmarks" || normalizeActionType(entry.actionType) === "external"
@@ -875,6 +1192,7 @@ function buildItemFromSource(entry, sourceData) {
     sortOrder: Number.isFinite(Number(entry.sortOrder)) ? Number(entry.sortOrder) : null,
     sharedUrl,
     lastUpdated: sourceData.lastUpdated || "",
+    mediaStartLabel: sourceData.mediaStartLabel || "",
     detailPage: {
       title,
       description: entry.seoDescription || summary || "",
@@ -887,6 +1205,7 @@ function buildItemFromSource(entry, sourceData) {
       notionTitle: sourceData.notionTitle || "",
       notionSummary: sourceData.notionSummary || "",
       notionImage: sourceData.notionImage || "",
+      externalPreviewImage: sourceData.externalPreviewImage || "",
       contentHtml: sourceData.contentHtml || "",
       publishingType: sourceData.publishingType || "",
       publishingStatus: sourceData.publishingStatus || "",
@@ -894,6 +1213,7 @@ function buildItemFromSource(entry, sourceData) {
       year: sourceData.year || "",
       effort: sourceData.effort || "",
       notionExternalUrl: sourceData.notionExternalUrl || "",
+      mediaStartLabel: sourceData.mediaStartLabel || "",
       dateAdded: sourceData.dateAdded || "",
       dateModified: sourceData.dateModified || sourceData.lastUpdated || ""
     }
@@ -931,6 +1251,20 @@ async function buildFreshSourceData(entry, pageId) {
       assetSlug,
       "page-cover"
     )) || (await findFirstImage(recordMap, getBlockChildren(pageBlock), assetSlug));
+  const publishingType = readNotionProperty(pageBlock.properties, propertyAliases.publishingType);
+  const publishingStatus = readNotionProperty(pageBlock.properties, propertyAliases.publishingStatus);
+  const category = readNotionProperty(pageBlock.properties, propertyAliases.category);
+  const year = readNotionProperty(pageBlock.properties, propertyAliases.year);
+  const effort = readNotionProperty(pageBlock.properties, propertyAliases.effort);
+  const notionExternalUrl =
+    readNotionProperty(pageBlock.properties, propertyAliases.externalUrl) ||
+    findFirstExternalBookmarkUrl(recordMap, getBlockChildren(pageBlock));
+  const section = normalizeSection(publishingType) || normalizeSection(entry.section);
+  const mediaStartLabel = extractMediaStartLabel(notionExternalUrl);
+  const externalPreviewImage =
+    section === "cool-bookmarks" && !entry.image && !notionImage && notionExternalUrl
+      ? await fetchExternalPreviewImage(notionExternalUrl, assetSlug)
+      : "";
 
   return {
     pageId,
@@ -940,13 +1274,15 @@ async function buildFreshSourceData(entry, pageId) {
     lastUpdated: formatLastUpdated(pageBlock.last_edited_time),
     notionTitle,
     notionSummary,
-    notionImage,
-    publishingType: readNotionProperty(pageBlock.properties, propertyAliases.publishingType),
-    publishingStatus: readNotionProperty(pageBlock.properties, propertyAliases.publishingStatus),
-    category: readNotionProperty(pageBlock.properties, propertyAliases.category),
-    year: readNotionProperty(pageBlock.properties, propertyAliases.year),
-    effort: readNotionProperty(pageBlock.properties, propertyAliases.effort),
-    notionExternalUrl: readNotionProperty(pageBlock.properties, propertyAliases.externalUrl),
+    notionImage: notionImage || externalPreviewImage,
+    externalPreviewImage,
+    publishingType,
+    publishingStatus,
+    category,
+    year,
+    effort,
+    notionExternalUrl,
+    mediaStartLabel,
     contentHtml: await renderBlocks(recordMap, getBlockChildren(pageBlock), {
       slug: assetSlug,
       title: effectiveTitle

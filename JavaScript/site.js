@@ -13,6 +13,10 @@ function getScrollbarCompensation() {
   return Math.max(0, window.innerWidth - document.documentElement.clientWidth);
 }
 
+function syncLayoutMetrics() {
+  document.documentElement.style.setProperty("--scrollbar-compensation", `${getScrollbarCompensation()}px`);
+}
+
 function setNavigationOpen(isOpen, options = {}) {
   if (!navToggle || !sideNav) {
     return;
@@ -187,6 +191,7 @@ if (navToggle && sideNav) {
       setNavigationOpen(false, { persist: false });
     }
 
+    syncLayoutMetrics();
     syncMobileNavigation();
     syncDesktopNavigation();
   });
@@ -201,6 +206,7 @@ desktopNavToggle?.addEventListener("click", () => {
   setDesktopNavigationCollapsed(nextState);
 });
 
+syncLayoutMetrics();
 syncMobileNavigation();
 syncDesktopNavigation();
 

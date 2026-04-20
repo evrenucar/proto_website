@@ -213,6 +213,35 @@ function formatDateLabel(value) {
   }).format(date);
 }
 
+function formatDateOnlyLabel(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium"
+  }).format(date);
+}
+
+function parseCategoryTags(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue) {
+    return [];
+  }
+
+  return rawValue
+    .split(/[,;\n]+/g)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 function contentPagePath(section, slug) {
   return `content/${section}/${slug}.html`;
 }
@@ -582,6 +611,12 @@ function getDisplayFieldEntry(item, fieldName) {
         label: "Added",
         value: item.dateAddedLabel || ""
       });
+    case "retrievedDate":
+      return createDisplayEntry({
+        key: fieldName,
+        label: "Retrieved",
+        value: item.retrievedDateLabel || ""
+      });
     case "dateModified":
     case "lastUpdated":
       return createDisplayEntry({
@@ -609,24 +644,87 @@ function getDisplayFieldEntry(item, fieldName) {
 }
 
 function getCardMetaEntries(item) {
+  const hiddenFieldNames = new Set(["summary", "lastUpdated"]);
+
+  if (item.section === "cool-bookmarks") {
+    hiddenFieldNames.add("category");
+    hiddenFieldNames.add("retrievedDate");
+  }
+
   return item.cardFields
-    .filter((fieldName) => !["summary", "lastUpdated"].includes(fieldName))
+    .filter((fieldName) => !hiddenFieldNames.has(fieldName))
     .map((fieldName) => getDisplayFieldEntry(item, fieldName))
     .filter(Boolean);
 }
 
 function getCardFooterEntries(item) {
+  if (item.section === "cool-bookmarks") {
+    return [getDisplayFieldEntry(item, "retrievedDate")].filter(Boolean);
+  }
+
   return [getDisplayFieldEntry(item, "lastUpdated")].filter(Boolean);
+}
+
+function renderIcon(name) {
+  switch (name) {
+    case "time":
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8"></circle>
+          <path d="M12 8v4l2.5 1.5"></path>
+        </svg>
+      `;
+    case "arrow-up":
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19V5"></path>
+          <path d="m6 11 6-6 6 6"></path>
+        </svg>
+      `;
+    case "arrow-left":
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"></path>
+          <path d="m11 18-6-6 6-6"></path>
+        </svg>
+      `;
+    default:
+      return "";
+  }
+}
+
+function getBookmarkTagValues(item) {
+  return item.categoryTags?.length > 0 ? item.categoryTags : [EMPTY_FIELD_VALUE];
+}
+
+function renderBookmarkTagStrip(item) {
+  if (item.section !== "cool-bookmarks") {
+    return "";
+  }
+
+  return `
+    <div class="content-card-tag-strip">
+      ${getBookmarkTagValues(item)
+        .map((tag) => `<span class="content-card-tag${tag === EMPTY_FIELD_VALUE ? " is-empty" : ""}">${escapeHtml(tag)}</span>`)
+        .join("")}
+    </div>
+  `;
 }
 
 function renderCardMedia(item, currentFile = "") {
   const mediaLabel = escapeHtml(item.publishingTypeLabel || getSectionLabel(item.section));
   const imageHref = currentFile ? relativeHref(currentFile, item.image) : item.image;
+  const mediaBadge = item.mediaStartLabel
+    ? `<span class="content-card-media-badge"><span class="content-card-media-badge-icon">${renderIcon(
+        "time"
+      )}</span><span>${escapeHtml(item.mediaStartLabel)}</span></span>`
+    : "";
 
   if (item.image) {
     return `
       <div class="content-card-media">
         <img src="${imageHref}" alt="${escapeHtml(item.alt || item.title)}" loading="eager" decoding="async">
+        ${mediaBadge}
       </div>
     `;
   }
@@ -642,6 +740,46 @@ function renderCardSeparator() {
   return `<span class="content-card-separator" aria-hidden="true"></span>`;
 }
 
+function renderCardMeta(metaEntries) {
+  if (metaEntries.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="content-card-meta">
+      ${metaEntries
+        .map(
+          (entry) =>
+            `<span class="content-card-pill content-card-pill--${escapeHtml(
+              sectionToCssToken(entry.key)
+            )}${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(entry.label)}</strong><span>${escapeHtml(
+              entry.value
+            )}</span></span>`
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderCardFooter(footerEntries) {
+  if (footerEntries.length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="content-card-footer">
+      ${footerEntries
+        .map(
+          (entry) =>
+            `<p class="content-card-footnote${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(
+              entry.label
+            )}</strong><span>${escapeHtml(entry.value)}</span></p>`
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderContentCard(item, currentFile = "") {
   const href = getResolvedItemHref(item);
   const resolvedHref = currentFile ? relativeHref(currentFile, href) : href;
@@ -655,42 +793,21 @@ function renderContentCard(item, currentFile = "") {
         summaryValue || EMPTY_FIELD_VALUE
       )}</p>`
     : "";
+  const metaHtml = renderCardMeta(metaEntries);
+  const footerHtml = renderCardFooter(footerEntries);
   const bodyHtml = `
-    <div class="content-card-body">
-      ${
-        metaEntries.length > 0
-          ? `<div class="content-card-meta">${metaEntries
-              .map(
-                (entry) =>
-                  `<span class="content-card-pill content-card-pill--${escapeHtml(
-                    sectionToCssToken(entry.key)
-                  )}${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(entry.label)}</strong><span>${escapeHtml(
-                    entry.value
-                  )}</span></span>`
-              )
-              .join("")}</div>`
-          : ""
-      }
+    <div class="content-card-body${item.section === "cool-bookmarks" ? " content-card-body--bookmark" : ""}">
+      ${item.section === "cool-bookmarks" ? "" : metaHtml}
       <h3 class="content-card-title">${escapeHtml(item.title)}</h3>
       ${summary}
-      ${
-        footerEntries.length > 0
-          ? `<div class="content-card-footer">${footerEntries
-              .map(
-                (entry) =>
-                  `<p class="content-card-footnote${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(
-                    entry.label
-                  )}</strong><span>${escapeHtml(entry.value)}</span></p>`
-              )
-              .join("")}</div>`
-          : ""
-      }
+      ${item.section === "cool-bookmarks" ? metaHtml : ""}
+      ${footerHtml}
     </div>
   `;
   const innerHtml =
     variantClass === "text"
       ? `${renderCardSeparator()}${bodyHtml}`
-      : `${renderCardMedia(item, currentFile)}${renderCardSeparator()}${bodyHtml}`;
+      : `${renderCardMedia(item, currentFile)}${renderBookmarkTagStrip(item)}${renderCardSeparator()}${bodyHtml}`;
 
   return `
     <article class="content-card content-card--${escapeHtml(sectionClass)} content-card--${escapeHtml(
@@ -753,27 +870,6 @@ function renderInfoPage(currentFile, { tag, title, intro, items }) {
       </div>
     </section>
   `;
-}
-
-function renderIcon(name) {
-  switch (name) {
-    case "arrow-up":
-      return `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 19V5"></path>
-          <path d="m6 11 6-6 6 6"></path>
-        </svg>
-      `;
-    case "arrow-left":
-      return `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M19 12H5"></path>
-          <path d="m11 18-6-6 6-6"></path>
-        </svg>
-      `;
-    default:
-      return "";
-  }
 }
 
 function renderDetailActions(item, currentFile) {
@@ -1239,16 +1335,19 @@ function normalizePageDatabaseItem(item) {
     year: meta.year || (item.year ? String(item.year) : ""),
     dateAdded,
     dateAddedLabel: formatDateLabel(dateAdded),
+    retrievedDateLabel: formatDateOnlyLabel(dateAdded),
     dateModified,
     notionLastEdited: meta.notionLastEdited || dateModified,
     image: content.image || item.image || "",
     alt: content.alt || item.alt || title,
+    categoryTags: parseCategoryTags(meta.category || item.category || ""),
     summary,
     actionLabel,
     actionType,
     actionUrl,
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
     sharedUrl: item.sharedUrl || "",
+    mediaStartLabel: item.mediaStartLabel || "",
     lastUpdated: dateModified,
     lastUpdatedLabel: formatDateLabel(dateModified),
     detailPage,
@@ -1313,16 +1412,19 @@ function normalizeNotionItem(item) {
     year: item.year ? String(item.year) : "",
     dateAdded,
     dateAddedLabel: formatDateLabel(dateAdded),
+    retrievedDateLabel: formatDateOnlyLabel(dateAdded),
     dateModified,
     notionLastEdited: dateModified,
     image: item.image || "",
     alt: item.alt || item.title,
+    categoryTags: parseCategoryTags(item.category || ""),
     summary: item.summary || "",
     actionLabel,
     actionType,
     actionUrl,
     sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : null,
     sharedUrl: item.sharedUrl || "",
+    mediaStartLabel: item.mediaStartLabel || "",
     lastUpdated: dateModified,
     lastUpdatedLabel: formatDateLabel(dateModified),
     detailPage,

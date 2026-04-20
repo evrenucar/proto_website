@@ -36,12 +36,12 @@ export const pageDatabaseCollections = {
     }
   },
   "cool-bookmarks": {
-    cardVariant: "text",
+    cardVariant: "media",
     defaultCardSize: "sm",
-    defaultCardFields: ["publishingType", "publishingStatus", "category", "lastUpdated"],
+    defaultCardFields: ["publishingType", "publishingStatus", "category", "summary", "retrievedDate"],
     defaultDetailVisibility: {
       showHero: false,
-      showMeta: ["publishingType", "publishingStatus", "category", "dateAdded", "lastUpdated", "notionLink", "externalLink"],
+      showMeta: ["publishingType", "publishingStatus", "category", "retrievedDate", "notionLink", "externalLink"],
       showComments: false
     }
   }
