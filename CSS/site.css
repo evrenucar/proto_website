@@ -1453,6 +1453,7 @@ html.nav-pos-left .detail-action-row {
 .article-content figure img {
   width: 100%;
   border-radius: 5px;
+  cursor: zoom-in;
 }
 
 .article-content figure video {
@@ -1624,6 +1625,8 @@ html.nav-pos-left .detail-action-row {
   display: none;
   z-index: 70;
   overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .lightbox[hidden] {
@@ -1636,16 +1639,26 @@ html.nav-pos-left .detail-action-row {
   align-items: center;
 }
 
+.lightbox.is-zoomed {
+  cursor: grab;
+}
+
 .lightbox-figure {
   margin: 0;
   width: min(100%, 1200px);
   text-align: center;
+  touch-action: none;
 }
 
 .lightbox-figure img {
   max-width: 92vw;
   max-height: calc(100vh - 120px);
   margin: 0 auto;
+  transform-origin: center center;
+  will-change: transform;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .lightbox-figure figcaption {
@@ -1662,6 +1675,10 @@ html.nav-pos-left .detail-action-row {
   background: #1a1919;
   color: #fafafa;
   cursor: pointer;
+}
+
+.detail-hero img {
+  cursor: zoom-in;
 }
 
 .copy-toast {
@@ -1898,6 +1915,19 @@ html.nav-pos-left .detail-action-row {
 
   .photo-grid-preview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lightbox {
+    padding: 16px;
+  }
+
+  .lightbox-figure {
+    width: 100%;
+  }
+
+  .lightbox-figure img {
+    max-width: 100%;
+    max-height: calc(100vh - 96px);
   }
 }
 

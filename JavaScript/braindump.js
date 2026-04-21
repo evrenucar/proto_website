@@ -36,6 +36,7 @@ const recommendationConfig = {
 };
 
 let toolbarToastTimeout = null;
+let lastToolbarTouchTime = 0;
 let viewportSaveTimeout = null;
 let pendingRecommendation = null;
 const RECOMMENDATION_MODAL_DISMISS_SUFFIX = ":recommendation-modal-dismissed";
@@ -525,6 +526,7 @@ let currentPathData = "";
 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 let selectionBox = null;
 let dragRect = { x: 0, y: 0, w: 0, h: 0, startX: 0, startY: 0, active: false };
+let touchSelectionMoved = false;
 
 let nodes = [];
 let edges = [];
@@ -605,6 +607,47 @@ function focusTextEditor(nodeId, options = {}) {
   document.querySelectorAll(".bd-item").forEach(item => item.classList.remove("selected"));
   el.classList.add("selected");
   beginTextEditing(nodeObj, editor, options);
+}
+
+function startSelectionRect(clientX, clientY, preserveSelection = false) {
+  if (!preserveSelection) {
+    document.querySelectorAll(".bd-item").forEach((item) => item.classList.remove("selected"));
+  }
+
+  const pos = screenToCanvas(clientX, clientY);
+  dragRect = { x: pos.x, y: pos.y, w: 0, h: 0, startX: pos.x, startY: pos.y, active: true };
+  touchSelectionMoved = false;
+
+  if (!selectionBox) {
+    selectionBox = document.createElement("div");
+    selectionBox.style.position = "absolute";
+    selectionBox.style.border = "1px solid #3fdaca";
+    selectionBox.style.backgroundColor = "rgba(63, 218, 202, 0.1)";
+    selectionBox.style.pointerEvents = "none";
+    selectionBox.style.zIndex = "1000";
+    canvas.appendChild(selectionBox);
+  }
+
+  selectionBox.style.left = `${pos.x}px`;
+  selectionBox.style.top = `${pos.y}px`;
+  selectionBox.style.width = "0px";
+  selectionBox.style.height = "0px";
+  selectionBox.style.display = "block";
+}
+
+function updateSelectionRect(clientX, clientY) {
+  const pos = screenToCanvas(clientX, clientY);
+  dragRect.x = Math.min(pos.x, dragRect.startX);
+  dragRect.y = Math.min(pos.y, dragRect.startY);
+  dragRect.w = Math.abs(pos.x - dragRect.startX);
+  dragRect.h = Math.abs(pos.y - dragRect.startY);
+  touchSelectionMoved = touchSelectionMoved || dragRect.w > 4 / camera.z || dragRect.h > 4 / camera.z;
+
+  if (!selectionBox) return;
+  selectionBox.style.left = `${dragRect.x}px`;
+  selectionBox.style.top = `${dragRect.y}px`;
+  selectionBox.style.width = `${dragRect.w}px`;
+  selectionBox.style.height = `${dragRect.h}px`;
 }
 
 function pushAction(action) {
@@ -760,9 +803,7 @@ function copySelected() {
 
 // Apply Camera Transform
 function updateTransform() {
-  canvas.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.z})`;
-  viewport.style.backgroundPosition = `${camera.x}px ${camera.y}px`;
-  viewport.style.backgroundSize = `${30 * camera.z}px ${30 * camera.z}px`;
+  canvas.style.transform = `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.z})`;
 }
 
 // Convert screen constraints
@@ -806,20 +847,47 @@ viewport.addEventListener("wheel", (e) => {
 }, { passive: false });
 
 let initialPinchDistance = null;
-let initialCameraZ = 1;
+let pinchStartCamera = null;
+let pinchStartMidpoint = null;
+
+function getTouchDistance(touchA, touchB) {
+  const dx = touchA.clientX - touchB.clientX;
+  const dy = touchA.clientY - touchB.clientY;
+  return Math.hypot(dx, dy);
+}
+
+function getTouchMidpoint(touchA, touchB) {
+  return {
+    x: (touchA.clientX + touchB.clientX) / 2,
+    y: (touchA.clientY + touchB.clientY) / 2
+  };
+}
+
+function beginPinchZoom(touches) {
+  if (!touches || touches.length < 2) return;
+
+  const [firstTouch, secondTouch] = touches;
+  initialPinchDistance = getTouchDistance(firstTouch, secondTouch);
+  pinchStartMidpoint = getTouchMidpoint(firstTouch, secondTouch);
+  pinchStartCamera = {
+    x: camera.x,
+    y: camera.y,
+    z: camera.z
+  };
+}
 
 viewport.addEventListener("touchstart", (e) => {
   if (e.touches.length === 2) {
     isPanning = false;
     isDrawing = false;
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    initialPinchDistance = Math.hypot(dx, dy);
-    initialCameraZ = camera.z;
+    beginPinchZoom(e.touches);
   } else if (e.touches.length === 1) {
     if (activeTool === "draw") {
       e.preventDefault();
       startDrawing(e.touches[0].clientX, e.touches[0].clientY);
+    } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
+      e.preventDefault();
+      startSelectionRect(e.touches[0].clientX, e.touches[0].clientY, false);
     } else if (activeTool === "pan" || e.target === viewport) {
       if (e.target === viewport) {
         isPanning = true;
@@ -832,17 +900,35 @@ viewport.addEventListener("touchstart", (e) => {
 viewport.addEventListener("touchmove", (e) => {
   if (e.touches.length === 2 && initialPinchDistance) {
     e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const distance = Math.hypot(dx, dy);
-    let scale = distance / initialPinchDistance;
-    scale = 1 + (scale - 1) * 8.0; // 4x faster pinch zoom
-    camera.z = Math.min(Math.max(initialCameraZ * scale, 0.1), 5);
+    const [firstTouch, secondTouch] = e.touches;
+    const distance = getTouchDistance(firstTouch, secondTouch);
+    const midpoint = getTouchMidpoint(firstTouch, secondTouch);
+
+    if (!pinchStartCamera || !pinchStartMidpoint || initialPinchDistance <= 0) {
+      beginPinchZoom(e.touches);
+      return;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    const startMidpointX = pinchStartMidpoint.x - rect.left;
+    const startMidpointY = pinchStartMidpoint.y - rect.top;
+    const currentMidpointX = midpoint.x - rect.left;
+    const currentMidpointY = midpoint.y - rect.top;
+    const anchorCanvasX = (startMidpointX - pinchStartCamera.x) / pinchStartCamera.z;
+    const anchorCanvasY = (startMidpointY - pinchStartCamera.y) / pinchStartCamera.z;
+    const nextZoom = Math.min(Math.max(pinchStartCamera.z * (distance / initialPinchDistance), 0.1), 5);
+
+    camera.z = nextZoom;
+    camera.x = currentMidpointX - anchorCanvasX * nextZoom;
+    camera.y = currentMidpointY - anchorCanvasY * nextZoom;
     updateTransform();
   } else if (e.touches.length === 1) {
     if (isDrawing) {
       e.preventDefault();
       draw(e.touches[0].clientX, e.touches[0].clientY);
+    } else if (dragRect.active) {
+      e.preventDefault();
+      updateSelectionRect(e.touches[0].clientX, e.touches[0].clientY);
     } else if (isPanning) {
       e.preventDefault();
       camera.x = e.touches[0].clientX - startPan.x;
@@ -852,10 +938,48 @@ viewport.addEventListener("touchmove", (e) => {
   }
 }, { passive: false });
 
-viewport.addEventListener("touchend", () => {
+viewport.addEventListener("touchend", (e) => {
+  if (e.touches.length >= 2) {
+    beginPinchZoom(e.touches);
+    return;
+  }
+
   initialPinchDistance = null;
+  pinchStartCamera = null;
+  pinchStartMidpoint = null;
   isPanning = false;
+
+  if (e.touches.length === 1 && activeTool === "pan") {
+    isPanning = true;
+    startPan = {
+      x: e.touches[0].clientX - camera.x,
+      y: e.touches[0].clientY - camera.y
+    };
+  }
+
   if (isDrawing) stopDrawing();
+  if (dragRect.active) {
+    dragRect.active = false;
+    if (selectionBox) selectionBox.style.display = "none";
+    if (touchSelectionMoved) {
+      nodes.forEach((n) => {
+        const el = document.getElementById(n.id);
+        if (!el) return;
+        if (n.x < dragRect.x + dragRect.w && n.x + n.width > dragRect.x &&
+            n.y < dragRect.y + dragRect.h && n.y + n.height > dragRect.y) {
+          el.classList.add("selected");
+        }
+      });
+    }
+    touchSelectionMoved = false;
+  }
+}, { passive: false });
+
+viewport.addEventListener("touchcancel", () => {
+  initialPinchDistance = null;
+  pinchStartCamera = null;
+  pinchStartMidpoint = null;
+  isPanning = false;
 });
 
 // Global middle-click, right-click, and pan-tool panning
@@ -894,26 +1018,7 @@ viewport.addEventListener("mousedown", (e) => {
     if (activeTool === "draw") {
       startDrawing(e.clientX, e.clientY);
     } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
-      if (!e.shiftKey) { 
-        document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
-      }
-      let pos = screenToCanvas(e.clientX, e.clientY);
-      dragRect = { x: pos.x, y: pos.y, w: 0, h: 0, startX: pos.x, startY: pos.y, active: true };
-      
-      if (!selectionBox) {
-        selectionBox = document.createElement("div");
-        selectionBox.style.position = "absolute";
-        selectionBox.style.border = "1px solid #3fdaca";
-        selectionBox.style.backgroundColor = "rgba(63, 218, 202, 0.1)";
-        selectionBox.style.pointerEvents = "none";
-        selectionBox.style.zIndex = "1000";
-        canvas.appendChild(selectionBox);
-      }
-      selectionBox.style.left = `${pos.x}px`;
-      selectionBox.style.top = `${pos.y}px`;
-      selectionBox.style.width = `0px`;
-      selectionBox.style.height = `0px`;
-      selectionBox.style.display = "block";
+      startSelectionRect(e.clientX, e.clientY, e.shiftKey);
     } else if (activeTool === "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       let pos = screenToCanvas(e.clientX, e.clientY);
       const newNode = createNode("text", pos.x, pos.y, { text: "", width: 250, height: 150 });
@@ -940,15 +1045,7 @@ window.addEventListener("pointermove", (e) => {
   } else if (isDrawing) {
     draw(e.clientX, e.clientY);
   } else if (dragRect.active) {
-    let pos = screenToCanvas(e.clientX, e.clientY);
-    dragRect.x = Math.min(pos.x, dragRect.startX);
-    dragRect.y = Math.min(pos.y, dragRect.startY);
-    dragRect.w = Math.abs(pos.x - dragRect.startX);
-    dragRect.h = Math.abs(pos.y - dragRect.startY);
-    selectionBox.style.left = `${dragRect.x}px`;
-    selectionBox.style.top = `${dragRect.y}px`;
-    selectionBox.style.width = `${dragRect.w}px`;
-    selectionBox.style.height = `${dragRect.h}px`;
+    updateSelectionRect(e.clientX, e.clientY);
   }
 });
 
@@ -1030,16 +1127,49 @@ function setActiveTool(tool) {
   else viewport.style.cursor = "default";
 }
 
+function stopTransientBoardInteractions() {
+  if (isDrawing) stopDrawing();
+  isPanning = false;
+  initialPinchDistance = null;
+
+  if (dragRect.active) {
+    dragRect.active = false;
+    touchSelectionMoved = false;
+    if (selectionBox) selectionBox.style.display = "none";
+  }
+}
+
+function handleToolbarAction(btn) {
+  stopTransientBoardInteractions();
+
+  if (btn.dataset.tool === "save") return saveBoard();
+  if (btn.dataset.tool === "recommend") {
+    const shouldOpen = recommendationPanel?.hidden ?? true;
+    setRecommendationPanelOpen(shouldOpen);
+    return;
+  }
+  if (btn.dataset.tool === "export") return exportCanvas();
+  setActiveTool(btn.dataset.tool);
+}
+
 toolbarButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    if (btn.dataset.tool === "save") return saveBoard();
-    if (btn.dataset.tool === "recommend") {
-      const shouldOpen = recommendationPanel?.hidden ?? true;
-      setRecommendationPanelOpen(shouldOpen);
-      return;
-    }
-    if (btn.dataset.tool === "export") return exportCanvas();
-    setActiveTool(btn.dataset.tool);
+  btn.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  btn.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    lastToolbarTouchTime = Date.now();
+    handleToolbarAction(btn);
+  }, { passive: false });
+
+  btn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (Date.now() - lastToolbarTouchTime < 500) return;
+    handleToolbarAction(btn);
   });
 });
 
@@ -1342,6 +1472,14 @@ function renderNode(nodeObj) {
       if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
       if (e.target.classList.contains("resize-handle")) return; // handled separately
       if (e.target.isContentEditable && document.activeElement === e.target) return;
+
+      if (!el.classList.contains("selected")) {
+        document.querySelectorAll(".bd-item").forEach((n) => n.classList.remove("selected"));
+        el.classList.add("selected");
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
 
       const touch = e.touches[0];
       if (!beginNodeDrag(touch.clientX, touch.clientY, false)) return;

@@ -478,7 +478,7 @@ function renderShell({
     <link rel="manifest" href="${relativeHref(currentFile, "favicon/site.webmanifest")}" />
     ${renderInitialNavigationStateScript()}
     ${schemaBlocks}
-    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=4" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=5" defer></script>
   </head>
   <body class="${escapeHtml(bodyClass)}">
     <a class="skip-link" href="#content">Skip to content</a>
@@ -1249,7 +1249,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         </div>
       </div>
     </div>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=21" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=22" defer></script>
   `;
 }
 

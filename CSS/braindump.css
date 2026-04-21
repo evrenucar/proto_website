@@ -45,10 +45,9 @@ html:has(body.page-braindump) {
   z-index: 1;
   overflow: hidden;
   background-color: #151515;
-  background-image: radial-gradient(#333 1px, transparent 1px);
-  background-size: 30px 30px;
   cursor: grab;
   color: #fafafa;
+  touch-action: none;
 }
 
 .braindump-viewport:active {
@@ -64,6 +63,18 @@ html:has(body.page-braindump) {
   width: 0;
   height: 0;
   transform-origin: 0 0;
+  will-change: transform;
+}
+
+.braindump-grid {
+  position: absolute;
+  top: -120000px;
+  left: -120000px;
+  width: 240000px;
+  height: 240000px;
+  background-image: radial-gradient(circle, #333 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
 }
 
 #braindump-svg-layer {
@@ -90,6 +101,11 @@ html:has(body.page-braindump) {
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   transform-origin: top left;
   user-select: none;
+}
+
+.braindump-viewport[data-mode="draw"] .bd-item,
+.braindump-viewport[data-mode="draw"] .bd-item * {
+  pointer-events: none !important;
 }
 
 .bd-item.selected {
@@ -252,12 +268,14 @@ html:has(body.page-braindump) {
   border-radius: 12px;
   border: 1px solid #2d2c2c;
   box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  touch-action: manipulation;
 }
 
 .braindump-toolbar button, .braindump-file-label {
   width: 44px;
   height: 44px;
   border-radius: 8px;
+  touch-action: manipulation;
   border: 1px solid transparent;
   background: transparent;
   color: #bfbfbf;
