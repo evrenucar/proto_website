@@ -1146,9 +1146,10 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
     ? relativeHref(currentFile, board.legacySourcePath)
     : "";
   const recommendationConfig = board.recommendation || {};
+  const bugReportConfig = board.bugReport || {};
 
   return `
-    <link rel="stylesheet" href="CSS/braindump.css?v=6">
+    <link rel="stylesheet" href="CSS/braindump.css?v=12">
     <div
       class="braindump-viewport"
       id="braindump-viewport"
@@ -1160,13 +1161,26 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
       data-board-storage-key="${escapeHtml(board.storageKey)}"
       data-board-legacy-storage-key="${escapeHtml(board.legacyStorageKey || "")}"
       data-board-save-endpoint="${escapeHtml(board.saveEndpoint || "/api/save-board")}"
+      data-board-autosave-seconds="${escapeHtml(String(board.autosaveSeconds || 20))}"
       data-board-allow-recommendations="${board.allowRecommendations ? "true" : "false"}"
       data-recommendation-type="${escapeHtml(recommendationConfig.type || "")}"
       data-recommendation-owner="${escapeHtml(recommendationConfig.owner || "")}"
       data-recommendation-repo="${escapeHtml(recommendationConfig.repo || "")}"
       data-recommendation-labels="${escapeHtml((recommendationConfig.labels || []).join(","))}"
+      data-bug-report-type="${escapeHtml(bugReportConfig.type || "")}"
+      data-bug-report-owner="${escapeHtml(bugReportConfig.owner || "")}"
+      data-bug-report-repo="${escapeHtml(bugReportConfig.repo || "")}"
+      data-bug-report-labels="${escapeHtml((bugReportConfig.labels || []).join(","))}"
     >
       <div class="braindump-canvas" id="braindump-canvas">
+        <svg class="braindump-grid" aria-hidden="true" viewBox="-120000 -120000 240000 240000">
+          <defs>
+            <pattern id="braindump-grid-pattern" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+              <circle class="braindump-grid-dot" cx="1" cy="1" r="1"></circle>
+            </pattern>
+          </defs>
+          <rect x="-120000" y="-120000" width="240000" height="240000" fill="url(#braindump-grid-pattern)"></rect>
+        </svg>
         <svg id="braindump-svg-layer"></svg>
       </div>
       <div class="braindump-toolbar-shell">
@@ -1187,30 +1201,107 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           </button>
           <div class="braindump-toolbar-divider"></div>
-          <button type="button" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
+          <button type="button" class="braindump-toolbar-action braindump-toolbar-action-desktop-only" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span class="braindump-toolbar-action-label">Save</span>
           </button>
-          <button type="button" data-tool="recommend" aria-label="Send recommendation" title="Send recommendation">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          <button type="button" class="braindump-toolbar-action braindump-toolbar-action-desktop-only" data-tool="recommend" aria-label="Send feature request" title="Send feature request">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
+            <span class="braindump-toolbar-action-label">Feature request</span>
           </button>
-          <button type="button" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <button
+            type="button"
+            class="braindump-toolbar-more"
+            id="braindump-toolbar-more"
+            data-tool="more"
+            aria-label="More board actions"
+            aria-controls="braindump-toolbar-actions"
+            aria-expanded="false"
+            title="More actions"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
           </button>
-          <label class="braindump-file-label" aria-label="Import .canvas or .canvas.json" title="Import (.canvas / .canvas.json)">
-            <input type="file" id="braindump-import" accept=".canvas,.canvas.json,.json" hidden>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          </label>
+          <div class="braindump-toolbar-actions" id="braindump-toolbar-actions" aria-label="Board actions">
+            <button type="button" class="braindump-toolbar-action braindump-toolbar-action-mobile-only" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span class="braindump-toolbar-action-label">Save</span>
+            </button>
+            <button type="button" class="braindump-toolbar-action" data-tool="recommend" aria-label="Send feature request" title="Send feature request">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
+              <span class="braindump-toolbar-action-label">Feature request</span>
+            </button>
+            <button type="button" class="braindump-toolbar-action" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span class="braindump-toolbar-action-label">Export</span>
+            </button>
+            <label class="braindump-file-label braindump-toolbar-action" aria-label="Import .canvas or .canvas.json" title="Import (.canvas / .canvas.json)">
+              <input type="file" id="braindump-import" accept=".canvas,.canvas.json,.json" hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span class="braindump-toolbar-action-label">Import</span>
+            </label>
+            <button type="button" class="braindump-toolbar-action" data-tool="settings" aria-label="Board settings" title="Settings">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 .99-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .99 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51.99H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.99Z"></path></svg>
+              <span class="braindump-toolbar-action-label">Settings</span>
+            </button>
+            <button type="button" class="braindump-toolbar-action" data-tool="bug-report" aria-label="Send bug report" title="Send bug report">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.31 0-6-2.69-6-6v-3a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3c0 3.31-2.69 6-6 6Z"/><path d="M12 20v-9"/><path d="M6.53 9C5.6 8.31 4.5 8 3 8"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M17.47 9c.93-.69 2.03-1 3.53-1"/><path d="M18 13h4"/><path d="M21 21c0-2.1-1.7-3.9-3.8-4"/></svg>
+              <span class="braindump-toolbar-action-label">Bug report</span>
+            </button>
+          </div>
         </div>
-        <div class="braindump-recommend-panel" id="braindump-recommend-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-recommend-panel" hidden>
           <input
             type="text"
             id="braindump-recommend-summary"
-            class="braindump-recommend-input"
+            class="braindump-issue-input"
             maxlength="50"
-            placeholder="Short description"
-            aria-label="Short description for recommendation"
+            placeholder="Short feature summary"
+            aria-label="Short description for feature request"
           >
-          <button type="button" id="braindump-recommend-submit" class="braindump-recommend-submit" title="Send recommendation">Send recommendation</button>
+          <button type="button" id="braindump-recommend-submit" class="braindump-issue-submit" title="Send feature request">Send feature request</button>
+        </div>
+        <div class="braindump-issue-panel" id="braindump-bug-panel" hidden>
+          <input
+            type="text"
+            id="braindump-bug-summary"
+            class="braindump-issue-input"
+            maxlength="50"
+            placeholder="Short bug summary"
+            aria-label="Short description for bug report"
+          >
+          <button type="button" id="braindump-bug-submit" class="braindump-issue-submit" title="Send bug report">Send bug report</button>
+        </div>
+        <div class="braindump-settings-panel" id="braindump-settings-panel" hidden>
+          <section class="braindump-settings-section" aria-labelledby="braindump-settings-title">
+            <div class="braindump-settings-header">
+              <h2 id="braindump-settings-title" class="braindump-settings-title">Settings</h2>
+              <button type="button" id="braindump-settings-reset" class="braindump-settings-reset">Reset</button>
+            </div>
+            <label class="braindump-settings-toggle" for="braindump-setting-autosave-enabled">
+              <span class="braindump-settings-label-wrap">
+                <span class="braindump-settings-label">Background autosave sync</span>
+                <span class="braindump-settings-copy">Local draft saving stays on while you edit. This setting controls the timed sync back to the board file when the save endpoint is available.</span>
+              </span>
+              <input type="checkbox" id="braindump-setting-autosave-enabled">
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-autosave-seconds">
+              <span class="braindump-settings-label">Sync interval</span>
+              <div class="braindump-settings-input-row">
+                <input type="number" id="braindump-setting-autosave-seconds" min="5" max="300" step="5" inputmode="numeric">
+                <span>seconds</span>
+              </div>
+            </label>
+          </section>
+          <section class="braindump-settings-section" aria-labelledby="braindump-help-title">
+            <h3 id="braindump-help-title" class="braindump-help-title">Help</h3>
+            <p class="braindump-help-copy">Desktop shortcuts and mobile editing hints for the current board.</p>
+            <ul class="braindump-help-list">
+              <li><strong>Desktop:</strong> <code>V</code> select, <code>T</code> text, <code>P</code> draw, <code>L</code> link, hold <code>Space</code> to pan, and <code>Ctrl/Cmd+S</code> to force a save.</li>
+              <li><strong>Mobile text:</strong> tap once with the text tool and the note opens centered so you can type or long-press to paste.</li>
+              <li><strong>Mobile links:</strong> tap once with the link tool and a paste-ready URL field opens immediately.</li>
+              <li><strong>Autosave:</strong> local draft state saves as you work; timed background sync updates the board file when the local save endpoint is running.</li>
+            </ul>
+          </section>
         </div>
         <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" role="status" aria-live="polite" hidden></div>
       </div>
@@ -1226,7 +1317,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         <div class="braindump-modal-panel">
           <h2 id="braindump-modal-title" class="braindump-modal-title">Before you open GitHub</h2>
           <p id="braindump-modal-description" class="braindump-modal-description">
-            Follow these steps so the recommendation is submitted correctly.
+            Follow these steps so the feature request is submitted correctly.
           </p>
           <p class="braindump-modal-file-note">
             Downloaded file:
@@ -1234,7 +1325,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           </p>
           <ol class="braindump-modal-steps">
             <li>A <strong class="braindump-file-emphasis">.canvas.json file</strong> has been downloaded automatically.</li>
-            <li>Log in to GitHub so you can send the recommendation.</li>
+            <li>Log in to GitHub so you can send the feature request.</li>
             <li>Fill out the information on the GitHub form and modify it if necessary.</li>
             <li>Do not forget to attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>.</li>
           </ol>
@@ -1249,7 +1340,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         </div>
       </div>
     </div>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=22" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=30" defer></script>
   `;
 }
 

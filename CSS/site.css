@@ -1754,7 +1754,7 @@ html.nav-pos-left .detail-action-row {
   }
 
   .nav-link {
-    font-size: 35px;
+    font-size: calc(35px * 0.7);
     line-height: 1.62;
   }
 

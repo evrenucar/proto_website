@@ -48,6 +48,8 @@ html:has(body.page-braindump) {
   cursor: grab;
   color: #fafafa;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
 }
 
 .braindump-viewport:active {
@@ -63,7 +65,6 @@ html:has(body.page-braindump) {
   width: 0;
   height: 0;
   transform-origin: 0 0;
-  will-change: transform;
 }
 
 .braindump-grid {
@@ -72,9 +73,13 @@ html:has(body.page-braindump) {
   left: -120000px;
   width: 240000px;
   height: 240000px;
-  background-image: radial-gradient(circle, #333 1px, transparent 1px);
-  background-size: 30px 30px;
   pointer-events: none;
+  overflow: visible;
+}
+
+.braindump-grid-dot {
+  fill: #333;
+  shape-rendering: geometricPrecision;
 }
 
 #braindump-svg-layer {
@@ -101,6 +106,8 @@ html:has(body.page-braindump) {
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   transform-origin: top left;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .braindump-viewport[data-mode="draw"] .bd-item,
@@ -116,19 +123,35 @@ html:has(body.page-braindump) {
 
 .bd-item .resize-handle {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
+  right: -18px;
+  bottom: -18px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  cursor: se-resize;
+  display: none;
+  z-index: 20;
+  touch-action: none;
+}
+
+.bd-item .resize-handle::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
   width: 12px;
   height: 12px;
   background: #fafafa;
   border: 1px solid #1a1a1a;
   border-radius: 50%;
-  cursor: se-resize;
-  display: none;
-  z-index: 10;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
-.bd-item.selected .resize-handle {
+.braindump-viewport[data-mode="select"] .bd-item.selected .resize-handle {
   display: block;
 }
 
@@ -164,7 +187,26 @@ html:has(body.page-braindump) {
   font: inherit;
   line-height: 1.4;
   white-space: pre-wrap;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  word-break: break-word;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  caret-color: #fafafa;
+}
+
+.bd-text-editor[contenteditable="true"] {
   user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: auto;
 }
 
 .bd-text-editor.is-empty::before {
@@ -173,10 +215,14 @@ html:has(body.page-braindump) {
   pointer-events: none;
 }
 
+.bd-text-editor[contenteditable="true"].is-empty::before {
+  opacity: 0;
+}
+
 /* Image Component */
 .bd-layer-image, .bd-layer-file {
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .bd-layer-image img, .bd-layer-file img {
@@ -185,6 +231,7 @@ html:has(body.page-braindump) {
   height: 100%;
   pointer-events: none;
   object-fit: fill;
+  border-radius: inherit;
 }
 
 .bd-item.bd-layer-draw {
@@ -214,12 +261,63 @@ html:has(body.page-braindump) {
   color: #fff;
 }
 
+.bd-link-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .bd-auto-size-content {
   box-sizing: border-box;
   width: max-content;
   height: max-content;
   min-width: 250px;
   max-width: 400px;
+}
+
+.bd-link-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bd-link-editor-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #d7d7d7;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bd-link-editor-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  background: #121212;
+  color: #fafafa;
+  font: inherit;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: auto;
+}
+
+.bd-link-editor-input:focus {
+  border-color: #3fdaca;
+  box-shadow: 0 0 0 3px rgba(63, 218, 202, 0.15);
+}
+
+.bd-link-editor-hint {
+  margin: 0;
+  color: rgba(250, 250, 250, 0.62);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .bd-bookmark-image {
@@ -237,11 +335,29 @@ html:has(body.page-braindump) {
   line-height: 1.3;
 }
 
+.bd-bookmark-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bd-bookmark-desc {
+  margin: 0;
+  color: rgba(250, 250, 250, 0.7);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .bd-bookmark-link {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #3fdaca;
   text-decoration: none;
   font-size: 14px;
-  word-break: break-all;
 }
 
 .bd-bookmark-link:hover {
@@ -261,7 +377,9 @@ html:has(body.page-braindump) {
 }
 
 .braindump-toolbar {
+  position: relative;
   display: flex;
+  align-items: center;
   gap: 12px;
   background: #1a1919;
   padding: 10px 14px;
@@ -271,10 +389,12 @@ html:has(body.page-braindump) {
   touch-action: manipulation;
 }
 
-.braindump-toolbar button, .braindump-file-label {
+.braindump-toolbar button,
+.braindump-file-label {
   width: 44px;
   height: 44px;
   border-radius: 8px;
+  flex: 0 0 auto;
   touch-action: manipulation;
   border: 1px solid transparent;
   background: transparent;
@@ -287,7 +407,8 @@ html:has(body.page-braindump) {
   transition: all 0.2s ease;
 }
 
-.braindump-toolbar button:hover, .braindump-file-label:hover {
+.braindump-toolbar button:hover,
+.braindump-file-label:hover {
   color: #fafafa;
   background: #232222;
 }
@@ -298,13 +419,223 @@ html:has(body.page-braindump) {
   color: #3fdaca;
 }
 
+.braindump-toolbar-actions {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 220px;
+  padding: 10px;
+  border: 1px solid #2d2c2c;
+  border-radius: 12px;
+  background: rgba(26, 25, 25, 0.98);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+
+.braindump-toolbar-actions.is-open {
+  display: flex;
+}
+
+.braindump-toolbar-actions .braindump-toolbar-action,
+.braindump-toolbar-actions .braindump-file-label {
+  width: 100%;
+  height: 44px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 12px;
+  border-color: #2d2c2c;
+  background: #1f1f1f;
+  color: #fafafa;
+}
+
+.braindump-toolbar-action-label {
+  display: none;
+}
+
+.braindump-toolbar-actions .braindump-toolbar-action-label {
+  display: inline;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.braindump-toolbar-action-desktop-only {
+  display: flex;
+}
+
+.braindump-toolbar-action-mobile-only {
+  display: none !important;
+}
+
+.braindump-toolbar-more {
+  display: flex;
+}
+
+.braindump-toolbar-more[aria-expanded="true"] {
+  background: #2a2a2a;
+  border-color: #343434;
+  color: #3fdaca;
+}
+
+.braindump-settings-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #2d2c2c;
+  border-radius: 12px;
+  background: rgba(18, 18, 18, 0.98);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+
+.braindump-settings-panel[hidden] {
+  display: none;
+}
+
+.braindump-settings-section + .braindump-settings-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #2d2c2c;
+}
+
+.braindump-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.braindump-settings-title,
+.braindump-help-title {
+  margin: 0;
+  color: #fafafa;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.braindump-settings-reset {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  background: #1c1c1c;
+  color: #d7d7d7;
+  cursor: pointer;
+}
+
+.braindump-settings-reset:hover {
+  color: #fafafa;
+  border-color: #3fdaca;
+}
+
+.braindump-settings-toggle,
+.braindump-settings-field {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.braindump-settings-toggle {
+  justify-content: space-between;
+}
+
+.braindump-settings-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.braindump-settings-label {
+  color: #fafafa;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.braindump-settings-copy {
+  color: rgba(250, 250, 250, 0.7);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.braindump-settings-toggle input {
+  margin-top: 0.2rem;
+  accent-color: #3fdaca;
+}
+
+.braindump-settings-field {
+  margin-top: 12px;
+  flex-direction: column;
+}
+
+.braindump-settings-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.braindump-settings-input-row input {
+  width: 88px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  background: #111;
+  color: #fafafa;
+  font: inherit;
+}
+
+.braindump-settings-input-row input:disabled {
+  opacity: 0.45;
+}
+
+.braindump-settings-input-row span {
+  color: rgba(250, 250, 250, 0.72);
+  font-size: 13px;
+}
+
+.braindump-help-copy {
+  margin: 10px 0 0;
+  color: rgba(250, 250, 250, 0.7);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.braindump-help-list {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  color: rgba(250, 250, 250, 0.86);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.braindump-help-list li + li {
+  margin-top: 8px;
+}
+
+.braindump-help-list code {
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fafafa;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+
 .braindump-toolbar-divider {
   width: 1px;
   background: #2d2c2c;
   margin: 4px 6px;
 }
 
-.braindump-recommend-panel {
+.braindump-issue-panel {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -316,11 +647,11 @@ html:has(body.page-braindump) {
   min-width: 320px;
 }
 
-.braindump-recommend-panel[hidden] {
+.braindump-issue-panel[hidden] {
   display: none;
 }
 
-.braindump-recommend-input {
+.braindump-issue-input {
   width: 250px;
   height: 40px;
   padding: 0 12px;
@@ -332,12 +663,12 @@ html:has(body.page-braindump) {
   outline: none;
 }
 
-.braindump-recommend-input:focus {
+.braindump-issue-input:focus {
   border-color: #3fdaca;
   box-shadow: 0 0 0 3px rgba(63, 218, 202, 0.15);
 }
 
-.braindump-recommend-submit {
+.braindump-issue-submit {
   height: 40px;
   padding: 0 14px;
   border-radius: 8px;
@@ -349,7 +680,7 @@ html:has(body.page-braindump) {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.braindump-recommend-submit:hover {
+.braindump-issue-submit:hover {
   background: rgba(63, 218, 202, 0.22);
   color: #fff;
 }
@@ -513,36 +844,89 @@ html:has(body.page-braindump) {
 }
 
 /* Mobile Adjustments */
-@media screen and (max-width: 1200px) {
+@media screen and (max-width: 1200px) and (pointer: coarse), screen and (max-width: 1200px) and (hover: none) {
   .braindump-viewport {
     left: 0;
   }
 
   .braindump-toolbar-shell {
-    flex-direction: column;
-    align-items: stretch;
-    width: min(calc(100vw - 24px), 640px);
+    left: 12px;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: none;
+    display: block;
+    width: auto;
   }
 
   .braindump-toolbar {
-    justify-content: center;
-    flex-wrap: wrap;
+    width: min(100%, 312px);
+    margin: 0 auto;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px;
   }
 
-  .braindump-recommend-panel {
+  .braindump-toolbar button,
+  .braindump-file-label {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .braindump-toolbar-divider {
+    display: none;
+  }
+
+  .braindump-toolbar-actions {
+    bottom: calc(100% + 10px);
+    width: min(100%, 210px);
+  }
+
+  .braindump-toolbar-action-desktop-only {
+    display: none !important;
+  }
+
+  .braindump-toolbar-action-mobile-only {
+    display: flex !important;
+  }
+
+  .braindump-issue-panel {
+    position: absolute;
+    right: 0;
+    left: 0;
+    bottom: calc(100% + 10px);
+    width: min(100%, 312px);
+    margin: 0 auto;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .braindump-settings-panel {
+    right: 0;
+    left: 0;
+    bottom: calc(100% + 10px);
+    width: min(100%, 312px);
+    margin: 0 auto;
+    max-height: min(62vh, 520px);
+  }
+
+  .braindump-issue-input {
+    width: 100%;
     min-width: 0;
   }
 
-  .braindump-recommend-input {
-    flex: 1;
-    width: auto;
-    min-width: 0;
+  .braindump-issue-submit {
+    width: 100%;
   }
 
   .braindump-toolbar-toast {
-    position: static;
-    max-width: none;
-    margin-bottom: 8px;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 10px);
+    max-width: min(100%, 312px);
+    margin: 0 auto;
   }
 
   .braindump-modal {
@@ -559,5 +943,21 @@ html:has(body.page-braindump) {
 
   .braindump-modal-button {
     width: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .bd-item .resize-handle {
+    right: -22px;
+    bottom: -22px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .bd-item .resize-handle::after {
+    right: 17px;
+    bottom: 17px;
+    width: 14px;
+    height: 14px;
   }
 }

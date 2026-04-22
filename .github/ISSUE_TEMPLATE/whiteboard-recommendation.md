@@ -1,7 +1,7 @@
 ---
-name: Whiteboard recommendation
-about: Suggest an update to a whiteboard and attach the exported recommendation .canvas.json file
-title: "Recommendation: "
+name: Whiteboard feature request
+about: Suggest a whiteboard feature or update and attach the exported feature-request .canvas.json file
+title: "Feature request: "
 labels: recommendation, whiteboard
 assignees: ""
 ---
@@ -12,7 +12,7 @@ Which board is this for?
 
 ## Page
 
-Link to the page where you made the recommendation.
+Link to the page where you made the feature request.
 
 ## What changed
 
@@ -24,11 +24,11 @@ If you'd like to include further notes, add them here.
 
 ## Attachment
 
-Attach the exported recommendation `.canvas.json` file to this issue.
+Attach the exported feature-request `.canvas.json` file to this issue.
 
 ## Notes
 
 - Local import supports `.canvas.json` directly, so you can bring the file back into the board without converting it first.
 - If you want a normal board file again outside the site, rename the file so it ends with `.canvas` instead of `.canvas.json`.
-- If you already opened a recommendation issue for this board, update that issue instead of opening a new one.
-- Recommendations are reviewed before they appear on the live site.
+- If you already opened a feature request issue for this board, update that issue instead of opening a new one.
+- Feature requests are reviewed before they appear on the live site.

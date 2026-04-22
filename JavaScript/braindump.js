@@ -2,11 +2,20 @@ const viewport = document.getElementById("braindump-viewport");
 const canvas = document.getElementById("braindump-canvas");
 const svgLayer = document.getElementById("braindump-svg-layer");
 const toolbarButtons = document.querySelectorAll(".braindump-toolbar button");
+const toolbarActions = document.getElementById("braindump-toolbar-actions");
+const toolbarMoreButton = document.getElementById("braindump-toolbar-more");
 const fileInput = document.getElementById("braindump-import");
 const toolbarToast = document.getElementById("braindump-toolbar-toast");
 const recommendationPanel = document.getElementById("braindump-recommend-panel");
+const bugReportPanel = document.getElementById("braindump-bug-panel");
+const settingsPanel = document.getElementById("braindump-settings-panel");
+const settingsAutosaveEnabledInput = document.getElementById("braindump-setting-autosave-enabled");
+const settingsAutosaveSecondsInput = document.getElementById("braindump-setting-autosave-seconds");
+const settingsResetButton = document.getElementById("braindump-settings-reset");
 const recommendationSummaryInput = document.getElementById("braindump-recommend-summary");
 const recommendationSubmitButton = document.getElementById("braindump-recommend-submit");
+const bugReportSummaryInput = document.getElementById("braindump-bug-summary");
+const bugReportSubmitButton = document.getElementById("braindump-bug-submit");
 const recommendationModal = document.getElementById("braindump-modal");
 const recommendationModalFilename = document.getElementById("braindump-recommend-file-name");
 const recommendationModalCancelButton = document.getElementById("braindump-modal-cancel");
@@ -22,6 +31,7 @@ const boardConfig = {
   storageKey: viewport?.dataset.boardStorageKey || "board:braindump",
   legacyStorageKey: viewport?.dataset.boardLegacyStorageKey || "braindump-canvas",
   saveEndpoint: viewport?.dataset.boardSaveEndpoint || "/api/save-board",
+  autosaveSeconds: Math.max(5, Number(viewport?.dataset.boardAutosaveSeconds || 20) || 20),
   allowRecommendations: viewport?.dataset.boardAllowRecommendations === "true"
 };
 
@@ -35,15 +45,100 @@ const recommendationConfig = {
     .filter(Boolean)
 };
 
+const bugReportConfig = {
+  type: viewport?.dataset.bugReportType || "",
+  owner: viewport?.dataset.bugReportOwner || "",
+  repo: viewport?.dataset.bugReportRepo || "",
+  labels: String(viewport?.dataset.bugReportLabels || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+};
+
 let toolbarToastTimeout = null;
 let lastToolbarTouchTime = 0;
-let viewportSaveTimeout = null;
+let lastViewportTouchTime = 0;
+let localStateSaveTimeout = null;
+let autosaveIntervalId = null;
+let autosaveRepositorySupported = true;
+let hasPendingRepositorySave = false;
+let isPersistingRepositoryState = false;
 let pendingRecommendation = null;
 const RECOMMENDATION_MODAL_DISMISS_SUFFIX = ":recommendation-modal-dismissed";
+const BOARD_SETTINGS_SUFFIX = ":settings";
+const DEFAULT_AUTOSAVE_SECONDS = boardConfig.autosaveSeconds;
+const DEFAULT_BOARD_SETTINGS = Object.freeze({
+  autosaveEnabled: true,
+  autosaveSeconds: DEFAULT_AUTOSAVE_SECONDS
+});
 
-function scheduleViewportSave() {
-  if (viewportSaveTimeout) clearTimeout(viewportSaveTimeout);
-  viewportSaveTimeout = setTimeout(() => persistLocalState(serializeState()), 400);
+function clampAutosaveSeconds(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_BOARD_SETTINGS.autosaveSeconds;
+  return Math.min(300, Math.max(5, Math.round(parsed)));
+}
+
+function getBoardSettingsKey() {
+  return `${boardConfig.storageKey}${BOARD_SETTINGS_SUFFIX}`;
+}
+
+function loadBoardSettings() {
+  try {
+    const raw = localStorage.getItem(getBoardSettingsKey());
+    if (!raw) {
+      return { ...DEFAULT_BOARD_SETTINGS };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      autosaveEnabled: parsed?.autosaveEnabled !== false,
+      autosaveSeconds: clampAutosaveSeconds(parsed?.autosaveSeconds)
+    };
+  } catch (error) {
+    return { ...DEFAULT_BOARD_SETTINGS };
+  }
+}
+
+let boardSettings = loadBoardSettings();
+boardConfig.autosaveSeconds = boardSettings.autosaveSeconds;
+
+function scheduleLocalStateSave() {
+  if (localStateSaveTimeout) clearTimeout(localStateSaveTimeout);
+  localStateSaveTimeout = window.setTimeout(() => {
+    localStateSaveTimeout = null;
+    persistLocalState(serializeState());
+  }, 400);
+}
+
+function flushLocalStateSave(state = serializeState()) {
+  if (localStateSaveTimeout) {
+    window.clearTimeout(localStateSaveTimeout);
+    localStateSaveTimeout = null;
+  }
+  return persistLocalState(state);
+}
+
+function markBoardDirty(options = {}) {
+  const { scheduleLocalSave = true } = options;
+  hasPendingRepositorySave = true;
+  if (scheduleLocalSave) {
+    scheduleLocalStateSave();
+  }
+}
+
+function startAutosaveLoop() {
+  if (autosaveIntervalId) {
+    window.clearInterval(autosaveIntervalId);
+    autosaveIntervalId = null;
+  }
+  if (!boardSettings.autosaveEnabled || boardConfig.autosaveSeconds <= 0) return;
+
+  autosaveIntervalId = window.setInterval(() => {
+    if (!hasPendingRepositorySave || !autosaveRepositorySupported || isPersistingRepositoryState) {
+      return;
+    }
+    saveBoard({ showFeedback: false, source: "autosave" });
+  }, boardConfig.autosaveSeconds * 1000);
 }
 let comparisonBaselineState = { nodes: [], edges: [] };
 
@@ -122,14 +217,107 @@ function showToolbarToast(message, variant = "info") {
   }, 3200);
 }
 
+function persistBoardSettings() {
+  try {
+    localStorage.setItem(getBoardSettingsKey(), JSON.stringify(boardSettings));
+  } catch (error) {
+    // Ignore storage failures and keep current session settings in memory.
+  }
+}
+
+function syncSettingsPanelFromState() {
+  if (settingsAutosaveEnabledInput) {
+    settingsAutosaveEnabledInput.checked = boardSettings.autosaveEnabled;
+  }
+  if (settingsAutosaveSecondsInput) {
+    settingsAutosaveSecondsInput.value = String(boardSettings.autosaveSeconds);
+    settingsAutosaveSecondsInput.disabled = !boardSettings.autosaveEnabled;
+  }
+}
+
+function applyBoardSettings(options = {}) {
+  const { persist = true, announce = false } = options;
+  boardSettings.autosaveEnabled = boardSettings.autosaveEnabled !== false;
+  boardSettings.autosaveSeconds = clampAutosaveSeconds(boardSettings.autosaveSeconds);
+  boardConfig.autosaveSeconds = boardSettings.autosaveSeconds;
+  if (persist) {
+    persistBoardSettings();
+  }
+  syncSettingsPanelFromState();
+  startAutosaveLoop();
+  if (announce) {
+    showToolbarToast("Board settings updated.", "success");
+  }
+}
+
+function setToolbarActionsOpen(isOpen) {
+  if (!toolbarActions || !toolbarMoreButton) return;
+
+  toolbarActions.classList.toggle("is-open", isOpen);
+  toolbarMoreButton.setAttribute("aria-expanded", String(isOpen));
+}
+
+function closeFloatingPanels(options = {}) {
+  const { keep = "" } = options;
+
+  if (keep !== "actions") {
+    setToolbarActionsOpen(false);
+  }
+
+  if (keep !== "recommendation" && recommendationPanel) {
+    recommendationPanel.hidden = true;
+    recommendationPanel.classList.remove("is-open");
+  }
+
+  if (keep !== "bug-report" && bugReportPanel) {
+    bugReportPanel.hidden = true;
+    bugReportPanel.classList.remove("is-open");
+  }
+
+  if (keep !== "settings" && settingsPanel) {
+    settingsPanel.hidden = true;
+    settingsPanel.classList.remove("is-open");
+  }
+}
+
+function setSettingsPanelOpen(isOpen) {
+  if (!settingsPanel) return;
+
+  if (isOpen) {
+    closeFloatingPanels({ keep: "settings" });
+    syncSettingsPanelFromState();
+  }
+
+  settingsPanel.hidden = !isOpen;
+  settingsPanel.classList.toggle("is-open", isOpen);
+}
+
 function setRecommendationPanelOpen(isOpen) {
   if (!recommendationPanel) return;
 
+  if (isOpen) {
+    closeFloatingPanels({ keep: "recommendation" });
+  }
   recommendationPanel.hidden = !isOpen;
   recommendationPanel.classList.toggle("is-open", isOpen);
   if (isOpen) {
     recommendationSummaryInput?.focus();
     recommendationSummaryInput?.select();
+  }
+}
+
+function setBugReportPanelOpen(isOpen) {
+  if (!bugReportPanel) return;
+
+  if (isOpen) {
+    closeFloatingPanels({ keep: "bug-report" });
+  }
+
+  bugReportPanel.hidden = !isOpen;
+  bugReportPanel.classList.toggle("is-open", isOpen);
+  if (isOpen) {
+    bugReportSummaryInput?.focus();
+    bugReportSummaryInput?.select();
   }
 }
 
@@ -173,7 +361,7 @@ function setRecommendationModalDismissed(shouldDismiss) {
 
 function openRecommendationIssue(issueUrl, recommendationFilename) {
   window.open(issueUrl, "_blank", "noopener,noreferrer");
-  showToolbarToast(`Recommendation sent — attach ${recommendationFilename} to the form that just opened.`, "success");
+  showToolbarToast(`Feature request opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
 }
 
 function closeRecommendationModal() {
@@ -277,47 +465,24 @@ function getYouTubeVideoId(url) {
 }
 
 function applyBookmarkPreview(nodeObj, el, preview) {
-  if (!el) return;
-
-  const titleEl = el.querySelector(".bd-bookmark-title");
-  const descEl = el.querySelector(".bd-bookmark-desc");
-  const linkEl = el.querySelector(".bd-bookmark-link");
-
   if (preview.title) {
     nodeObj.title = preview.title;
-    if (titleEl) titleEl.textContent = preview.title;
   }
 
   if (preview.description !== undefined) {
     nodeObj.description = preview.description || "";
-    if (descEl) descEl.textContent = nodeObj.description;
-  }
-
-  if (linkEl) {
-    linkEl.href = nodeObj.url;
-    linkEl.textContent = nodeObj.url || "#";
   }
 
   if (preview.image) {
     nodeObj.image = preview.image;
-    let imageEl = el.querySelector(".bd-bookmark-image");
-    if (!imageEl) {
-      el.insertAdjacentHTML(
-        "afterbegin",
-        `<img class="bd-bookmark-image" src="${nodeObj.image}" draggable="false" alt="${nodeObj.title || "Link preview"}">`
-      );
-      imageEl = el.querySelector(".bd-bookmark-image");
-      if (!nodeObj.hasAdjustedRatio) {
-        nodeObj.height += 160;
-        nodeObj.hasAdjustedRatio = true;
-        el.style.height = `${nodeObj.height}px`;
-      }
-    } else if (imageEl.getAttribute("src") !== nodeObj.image) {
-      imageEl.setAttribute("src", nodeObj.image);
+    if (!nodeObj.hasAdjustedRatio) {
+      nodeObj.height += 160;
+      nodeObj.hasAdjustedRatio = true;
     }
   }
 
-  persistLocalState(serializeState());
+  renderNode(nodeObj);
+  markBoardDirty();
 }
 
 async function fetchBookmarkPreview(nodeObj, el) {
@@ -365,7 +530,7 @@ async function fetchBookmarkPreview(nodeObj, el) {
   }
 }
 
-function normalizeRecommendationSummary(value, maxLength = 50) {
+function normalizeIssueSummary(value, maxLength = 50) {
   const summary = String(value || "")
     .replace(/\s+/g, " ")
     .trim();
@@ -378,10 +543,10 @@ function normalizeRecommendationSummary(value, maxLength = 50) {
 }
 
 function buildRecommendationIssueTitle(summary) {
-  const normalizedSummary = normalizeRecommendationSummary(summary);
+  const normalizedSummary = normalizeIssueSummary(summary);
   return normalizedSummary
-    ? `Recommendation: ${boardConfig.title} (${normalizedSummary})`
-    : `Recommendation: ${boardConfig.title}`;
+    ? `Feature request: ${boardConfig.title} (${normalizedSummary})`
+    : `Feature request: ${boardConfig.title}`;
 }
 
 function buildRecommendationIssueBody(summary, details, exportFilename) {
@@ -404,20 +569,20 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     String(changedElements),
     "",
     "## Short summary",
-    normalizeRecommendationSummary(summary) || "Describe the recommendation in one sentence.",
+    normalizeIssueSummary(summary) || "Describe the feature request in one sentence.",
     "",
     "## Details",
     details || "If you'd like to include further notes, add them here.",
     "",
     "## Attachment",
-    `Please attach the exported recommendation file \`${exportFilename}\` to this issue.`,
-    "This recommendation flow exports a **.canvas.json file** because GitHub issue attachments do not accept `.canvas` files directly.",
+    `Please attach the exported feature-request file \`${exportFilename}\` to this issue.`,
+    "This feature-request flow exports a **.canvas.json file** because GitHub issue attachments do not accept `.canvas` files directly.",
     "Local import already accepts the **.canvas.json file** directly, so no conversion is required to bring it back into the board.",
     "If you want to turn it back into a normal board file outside the site, remove the trailing `.json` so it ends with `.canvas`.",
     "",
     "## Notes",
-    "- If you already opened a recommendation issue for this board, update that issue instead of creating a new one.",
-    "- This recommendation will be reviewed before it appears on the live site."
+    "- If you already opened a feature request issue for this board, update that issue instead of creating a new one.",
+    "- This feature request will be reviewed before it appears on the live site."
   ];
 
   return lines.join("\n");
@@ -437,15 +602,73 @@ function buildRecommendationIssueUrl(summary, details, exportFilename) {
   return url.toString();
 }
 
+function buildBugReportIssueTitle(summary) {
+  const normalizedSummary = normalizeIssueSummary(summary);
+  return normalizedSummary
+    ? `Bug: ${boardConfig.title} (${normalizedSummary})`
+    : `Bug: ${boardConfig.title}`;
+}
+
+function buildBugReportIssueBody(summary, details) {
+  const timestamp = formatTimestamp().replace("_", " ");
+  const lines = [
+    "## Board",
+    boardConfig.title,
+    "",
+    "## Page",
+    getPublicPageUrl(),
+    "",
+    "## Timestamp",
+    timestamp,
+    "",
+    "## Short summary",
+    normalizeIssueSummary(summary) || "Describe the bug in one sentence.",
+    "",
+    "## What happened",
+    details || "What did you try, and what went wrong?",
+    "",
+    "## What did you expect",
+    "What should have happened instead?",
+    "",
+    "## Steps to reproduce",
+    "1. ",
+    "2. ",
+    "3. ",
+    "",
+    "## Extra context",
+    "Add browser/device details, screenshots, or any other useful context.",
+    "",
+    "## Notes",
+    "- Keep the title short and concrete, for example: `Paste on iPhone creates duplicate note`.",
+    "- If this bug already has an issue, update that issue instead of opening a new one."
+  ];
+
+  return lines.join("\n");
+}
+
+function buildBugReportIssueUrl(summary, details) {
+  const url = new URL(
+    `https://github.com/${bugReportConfig.owner}/${bugReportConfig.repo}/issues/new`
+  );
+
+  url.searchParams.set("title", buildBugReportIssueTitle(summary));
+  if (bugReportConfig.labels.length > 0) {
+    url.searchParams.set("labels", bugReportConfig.labels.join(","));
+  }
+  url.searchParams.set("body", buildBugReportIssueBody(summary, details));
+
+  return url.toString();
+}
+
 function beginRecommendationFlow() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Recommendations are not set up for this board.", "error");
+    showToolbarToast("Feature requests are not set up for this board.", "error");
     return;
   }
 
-  const summary = normalizeRecommendationSummary(recommendationSummaryInput?.value);
+  const summary = normalizeIssueSummary(recommendationSummaryInput?.value);
   if (!summary) {
-    showToolbarToast("Add a short description for the recommendation.", "error");
+    showToolbarToast("Add a short description for the feature request.", "error");
     recommendationSummaryInput?.focus();
     return;
   }
@@ -462,6 +685,28 @@ function beginRecommendationFlow() {
   } else {
     openRecommendationModal(issueUrl, recommendationFilename);
   }
+}
+
+function beginBugReportFlow() {
+  if (bugReportConfig.type !== "issue" || !bugReportConfig.owner || !bugReportConfig.repo) {
+    showToolbarToast("Bug reports are not set up for this board.", "error");
+    return;
+  }
+
+  const summary = normalizeIssueSummary(bugReportSummaryInput?.value);
+  if (!summary) {
+    showToolbarToast("Add a short description for the bug report.", "error");
+    bugReportSummaryInput?.focus();
+    return;
+  }
+
+  const issueUrl = buildBugReportIssueUrl(summary, "");
+  setBugReportPanelOpen(false);
+  if (bugReportSummaryInput) {
+    bugReportSummaryInput.value = "";
+  }
+  window.open(issueUrl, "_blank", "noopener,noreferrer");
+  showToolbarToast("Bug report form opened in GitHub.", "success");
 }
 
 function downloadStateFile(filename, mimeType = "application/octet-stream") {
@@ -527,6 +772,25 @@ let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 let selectionBox = null;
 let dragRect = { x: 0, y: 0, w: 0, h: 0, startX: 0, startY: 0, active: false };
 let touchSelectionMoved = false;
+let activeTouchNodeInteractionCancel = null;
+const TOUCH_SELECT_HOLD_MS = 280;
+const TOUCH_SELECT_MOVE_TOLERANCE = 10;
+const touchSelectState = {
+  timerId: null,
+  pendingMode: null,
+  activeMode: null,
+  startX: 0,
+  startY: 0,
+  movedSinceStart: false,
+  interrupted: false
+};
+const touchPlacementState = {
+  pendingTool: "",
+  startX: 0,
+  startY: 0,
+  movedSinceStart: false,
+  canPlace: false
+};
 
 let nodes = [];
 let edges = [];
@@ -537,6 +801,65 @@ let historyIndex = -1;
 const MAX_HISTORY = 200;
 let isLoadingState = false; // Flag to prevent recording during load
 const TEXT_NODE_PLACEHOLDER = "Type here...";
+const LINK_NODE_PLACEHOLDER = "Paste a link";
+
+function getVisibleViewportMetrics() {
+  if (window.visualViewport) {
+    return {
+      centerX: window.visualViewport.offsetLeft + (window.visualViewport.width / 2),
+      centerY: window.visualViewport.offsetTop + (window.visualViewport.height / 2)
+    };
+  }
+
+  return {
+    centerX: window.innerWidth / 2,
+    centerY: window.innerHeight / 2
+  };
+}
+
+function getCenteredNodeCanvasPosition(width, height) {
+  const { centerX, centerY } = getVisibleViewportMetrics();
+  const center = screenToCanvas(centerX, centerY);
+  return {
+    x: center.x - (width / 2),
+    y: center.y - (height / 2)
+  };
+}
+
+function moveNodeWithoutHistory(nodeObj, nextX, nextY) {
+  if (!nodeObj) return;
+  if (Math.abs(nodeObj.x - nextX) <= 0.5 && Math.abs(nodeObj.y - nextY) <= 0.5) return;
+
+  nodeObj.x = nextX;
+  nodeObj.y = nextY;
+  const latestAction = undoHistory[historyIndex];
+  if (latestAction?.type === "create" && latestAction.nodeId === nodeObj.id && latestAction.nodeData) {
+    latestAction.nodeData.x = nextX;
+    latestAction.nodeData.y = nextY;
+  }
+  const el = document.getElementById(nodeObj.id);
+  if (el) {
+    el.style.left = `${nodeObj.x}px`;
+    el.style.top = `${nodeObj.y}px`;
+  }
+  markBoardDirty();
+}
+
+function centerNodeInVisibleViewport(nodeObj, options = {}) {
+  if (!nodeObj) return;
+  const { deferForKeyboard = false } = options;
+  const applyCenter = () => {
+    const centeredPosition = getCenteredNodeCanvasPosition(nodeObj.width, nodeObj.height);
+    moveNodeWithoutHistory(nodeObj, centeredPosition.x, centeredPosition.y);
+  };
+
+  applyCenter();
+
+  if (deferForKeyboard && shouldUseTouchSelectBehavior()) {
+    window.setTimeout(applyCenter, 180);
+    window.setTimeout(applyCenter, 360);
+  }
+}
 
 function normalizeTextEditorValue(value) {
   const normalized = String(value ?? "")
@@ -571,12 +894,23 @@ function placeCaretAtEnd(editor) {
 function beginTextEditing(nodeObj, editor, options = {}) {
   if (!nodeObj || !editor || editor.contentEditable === "true") return;
 
+  if (options.centerInView) {
+    centerNodeInVisibleViewport(nodeObj, { deferForKeyboard: true });
+  }
+
   editor.dataset.undoText = nodeObj.text || "";
   editor.contentEditable = "true";
-  syncTextEditorValue(editor, nodeObj.text || "");
-  editor.focus();
+  const normalizedText = syncTextEditorValue(editor, nodeObj.text || "");
 
-  if (options.placeCaretAtEnd) {
+  if (!normalizedText) {
+    editor.textContent = "\u200B";
+    editor.classList.remove("is-empty");
+  }
+
+  editor.focus();
+  editor.scrollTop = 0;
+
+  if (options.placeCaretAtEnd || !normalizedText) {
     placeCaretAtEnd(editor);
   }
 }
@@ -607,6 +941,98 @@ function focusTextEditor(nodeId, options = {}) {
   document.querySelectorAll(".bd-item").forEach(item => item.classList.remove("selected"));
   el.classList.add("selected");
   beginTextEditing(nodeObj, editor, options);
+}
+
+function normalizeLinkUrl(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+
+  const normalized = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "";
+    }
+    return parsed.toString();
+  } catch (error) {
+    return "";
+  }
+}
+
+function focusLinkEditor(nodeId, options = {}) {
+  const nodeObj = nodes.find(n => n.id === nodeId);
+  const el = document.getElementById(nodeId);
+  if (!nodeObj || !el || nodeObj.type !== "link") {
+    return;
+  }
+
+  if (!nodeObj.isEditingUrl || !el.querySelector(".bd-link-editor-input")) {
+    nodeObj.isEditingUrl = true;
+    renderNode(nodeObj);
+  }
+
+  const refreshedEl = document.getElementById(nodeId);
+  const input = refreshedEl?.querySelector(".bd-link-editor-input");
+  if (!input) return;
+
+  document.querySelectorAll(".bd-item").forEach(item => item.classList.remove("selected"));
+  refreshedEl.classList.add("selected");
+
+  if (options.centerInView) {
+    centerNodeInVisibleViewport(nodeObj, { deferForKeyboard: true });
+  }
+
+  input.focus();
+  if (options.selectAll && input.value) {
+    input.select();
+  } else {
+    const cursorPosition = input.value.length;
+    input.setSelectionRange(cursorPosition, cursorPosition);
+  }
+}
+
+function finalizeLinkEditing(nodeObj, input) {
+  if (!nodeObj || nodeObj.type !== "link" || !input) return false;
+
+  const draftValue = String(input.value || "");
+  const normalizedUrl = normalizeLinkUrl(draftValue);
+  if (draftValue.trim() && !normalizedUrl) {
+    showToolbarToast("Use a valid http(s) link.", "error");
+    window.setTimeout(() => focusLinkEditor(nodeObj.id, { selectAll: true }), 0);
+    return false;
+  }
+
+  if (!normalizedUrl) {
+    nodeObj.url = "";
+    nodeObj.title = "";
+    nodeObj.description = "";
+    nodeObj.image = "";
+    nodeObj.hasAdjustedRatio = false;
+    nodeObj.isEditingUrl = true;
+    markBoardDirty();
+    renderNode(nodeObj);
+    return false;
+  }
+
+  const urlChanged = nodeObj.url !== normalizedUrl;
+  nodeObj.url = normalizedUrl;
+  nodeObj.isEditingUrl = false;
+  if (urlChanged) {
+    nodeObj.title = "";
+    nodeObj.description = "";
+    nodeObj.image = "";
+    nodeObj.hasAdjustedRatio = false;
+  }
+  renderNode(nodeObj);
+  markBoardDirty();
+  const el = document.getElementById(nodeObj.id);
+  if (el) {
+    fetchBookmarkPreview(nodeObj, el);
+  }
+  return true;
 }
 
 function startSelectionRect(clientX, clientY, preserveSelection = false) {
@@ -650,11 +1076,189 @@ function updateSelectionRect(clientX, clientY) {
   selectionBox.style.height = `${dragRect.h}px`;
 }
 
+function setActiveTouchNodeInteraction(cancelFn) {
+  activeTouchNodeInteractionCancel = typeof cancelFn === "function" ? cancelFn : null;
+}
+
+function clearActiveTouchNodeInteraction(cancelFn) {
+  if (!cancelFn || activeTouchNodeInteractionCancel === cancelFn) {
+    activeTouchNodeInteractionCancel = null;
+  }
+}
+
+function cancelActiveTouchNodeInteraction() {
+  if (typeof activeTouchNodeInteractionCancel !== "function") return;
+
+  const cancelFn = activeTouchNodeInteractionCancel;
+  activeTouchNodeInteractionCancel = null;
+  cancelFn();
+}
+
+function shouldUseTouchSelectBehavior() {
+  return navigator.maxTouchPoints > 0;
+}
+
+function isTouchPlacementTool(tool) {
+  return tool === "text" || tool === "bookmark" || tool === "page";
+}
+
+function isTouchEditableTarget(target) {
+  if (!target) return false;
+  if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return true;
+
+  const editableAncestor = target.closest?.(".bd-text-editor");
+  return editableAncestor?.contentEditable === "true";
+}
+
+function isLinkInteractionTarget(target) {
+  return Boolean(target?.closest?.(".bd-bookmark-link"));
+}
+
+function clearTouchSelectTimer() {
+  if (!touchSelectState.timerId) return;
+  window.clearTimeout(touchSelectState.timerId);
+  touchSelectState.timerId = null;
+}
+
+function cancelPendingTouchSelectMode() {
+  clearTouchSelectTimer();
+  touchSelectState.pendingMode = null;
+}
+
+function resetTouchSelectState(options = {}) {
+  const { clearSelectionRect = false, preserveMovement = false, preserveInterrupted = false } = options;
+  clearTouchSelectTimer();
+  touchSelectState.pendingMode = null;
+  touchSelectState.activeMode = null;
+  touchSelectState.startX = 0;
+  touchSelectState.startY = 0;
+  if (!preserveMovement) {
+    touchSelectState.movedSinceStart = false;
+  }
+  if (!preserveInterrupted) {
+    touchSelectState.interrupted = false;
+  }
+
+  if (clearSelectionRect && dragRect.active) {
+    dragRect.active = false;
+    touchSelectionMoved = false;
+    if (selectionBox) selectionBox.style.display = "none";
+  }
+}
+
+function armTouchSelectMode(mode, clientX, clientY, onActivate) {
+  clearTouchSelectTimer();
+  touchSelectState.pendingMode = mode;
+  touchSelectState.activeMode = null;
+  touchSelectState.startX = clientX;
+  touchSelectState.startY = clientY;
+  touchSelectState.movedSinceStart = false;
+  touchSelectState.interrupted = false;
+  touchSelectState.timerId = window.setTimeout(() => {
+    touchSelectState.timerId = null;
+    if (touchSelectState.pendingMode !== mode) return;
+    touchSelectState.pendingMode = null;
+    touchSelectState.activeMode = mode;
+    onActivate?.();
+  }, TOUCH_SELECT_HOLD_MS);
+}
+
+function updateTouchSelectMovement(clientX, clientY) {
+  if (!touchSelectState.pendingMode) return;
+
+  const dx = clientX - touchSelectState.startX;
+  const dy = clientY - touchSelectState.startY;
+  if (Math.hypot(dx, dy) <= TOUCH_SELECT_MOVE_TOLERANCE) return;
+
+  touchSelectState.movedSinceStart = true;
+  cancelPendingTouchSelectMode();
+}
+
+function resetTouchPlacementState() {
+  touchPlacementState.pendingTool = "";
+  touchPlacementState.startX = 0;
+  touchPlacementState.startY = 0;
+  touchPlacementState.movedSinceStart = false;
+  touchPlacementState.canPlace = false;
+}
+
+function beginTouchPlacement(tool, clientX, clientY, canPlace) {
+  touchPlacementState.pendingTool = tool;
+  touchPlacementState.startX = clientX;
+  touchPlacementState.startY = clientY;
+  touchPlacementState.movedSinceStart = false;
+  touchPlacementState.canPlace = canPlace;
+  startPan = { x: clientX - camera.x, y: clientY - camera.y };
+  isPanning = false;
+}
+
+function updateTouchPlacementMovement(clientX, clientY) {
+  if (!touchPlacementState.pendingTool) return;
+
+  const dx = clientX - touchPlacementState.startX;
+  const dy = clientY - touchPlacementState.startY;
+  if (Math.hypot(dx, dy) <= TOUCH_SELECT_MOVE_TOLERANCE) return;
+
+  touchPlacementState.movedSinceStart = true;
+  isPanning = true;
+}
+
+function getSelectedItemElements() {
+  return Array.from(document.querySelectorAll(".bd-item.selected"));
+}
+
+function captureSelectedNodePositions() {
+  const positions = [];
+  getSelectedItemElements().forEach((el) => {
+    const node = nodes.find((n) => n.id === el.id);
+    if (node) {
+      positions.push({ id: node.id, x: node.x, y: node.y });
+    }
+  });
+  return positions;
+}
+
+function moveSelectedNodesByDelta(deltaX, deltaY) {
+  if (Math.abs(deltaX) <= 0 && Math.abs(deltaY) <= 0) return;
+
+  getSelectedItemElements().forEach((selEl) => {
+    const selNode = nodes.find((n) => n.id === selEl.id);
+    if (!selNode) return;
+
+    selNode.x += deltaX;
+    selNode.y += deltaY;
+    selEl.style.left = `${selNode.x}px`;
+    selEl.style.top = `${selNode.y}px`;
+  });
+}
+
+function pushSelectedMoveActionFromStartPositions(startPositions) {
+  if (!Array.isArray(startPositions) || startPositions.length === 0) return;
+
+  const movedIds = [];
+  const fromPos = [];
+  const toPos = [];
+  startPositions.forEach((sp) => {
+    const node = nodes.find((n) => n.id === sp.id);
+    if (!node) return;
+    if (Math.abs(node.x - sp.x) <= 0.5 && Math.abs(node.y - sp.y) <= 0.5) return;
+
+    movedIds.push(sp.id);
+    fromPos.push({ x: sp.x, y: sp.y });
+    toPos.push({ x: node.x, y: node.y });
+  });
+
+  if (movedIds.length > 0) {
+    pushAction({ type: "move", nodeIds: movedIds, fromPositions: fromPos, toPositions: toPos });
+  }
+}
+
 function pushAction(action) {
   undoHistory = undoHistory.slice(0, historyIndex + 1);
   undoHistory.push(action);
   if (undoHistory.length > MAX_HISTORY) { undoHistory.shift(); historyIndex--; }
   historyIndex = undoHistory.length - 1;
+  markBoardDirty();
 }
 
 function removeNodeById(nodeId) {
@@ -753,12 +1357,14 @@ function undo() {
   if (historyIndex < 0) return;
   applyReverse(undoHistory[historyIndex]);
   historyIndex--;
+  markBoardDirty();
 }
 
 function redo() {
   if (historyIndex >= undoHistory.length - 1) return;
   historyIndex++;
   applyForward(undoHistory[historyIndex]);
+  markBoardDirty();
 }
 
 function deleteSelected() {
@@ -803,7 +1409,7 @@ function copySelected() {
 
 // Apply Camera Transform
 function updateTransform() {
-  canvas.style.transform = `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.z})`;
+  canvas.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.z})`;
 }
 
 // Convert screen constraints
@@ -821,6 +1427,70 @@ function getDrawCursor() {
   const size = r * 2 + 4;
   const cx = size / 2;
   return `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="%233fdaca" stroke-width="1.5"/><circle cx="${cx}" cy="${cx}" r="1" fill="%233fdaca"/></svg>') ${cx} ${cx}, crosshair`;
+}
+
+function placeToolNodeAt(clientX, clientY, tool = activeTool) {
+  if (tool === "text") {
+    const dimensions = { width: 250, height: 150 };
+    const position = shouldUseTouchSelectBehavior()
+      ? getCenteredNodeCanvasPosition(dimensions.width, dimensions.height)
+      : screenToCanvas(clientX, clientY);
+    const newNode = createNode("text", position.x, position.y, { text: "", ...dimensions });
+    focusTextEditor(newNode.id, {
+      placeCaretAtEnd: true,
+      centerInView: shouldUseTouchSelectBehavior()
+    });
+
+    // Mobile browsers are stricter about focus timing; retry once if the editor
+    // did not enter editing mode during the original gesture.
+    const editor = document.getElementById(newNode.id)?.querySelector(".bd-text-editor");
+    if (editor?.contentEditable !== "true") {
+      window.setTimeout(() => focusTextEditor(newNode.id, {
+        placeCaretAtEnd: true,
+        centerInView: shouldUseTouchSelectBehavior()
+      }), 0);
+    }
+
+    setActiveTool("select");
+    return newNode;
+  }
+
+  if (tool === "bookmark" || tool === "page") {
+    const dimensions = { width: 320, height: 132 };
+    const position = screenToCanvas(clientX, clientY);
+    const newNode = createNode("bookmark", position.x, position.y, {
+      url: "",
+      title: "",
+      description: "",
+      image: "",
+      hasAdjustedRatio: false,
+      isEditingUrl: true,
+      ...dimensions
+    });
+    focusLinkEditor(newNode.id, {
+      centerInView: false
+    });
+
+    const input = document.getElementById(newNode.id)?.querySelector(".bd-link-editor-input");
+    if (input !== document.activeElement) {
+      window.setTimeout(() => focusLinkEditor(newNode.id, {
+        centerInView: false
+      }), 0);
+    }
+
+    setActiveTool("select");
+    return newNode;
+  }
+
+  const pos = screenToCanvas(clientX, clientY);
+
+  if (tool !== "pan" && tool !== "select" && tool !== "draw") {
+    createNode(tool, pos.x, pos.y);
+    setActiveTool("select");
+    return true;
+  }
+
+  return null;
 }
 
 // Handle Mouse & Touch Pan/Zoom
@@ -843,7 +1513,7 @@ viewport.addEventListener("wheel", (e) => {
   camera.z = newZ;
   updateTransform();
   if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
-  scheduleViewportSave();
+  markBoardDirty();
 }, { passive: false });
 
 let initialPinchDistance = null;
@@ -866,6 +1536,13 @@ function getTouchMidpoint(touchA, touchB) {
 function beginPinchZoom(touches) {
   if (!touches || touches.length < 2) return;
 
+  cancelActiveTouchNodeInteraction();
+  cancelBoardPanState();
+  touchSelectState.interrupted = true;
+  touchSelectState.movedSinceStart = true;
+  resetTouchSelectState({ clearSelectionRect: true, preserveMovement: true, preserveInterrupted: true });
+  resetTouchPlacementState();
+
   const [firstTouch, secondTouch] = touches;
   initialPinchDistance = getTouchDistance(firstTouch, secondTouch);
   pinchStartMidpoint = getTouchMidpoint(firstTouch, secondTouch);
@@ -877,21 +1554,58 @@ function beginPinchZoom(touches) {
 }
 
 viewport.addEventListener("touchstart", (e) => {
+  lastViewportTouchTime = Date.now();
+  if (e.target.closest?.(".resize-handle")) return;
+
   if (e.touches.length === 2) {
     isPanning = false;
     isDrawing = false;
     beginPinchZoom(e.touches);
   } else if (e.touches.length === 1) {
+    const touch = e.touches[0];
+    const isToolbarTouch = e.target.closest?.(".braindump-toolbar-shell");
+    const isEditableTouchTarget = isTouchEditableTarget(e.target);
+    const isLinkTouchTarget = isLinkInteractionTarget(e.target);
+    const isPlacementTouchTool = isTouchPlacementTool(activeTool);
+    const touchedItem = e.target.closest?.(".bd-item");
+
+    if (isToolbarTouch) return;
+    if (isEditableTouchTarget) return;
+    if (isLinkTouchTarget) return;
+    if (!touchedItem) {
+      cancelActiveTouchNodeInteraction();
+    }
+
     if (activeTool === "draw") {
       e.preventDefault();
-      startDrawing(e.touches[0].clientX, e.touches[0].clientY);
+      startDrawing(touch.clientX, touch.clientY);
+    } else if (isPlacementTouchTool && !isEditableTouchTarget) {
+      e.preventDefault();
+      beginTouchPlacement(
+        activeTool,
+        touch.clientX,
+        touch.clientY,
+        !e.target.closest?.(".bd-item") && !e.target.closest?.(".braindump-toolbar")
+      );
+    } else if (activeTool === "select" && shouldUseTouchSelectBehavior()) {
+      e.preventDefault();
+      isPanning = true;
+      startPan = { x: touch.clientX - camera.x, y: touch.clientY - camera.y };
+
+      if (!e.target.closest?.(".bd-item")) {
+        armTouchSelectMode("background-select", touch.clientX, touch.clientY, () => {
+          isPanning = false;
+          startSelectionRect(touchSelectState.startX, touchSelectState.startY, false);
+        });
+      }
     } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       e.preventDefault();
-      startSelectionRect(e.touches[0].clientX, e.touches[0].clientY, false);
+      startSelectionRect(touch.clientX, touch.clientY, false);
     } else if (activeTool === "pan" || e.target === viewport) {
-      if (e.target === viewport) {
+      if (e.target === viewport && !isEditableTouchTarget) {
+        e.preventDefault();
         isPanning = true;
-        startPan = { x: e.touches[0].clientX - camera.x, y: e.touches[0].clientY - camera.y };
+        startPan = { x: touch.clientX - camera.x, y: touch.clientY - camera.y };
       }
     }
   }
@@ -923,16 +1637,28 @@ viewport.addEventListener("touchmove", (e) => {
     camera.y = currentMidpointY - anchorCanvasY * nextZoom;
     updateTransform();
   } else if (e.touches.length === 1) {
+    const touch = e.touches[0];
+
+    if (activeTool === "select" && shouldUseTouchSelectBehavior()) {
+      updateTouchSelectMovement(touch.clientX, touch.clientY);
+    }
+    if (touchPlacementState.pendingTool) {
+      e.preventDefault();
+      updateTouchPlacementMovement(touch.clientX, touch.clientY);
+    }
+
     if (isDrawing) {
       e.preventDefault();
-      draw(e.touches[0].clientX, e.touches[0].clientY);
+      draw(touch.clientX, touch.clientY);
     } else if (dragRect.active) {
       e.preventDefault();
-      updateSelectionRect(e.touches[0].clientX, e.touches[0].clientY);
+      updateSelectionRect(touch.clientX, touch.clientY);
+    } else if (touchSelectState.activeMode === "item-drag") {
+      e.preventDefault();
     } else if (isPanning) {
       e.preventDefault();
-      camera.x = e.touches[0].clientX - startPan.x;
-      camera.y = e.touches[0].clientY - startPan.y;
+      camera.x = touch.clientX - startPan.x;
+      camera.y = touch.clientY - startPan.y;
       updateTransform();
     }
   }
@@ -944,12 +1670,24 @@ viewport.addEventListener("touchend", (e) => {
     return;
   }
 
+  const shouldDeselectFromBackgroundTap =
+    activeTool === "select" &&
+    shouldUseTouchSelectBehavior() &&
+    touchSelectState.pendingMode === "background-select" &&
+    !touchSelectState.movedSinceStart &&
+    !touchSelectState.interrupted &&
+    !dragRect.active;
+  const shouldPlaceFromTouchTap =
+    touchPlacementState.pendingTool &&
+    touchPlacementState.canPlace &&
+    !touchPlacementState.movedSinceStart;
+
   initialPinchDistance = null;
   pinchStartCamera = null;
   pinchStartMidpoint = null;
   isPanning = false;
 
-  if (e.touches.length === 1 && activeTool === "pan") {
+  if (e.touches.length === 1 && (activeTool === "pan" || (activeTool === "select" && shouldUseTouchSelectBehavior()))) {
     isPanning = true;
     startPan = {
       x: e.touches[0].clientX - camera.x,
@@ -973,17 +1711,36 @@ viewport.addEventListener("touchend", (e) => {
     }
     touchSelectionMoved = false;
   }
+
+  if (shouldDeselectFromBackgroundTap) {
+    document.querySelectorAll(".bd-item.selected").forEach((item) => item.classList.remove("selected"));
+  }
+  if (shouldPlaceFromTouchTap) {
+    placeToolNodeAt(
+      touchPlacementState.startX,
+      touchPlacementState.startY,
+      touchPlacementState.pendingTool
+    );
+  }
+
+  resetTouchSelectState({ preserveInterrupted: e.touches.length > 0 && touchSelectState.interrupted });
+  resetTouchPlacementState();
 }, { passive: false });
 
 viewport.addEventListener("touchcancel", () => {
+  cancelActiveTouchNodeInteraction();
   initialPinchDistance = null;
   pinchStartCamera = null;
   pinchStartMidpoint = null;
   isPanning = false;
+  resetTouchSelectState({ clearSelectionRect: true });
+  resetTouchPlacementState();
 });
 
 // Global middle-click, right-click, and pan-tool panning
 window.addEventListener("pointerdown", (e) => {
+  const isResizeHandle = e.target.closest ? e.target.closest(".resize-handle") : false;
+  if (isResizeHandle) return;
   const isItem = e.target.closest ? e.target.closest(".bd-item") : false;
   const isToolbar = e.target.closest ? e.target.closest(".braindump-toolbar") : false;
   const isBackgroundClick = !isItem && !isToolbar;
@@ -1007,6 +1764,7 @@ viewport.addEventListener("contextmenu", (e) => {
 });
 
 viewport.addEventListener("mousedown", (e) => {
+  if (e.target.closest?.(".resize-handle")) return;
   if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
     isPanning = true;
     startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
@@ -1019,16 +1777,21 @@ viewport.addEventListener("mousedown", (e) => {
       startDrawing(e.clientX, e.clientY);
     } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
       startSelectionRect(e.clientX, e.clientY, e.shiftKey);
-    } else if (activeTool === "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
-      let pos = screenToCanvas(e.clientX, e.clientY);
-      const newNode = createNode("text", pos.x, pos.y, { text: "", width: 250, height: 150 });
-      window.requestAnimationFrame(() => focusTextEditor(newNode.id, { placeCaretAtEnd: true }));
-      setActiveTool("select");
-    } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "text" && e.target.closest && !e.target.closest(".bd-item") && !e.target.closest(".braindump-toolbar")) {
-      let pos = screenToCanvas(e.clientX, e.clientY);
-      createNode(activeTool, pos.x, pos.y);
-      setActiveTool("select");
     }
+  }
+});
+
+viewport.addEventListener("click", (e) => {
+  if (Date.now() - lastViewportTouchTime < 700) return;
+  if (e.button !== 0) return;
+  if (isPanning || isDrawing || dragRect.active) return;
+  if (!e.target.closest) return;
+  if (e.target.closest(".bd-item") || e.target.closest(".braindump-toolbar-shell")) return;
+
+  if (activeTool === "text") {
+    placeToolNodeAt(e.clientX, e.clientY, "text");
+  } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "draw") {
+    placeToolNodeAt(e.clientX, e.clientY, activeTool);
   }
 });
 
@@ -1056,7 +1819,7 @@ window.addEventListener("pointerup", (e) => {
     if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
     else if (activeTool === "pan") viewport.style.cursor = "grab";
     else viewport.style.cursor = "default";
-    scheduleViewportSave();
+    markBoardDirty();
   } else {
     isPanning = false;
   }
@@ -1116,7 +1879,7 @@ window.addEventListener("keyup", (e) => {
 
 // Tools logic
 function setActiveTool(tool) {
-  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend") return;
+  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend" || tool === "settings" || tool === "bug-report" || tool === "more") return;
   activeTool = tool;
   toolbarButtons.forEach(btn => {
     btn.classList.toggle("active", btn.dataset.tool === tool);
@@ -1128,24 +1891,56 @@ function setActiveTool(tool) {
 }
 
 function stopTransientBoardInteractions() {
+  cancelActiveTouchNodeInteraction();
   if (isDrawing) stopDrawing();
   isPanning = false;
   initialPinchDistance = null;
+  pinchStartCamera = null;
+  pinchStartMidpoint = null;
 
   if (dragRect.active) {
     dragRect.active = false;
     touchSelectionMoved = false;
     if (selectionBox) selectionBox.style.display = "none";
   }
+
+  resetTouchSelectState();
+  resetTouchPlacementState();
+}
+
+function cancelBoardPanState() {
+  cancelActiveTouchNodeInteraction();
+  isPanning = false;
+  initialPinchDistance = null;
+  pinchStartCamera = null;
+  pinchStartMidpoint = null;
 }
 
 function handleToolbarAction(btn) {
   stopTransientBoardInteractions();
 
+  if (btn.dataset.tool === "more") {
+    const shouldOpen = !toolbarActions?.classList.contains("is-open");
+    closeFloatingPanels({ keep: shouldOpen ? "actions" : "" });
+    setToolbarActionsOpen(shouldOpen);
+    return;
+  }
+
+  setToolbarActionsOpen(false);
+  if (btn.dataset.tool === "settings") {
+    const shouldOpen = settingsPanel?.hidden ?? true;
+    setSettingsPanelOpen(shouldOpen);
+    return;
+  }
   if (btn.dataset.tool === "save") return saveBoard();
   if (btn.dataset.tool === "recommend") {
     const shouldOpen = recommendationPanel?.hidden ?? true;
     setRecommendationPanelOpen(shouldOpen);
+    return;
+  }
+  if (btn.dataset.tool === "bug-report") {
+    const shouldOpen = bugReportPanel?.hidden ?? true;
+    setBugReportPanelOpen(shouldOpen);
     return;
   }
   if (btn.dataset.tool === "export") return exportCanvas();
@@ -1175,7 +1970,7 @@ toolbarButtons.forEach(btn => {
 
 if (recommendationSummaryInput) {
   recommendationSummaryInput.addEventListener("input", () => {
-    recommendationSummaryInput.value = normalizeRecommendationSummary(recommendationSummaryInput.value);
+    recommendationSummaryInput.value = normalizeIssueSummary(recommendationSummaryInput.value);
   });
 
   recommendationSummaryInput.addEventListener("keydown", (event) => {
@@ -1195,6 +1990,28 @@ if (recommendationSubmitButton) {
   recommendationSubmitButton.addEventListener("click", beginRecommendationFlow);
 }
 
+if (bugReportSummaryInput) {
+  bugReportSummaryInput.addEventListener("input", () => {
+    bugReportSummaryInput.value = normalizeIssueSummary(bugReportSummaryInput.value);
+  });
+
+  bugReportSummaryInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      beginBugReportFlow();
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setBugReportPanelOpen(false);
+    }
+  });
+}
+
+if (bugReportSubmitButton) {
+  bugReportSubmitButton.addEventListener("click", beginBugReportFlow);
+}
+
 if (recommendationModalCancelButton) {
   recommendationModalCancelButton.addEventListener("click", closeRecommendationModal);
 }
@@ -1212,15 +2029,57 @@ if (recommendationModal) {
 }
 
 window.addEventListener("pointerdown", (event) => {
-  if (!recommendationPanel || recommendationPanel.hidden) return;
   const clickedRecommendButton = event.target.closest?.('[data-tool="recommend"]');
-  const clickedInsidePanel = event.target.closest?.("#braindump-recommend-panel");
-  if (!clickedRecommendButton && !clickedInsidePanel) {
+  const clickedInsideRecommendationPanel = event.target.closest?.("#braindump-recommend-panel");
+  if (recommendationPanel && !recommendationPanel.hidden && !clickedRecommendButton && !clickedInsideRecommendationPanel) {
     setRecommendationPanelOpen(false);
+  }
+
+  const clickedBugReportButton = event.target.closest?.('[data-tool="bug-report"]');
+  const clickedInsideBugReportPanel = event.target.closest?.("#braindump-bug-panel");
+  if (bugReportPanel && !bugReportPanel.hidden && !clickedBugReportButton && !clickedInsideBugReportPanel) {
+    setBugReportPanelOpen(false);
+  }
+
+  const clickedSettingsButton = event.target.closest?.('[data-tool="settings"]');
+  const clickedInsideSettingsPanel = event.target.closest?.("#braindump-settings-panel");
+  if (settingsPanel && !settingsPanel.hidden && !clickedSettingsButton && !clickedInsideSettingsPanel) {
+    setSettingsPanelOpen(false);
+  }
+
+  if (!toolbarActions?.classList.contains("is-open")) return;
+  const clickedMoreButton = event.target.closest?.('[data-tool="more"]');
+  const clickedInsideActions = event.target.closest?.("#braindump-toolbar-actions");
+  if (!clickedMoreButton && !clickedInsideActions) {
+    setToolbarActionsOpen(false);
   }
 });
 
 window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && recommendationPanel && !recommendationPanel.hidden) {
+    event.preventDefault();
+    setRecommendationPanelOpen(false);
+    return;
+  }
+
+  if (event.key === "Escape" && bugReportPanel && !bugReportPanel.hidden) {
+    event.preventDefault();
+    setBugReportPanelOpen(false);
+    return;
+  }
+
+  if (event.key === "Escape" && settingsPanel && !settingsPanel.hidden) {
+    event.preventDefault();
+    setSettingsPanelOpen(false);
+    return;
+  }
+
+  if (event.key === "Escape" && toolbarActions?.classList.contains("is-open")) {
+    event.preventDefault();
+    setToolbarActionsOpen(false);
+    return;
+  }
+
   if (event.key === "Escape" && recommendationModal && !recommendationModal.hidden) {
     event.preventDefault();
     closeRecommendationModal();
@@ -1238,6 +2097,12 @@ if (fileInput) {
         loadState(data);
         persistLocalState(serializeState());
         setComparisonBaseline(serializeState());
+        autosaveRepositorySupported = true;
+        markBoardDirty({ scheduleLocalSave: false });
+        setToolbarActionsOpen(false);
+        setRecommendationPanelOpen(false);
+        setBugReportPanelOpen(false);
+        setSettingsPanelOpen(false);
         showToolbarToast(`Imported ${file.name}`, "success");
       } catch(err) {
         showToolbarToast("Import failed. Use .canvas, .canvas.json, or .json.", "error");
@@ -1245,6 +2110,35 @@ if (fileInput) {
     };
     reader.readAsText(file);
     fileInput.value = "";
+  });
+}
+
+if (settingsAutosaveEnabledInput) {
+  settingsAutosaveEnabledInput.addEventListener("change", () => {
+    boardSettings.autosaveEnabled = settingsAutosaveEnabledInput.checked;
+    applyBoardSettings({ announce: true });
+  });
+}
+
+if (settingsAutosaveSecondsInput) {
+  settingsAutosaveSecondsInput.addEventListener("change", () => {
+    boardSettings.autosaveSeconds = settingsAutosaveSecondsInput.value;
+    applyBoardSettings({ announce: true });
+  });
+
+  settingsAutosaveSecondsInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      boardSettings.autosaveSeconds = settingsAutosaveSecondsInput.value;
+      applyBoardSettings({ announce: true });
+    }
+  });
+}
+
+if (settingsResetButton) {
+  settingsResetButton.addEventListener("click", () => {
+    boardSettings = { ...DEFAULT_BOARD_SETTINGS };
+    applyBoardSettings({ announce: true });
   });
 }
 
@@ -1256,13 +2150,13 @@ function exportCanvas() {
 
 function submitRecommendation() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Recommendations are not set up for this board.", "error");
+    showToolbarToast("Feature requests are not set up for this board.", "error");
     return;
   }
 
-  const summary = normalizeRecommendationSummary(recommendationSummaryInput?.value);
+  const summary = normalizeIssueSummary(recommendationSummaryInput?.value);
   if (!summary) {
-    showToolbarToast("Add a short description for the recommendation.", "error");
+    showToolbarToast("Add a short description for the feature request.", "error");
     recommendationSummaryInput?.focus();
     return;
   }
@@ -1272,7 +2166,7 @@ function submitRecommendation() {
   window.open(issueUrl, "_blank", "noopener,noreferrer");
   setRecommendationPanelOpen(false);
   if (recommendationSummaryInput) recommendationSummaryInput.value = "";
-  showToolbarToast(`Recommendation sent — attach ${recommendationFilename} to the form that just opened.`, "success");
+  showToolbarToast(`Feature request opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
 }
 
 // Drawing logic
@@ -1360,6 +2254,7 @@ function createNode(type, x, y, data = {}) {
                 el.style.width = `${nodeObj.width}px`;
                 el.style.height = `${nodeObj.height}px`;
             }
+            markBoardDirty();
         };
         img.src = data.file;
     }
@@ -1372,6 +2267,76 @@ function createNode(type, x, y, data = {}) {
     pushAction({ type: 'create', nodeId: nodeObj.id, nodeData: JSON.parse(JSON.stringify(nodeObj)) });
   }
   return nodeObj;
+}
+
+function renderLinkNode(nodeObj, el) {
+  let shell = el.querySelector(".bd-link-shell");
+  if (!shell) {
+    shell = document.createElement("div");
+    shell.className = "bd-link-shell";
+    el.insertBefore(shell, el.firstChild);
+  }
+
+  const isEditing = nodeObj.isEditingUrl || !nodeObj.url;
+
+  if (isEditing) {
+    shell.innerHTML = `
+      <div class="bd-link-editor">
+        <label class="bd-link-editor-label" for="link-input-${nodeObj.id}">
+          <span>Link</span>
+          <input
+            id="link-input-${nodeObj.id}"
+            class="bd-link-editor-input"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="${LINK_NODE_PLACEHOLDER}"
+          >
+        </label>
+        <p class="bd-link-editor-hint">Tap and hold to paste, then press Enter.</p>
+      </div>
+    `;
+
+    const editor = shell.querySelector(".bd-link-editor");
+    const input = shell.querySelector(".bd-link-editor-input");
+    if (!input) return;
+
+    input.value = nodeObj.url || "";
+
+    editor?.addEventListener("mousedown", (event) => event.stopPropagation());
+    editor?.addEventListener("click", (event) => event.stopPropagation());
+    editor?.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+    input.addEventListener("input", () => {
+      nodeObj.url = input.value;
+      markBoardDirty();
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        finalizeLinkEditing(nodeObj, input);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        input.blur();
+      }
+    });
+    input.addEventListener("blur", () => {
+      finalizeLinkEditing(nodeObj, input);
+    });
+    return;
+  }
+
+  shell.innerHTML = `
+    ${nodeObj.image ? `<img class="bd-bookmark-image" src="${nodeObj.image}" draggable="false" alt="${nodeObj.title || "Link preview"}">` : ""}
+    <div class="bd-bookmark-content">
+      <h3 class="bd-bookmark-title">${nodeObj.title || "Link Preview"}</h3>
+      <p class="bd-bookmark-desc">${nodeObj.description || ""}</p>
+      <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank" rel="noreferrer" draggable="false">${nodeObj.url || "#"}</a>
+    </div>
+  `;
 }
 
 function renderNode(nodeObj) {
@@ -1393,6 +2358,22 @@ function renderNode(nodeObj) {
     let isDragging = false;
     let dragStart = {x:0, y:0};
     let dragStartPositions = []; // For undo tracking
+    let pendingTouchTapSelection = false;
+    let pendingTouchSelectedDrag = false;
+    let pendingTouchSelectedDragStart = { x: 0, y: 0 };
+    let textNodeWasSelectedOnTouchStart = false;
+    let isResizing = false;
+    const cancelNodeDrag = () => {
+      isDragging = false;
+      dragStartPositions = [];
+      pendingTouchTapSelection = false;
+      pendingTouchSelectedDrag = false;
+      pendingTouchSelectedDragStart = { x: 0, y: 0 };
+      textNodeWasSelectedOnTouchStart = false;
+    };
+    const cancelNodeResize = () => {
+      isResizing = false;
+    };
 
     function beginNodeDrag(clientX, clientY, shiftKey = false) {
       if (activeTool === "pan") return false;
@@ -1407,10 +2388,9 @@ function renderNode(nodeObj) {
       el.classList.add("selected");
 
       dragStartPositions = [];
-      document.querySelectorAll(".bd-item.selected").forEach(selEl => {
-        const selNode = nodes.find(n => n.id === selEl.id);
-        if (selNode) dragStartPositions.push({ id: selNode.id, x: selNode.x, y: selNode.y });
-      });
+      dragStartPositions = captureSelectedNodePositions();
+
+      setActiveTouchNodeInteraction(cancelNodeDrag);
 
       return true;
     }
@@ -1421,37 +2401,16 @@ function renderNode(nodeObj) {
       const dx = (clientX - dragStart.x) / camera.z;
       const dy = (clientY - dragStart.y) / camera.z;
       dragStart = { x: clientX, y: clientY };
-
-      document.querySelectorAll(".bd-item.selected").forEach(selEl => {
-        const selNode = nodes.find(n => n.id === selEl.id);
-        if (selNode) {
-          selNode.x += dx;
-          selNode.y += dy;
-          selEl.style.left = `${selNode.x}px`;
-          selEl.style.top = `${selNode.y}px`;
-        }
-      });
+      moveSelectedNodesByDelta(dx, dy);
     }
 
     function finishNodeDrag() {
       if (isDragging && dragStartPositions.length > 0) {
-        const movedIds = [];
-        const fromPos = [];
-        const toPos = [];
-        dragStartPositions.forEach(sp => {
-          const node = nodes.find(n => n.id === sp.id);
-          if (node && (Math.abs(node.x - sp.x) > 0.5 || Math.abs(node.y - sp.y) > 0.5)) {
-            movedIds.push(sp.id);
-            fromPos.push({ x: sp.x, y: sp.y });
-            toPos.push({ x: node.x, y: node.y });
-          }
-        });
-        if (movedIds.length > 0) {
-          pushAction({ type: 'move', nodeIds: movedIds, fromPositions: fromPos, toPositions: toPos });
-        }
+        pushSelectedMoveActionFromStartPositions(dragStartPositions);
       }
       dragStartPositions = [];
       isDragging = false;
+      clearActiveTouchNodeInteraction(cancelNodeDrag);
     }
     
     el.addEventListener("mousedown", (e) => {
@@ -1459,6 +2418,7 @@ function renderNode(nodeObj) {
       if (activeTool === "pan") return;
       if (activeTool !== "select") return;
       if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+      if (isLinkInteractionTarget(e.target)) return;
       if (e.target.classList.contains("resize-handle")) return; // handled separately
       // Don't start drag if clicking inside an active contenteditable
       if (e.target.isContentEditable && document.activeElement === e.target) return;
@@ -1469,9 +2429,45 @@ function renderNode(nodeObj) {
 
     el.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
+      if (activeTool !== "select") return;
       if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+      if (isLinkInteractionTarget(e.target)) return;
       if (e.target.classList.contains("resize-handle")) return; // handled separately
       if (e.target.isContentEditable && document.activeElement === e.target) return;
+
+      cancelBoardPanState();
+      resetTouchPlacementState();
+
+      if (shouldUseTouchSelectBehavior()) {
+        const touch = e.touches[0];
+        textNodeWasSelectedOnTouchStart = el.classList.contains("selected");
+        pendingTouchTapSelection = true;
+        pendingTouchSelectedDrag = false;
+        pendingTouchSelectedDragStart = { x: touch.clientX, y: touch.clientY };
+
+        if (el.classList.contains("selected")) {
+          resetTouchSelectState({ clearSelectionRect: true });
+          pendingTouchSelectedDrag = true;
+          e.preventDefault();
+          e.stopPropagation();
+          setActiveTouchNodeInteraction(cancelNodeDrag);
+          return;
+        }
+
+        e.preventDefault();
+        armTouchSelectMode("item-drag", touch.clientX, touch.clientY, () => {
+          pendingTouchTapSelection = false;
+          isPanning = false;
+
+          if (!el.classList.contains("selected")) {
+            document.querySelectorAll(".bd-item").forEach((n) => n.classList.remove("selected"));
+            el.classList.add("selected");
+          }
+
+          beginNodeDrag(touchSelectState.startX, touchSelectState.startY, false);
+        });
+        return;
+      }
 
       if (!el.classList.contains("selected")) {
         document.querySelectorAll(".bd-item").forEach((n) => n.classList.remove("selected"));
@@ -1486,6 +2482,58 @@ function renderNode(nodeObj) {
       e.preventDefault();
       e.stopPropagation();
     }, { passive: false });
+
+    el.addEventListener("touchend", (e) => {
+      if (activeTool !== "select" || !shouldUseTouchSelectBehavior()) {
+        pendingTouchTapSelection = false;
+        pendingTouchSelectedDrag = false;
+        textNodeWasSelectedOnTouchStart = false;
+        return;
+      }
+
+      if (isLinkInteractionTarget(e.target)) {
+        pendingTouchTapSelection = false;
+        pendingTouchSelectedDrag = false;
+        textNodeWasSelectedOnTouchStart = false;
+        return;
+      }
+
+      if (!pendingTouchTapSelection) {
+        pendingTouchSelectedDrag = false;
+        textNodeWasSelectedOnTouchStart = false;
+        return;
+      }
+      pendingTouchTapSelection = false;
+      pendingTouchSelectedDrag = false;
+
+      if (touchSelectState.movedSinceStart || touchSelectState.interrupted || touchSelectState.activeMode === "item-drag") {
+        textNodeWasSelectedOnTouchStart = false;
+        return;
+      }
+
+      if (nodeObj.type === "text" && !nodeObj.text?.includes("<svg") && textNodeWasSelectedOnTouchStart) {
+        const editor = el.querySelector(".bd-text-editor");
+        if (editor) {
+          beginTextEditing(nodeObj, editor, { placeCaretAtEnd: true });
+          e.preventDefault();
+          e.stopPropagation();
+          textNodeWasSelectedOnTouchStart = false;
+          return;
+        }
+      }
+
+      document.querySelectorAll(".bd-item").forEach((n) => n.classList.remove("selected"));
+      el.classList.add("selected");
+      e.preventDefault();
+      e.stopPropagation();
+      textNodeWasSelectedOnTouchStart = false;
+    }, { passive: false });
+
+    el.addEventListener("touchcancel", () => {
+      pendingTouchTapSelection = false;
+      pendingTouchSelectedDrag = false;
+      textNodeWasSelectedOnTouchStart = false;
+    });
     
     window.addEventListener("mousemove", (e) => {
       if (!isDragging) return;
@@ -1494,7 +2542,22 @@ function renderNode(nodeObj) {
     });
 
     window.addEventListener("touchmove", (e) => {
-      if (!isDragging || e.touches.length !== 1) return;
+      if (e.touches.length !== 1) return;
+      if (pendingTouchSelectedDrag && !isDragging) {
+        const touch = e.touches[0];
+        const dx = touch.clientX - pendingTouchSelectedDragStart.x;
+        const dy = touch.clientY - pendingTouchSelectedDragStart.y;
+        if (Math.hypot(dx, dy) > TOUCH_SELECT_MOVE_TOLERANCE) {
+          pendingTouchTapSelection = false;
+          pendingTouchSelectedDrag = false;
+          if (beginNodeDrag(pendingTouchSelectedDragStart.x, pendingTouchSelectedDragStart.y, false)) {
+            e.preventDefault();
+            moveSelectedNodes(touch.clientX, touch.clientY);
+          }
+          return;
+        }
+      }
+      if (!isDragging) return;
       e.preventDefault();
       moveSelectedNodes(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: false });
@@ -1504,16 +2567,22 @@ function renderNode(nodeObj) {
     window.addEventListener("touchcancel", finishNodeDrag);
 
     // Resize logic
-    let isResizing = false;
     let resizeStartSize = { w: 0, h: 0 };
     let resizeStartPoint = { x: 0, y: 0 };
 
     function beginNodeResize(clientX, clientY) {
+      if (activeTool !== "select") return false;
+
+      cancelBoardPanState();
+      resetTouchSelectState({ clearSelectionRect: true });
+      resetTouchPlacementState();
       isResizing = true;
       resizeStartSize = { w: nodeObj.width, h: nodeObj.height };
       resizeStartPoint = { x: clientX, y: clientY };
       document.querySelectorAll(".bd-item").forEach(n => n.classList.remove("selected"));
       el.classList.add("selected");
+      setActiveTouchNodeInteraction(cancelNodeResize);
+      return true;
     }
 
     function resizeNode(clientX, clientY) {
@@ -1544,14 +2613,18 @@ function renderNode(nodeObj) {
         }
       }
       isResizing = false;
+      clearActiveTouchNodeInteraction(cancelNodeResize);
     }
 
     handle.addEventListener("mousedown", (e) => {
+      if (activeTool !== "select") return;
+      e.preventDefault();
       e.stopPropagation();
       beginNodeResize(e.clientX, e.clientY);
     });
 
     handle.addEventListener("touchstart", (e) => {
+      if (activeTool !== "select") return;
       if (e.touches.length !== 1) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1594,24 +2667,18 @@ function renderNode(nodeObj) {
         ta.className = "bd-text-editor";
         ta.dataset.placeholder = TEXT_NODE_PLACEHOLDER;
         ta.contentEditable = "true";
-        // Inline styles to match the centered opaque look for text boxes without relying on textarea limits
-        ta.style.width = "100%";
-        ta.style.height = "100%";
-        ta.style.outline = "none";
-        ta.style.overflow = "hidden";
-        ta.style.display = "flex";
-        ta.style.alignItems = "center";
-        ta.style.justifyContent = "center";
-        ta.style.textAlign = "center";
-        ta.style.wordBreak = "break-word";
         ta.addEventListener("input", () => {
           nodeObj.text = normalizeTextEditorValue(ta.innerText);
           ta.classList.toggle("is-empty", nodeObj.text.length === 0);
+          markBoardDirty();
         });
         // Only stop propagation when actively editing (contenteditable=true)
         ta.addEventListener("mousedown", (e) => {
           if (ta.contentEditable === "true") e.stopPropagation();
         });
+        ta.addEventListener("touchstart", (e) => {
+          if (ta.contentEditable === "true") e.stopPropagation();
+        }, { passive: true });
         ta.addEventListener("blur", () => finishTextEditing(nodeObj, ta));
         ta.contentEditable = "false";
         el.addEventListener("dblclick", () => {
@@ -1637,33 +2704,14 @@ function renderNode(nodeObj) {
            nodeObj.hasAdjustedRatio = true;
            el.style.width = `${nodeObj.width}px`;
            el.style.height = `${nodeObj.height}px`;
+           markBoardDirty();
         }
       };
     }
   } else if (nodeObj.type === "link") {
-    if (!el.querySelector(".bd-bookmark-title")) {
-        el.insertAdjacentHTML("afterbegin", `
-        <div class="bd-bookmark-content" style="display:flex; flex-direction:column; gap:4px">
-          <h3 class="bd-bookmark-title">${nodeObj.title || "Link Preview"}</h3>
-          <p class="bd-bookmark-desc" style="font-size:12px;opacity:0.7;margin:0">${nodeObj.description || ""}</p>
-          <a class="bd-bookmark-link" href="${nodeObj.url}" target="_blank" draggable="false">${nodeObj.url || '#'}</a>
-        </div>
-        `);
-    }
+    renderLinkNode(nodeObj, el);
 
-    if (nodeObj.image && !el.querySelector(".bd-bookmark-image")) {
-      el.insertAdjacentHTML(
-        "afterbegin",
-        `<img class="bd-bookmark-image" src="${nodeObj.image}" draggable="false" alt="${nodeObj.title || "Link preview"}">`
-      );
-      if (!nodeObj.hasAdjustedRatio) {
-        nodeObj.height += 160;
-        nodeObj.hasAdjustedRatio = true;
-        el.style.height = `${nodeObj.height}px`;
-      }
-    }
-
-    if (!nodeObj.title || (getYouTubeVideoId(nodeObj.url) && !nodeObj.image)) {
+    if (nodeObj.url && (!nodeObj.title || (getYouTubeVideoId(nodeObj.url) && !nodeObj.image))) {
       fetchBookmarkPreview(nodeObj, el);
     }
   }
@@ -1776,8 +2824,11 @@ async function loadBoard() {
       if (!data) continue;
 
       loadState(data);
-      persistLocalState(serializeState());
-      setComparisonBaseline(serializeState());
+      const state = serializeState();
+      flushLocalStateSave(state);
+      setComparisonBaseline(state);
+      hasPendingRepositorySave = false;
+      autosaveRepositorySupported = true;
       updateTransform();
       return true;
     }
@@ -1788,9 +2839,18 @@ async function loadBoard() {
   return false;
 }
 
-async function saveBoard() {
+async function saveBoard(options = {}) {
+  const { showFeedback = true, source = "manual" } = options;
+  if (source === "autosave" && (!hasPendingRepositorySave || !autosaveRepositorySupported || isPersistingRepositoryState)) {
+    return { ok: false, skipped: true };
+  }
+  if (source !== "autosave" && isPersistingRepositoryState) {
+    return { ok: false, skipped: true };
+  }
+
   const state = serializeState();
-  const serialized = persistLocalState(state);
+  const serialized = flushLocalStateSave(state);
+  isPersistingRepositoryState = true;
   try {
     let res = await fetch(buildSaveUrl(), {
       method: "POST",
@@ -1799,26 +2859,50 @@ async function saveBoard() {
     });
     if (res.ok) {
       const result = await res.json().catch(() => null);
-      if (result?.path) showToolbarToast(`Saved to ${result.path}`, "success");
-      else showToolbarToast("Board saved to local repository copy.", "success");
+      hasPendingRepositorySave = false;
+      autosaveRepositorySupported = true;
+      setComparisonBaseline(state);
+      if (showFeedback) {
+        if (result?.path) showToolbarToast(`Saved to ${result.path}`, "success");
+        else showToolbarToast("Board saved to local repository copy.", "success");
+      }
+      return { ok: true, path: result?.path || null };
     } else {
-      showToolbarToast("Saved locally. Start dev-server to persist to the repository.", "info");
+      autosaveRepositorySupported = false;
+      if (showFeedback) {
+        showToolbarToast("Saved locally. Start dev-server to persist to the repository.", "info");
+      }
+      return { ok: false, skipped: false };
     }
   } catch(e) {
-    showToolbarToast("Saved locally. Start dev-server to persist to the repository.", "info");
+    autosaveRepositorySupported = false;
+    if (showFeedback) {
+      showToolbarToast("Saved locally. Start dev-server to persist to the repository.", "info");
+    }
+    return { ok: false, skipped: false };
+  } finally {
+    isPersistingRepositoryState = false;
   }
 }
 
 // Init
 setActiveTool("select");
+applyBoardSettings({ persist: false });
 let saved = getSavedState();
 if (saved) {
   try {
     loadState(JSON.parse(saved));
-    persistLocalState(serializeState());
-    setComparisonBaseline(serializeState());
+    const state = serializeState();
+    flushLocalStateSave(state);
+    setComparisonBaseline(state);
+    hasPendingRepositorySave = true;
+    autosaveRepositorySupported = true;
   } catch(e) {
     loadBoard();
   }
 } else { loadBoard(); }
 updateTransform();
+
+window.addEventListener("beforeunload", () => {
+  flushLocalStateSave();
+});

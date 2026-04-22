@@ -298,12 +298,19 @@ export const braindumpPage = {
     storageKey: "board:braindump",
     legacyStorageKey: "braindump-canvas",
     saveEndpoint: "/api/save-board",
+    autosaveSeconds: 20,
     allowRecommendations: true,
     recommendation: {
       type: "issue",
       owner: "evrenucar",
       repo: "proto_website",
       labels: ["recommendation", "whiteboard"]
+    },
+    bugReport: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["bug", "whiteboard"]
     }
   }
 };
