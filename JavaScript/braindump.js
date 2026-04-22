@@ -7,6 +7,7 @@ const toolbarMoreButton = document.getElementById("braindump-toolbar-more");
 const fileInput = document.getElementById("braindump-import");
 const toolbarToast = document.getElementById("braindump-toolbar-toast");
 const recommendationPanel = document.getElementById("braindump-recommend-panel");
+const featureRequestPanel = document.getElementById("braindump-feature-panel");
 const bugReportPanel = document.getElementById("braindump-bug-panel");
 const settingsPanel = document.getElementById("braindump-settings-panel");
 const settingsAutosaveEnabledInput = document.getElementById("braindump-setting-autosave-enabled");
@@ -14,6 +15,8 @@ const settingsAutosaveSecondsInput = document.getElementById("braindump-setting-
 const settingsResetButton = document.getElementById("braindump-settings-reset");
 const recommendationSummaryInput = document.getElementById("braindump-recommend-summary");
 const recommendationSubmitButton = document.getElementById("braindump-recommend-submit");
+const featureRequestSummaryInput = document.getElementById("braindump-feature-summary");
+const featureRequestSubmitButton = document.getElementById("braindump-feature-submit");
 const bugReportSummaryInput = document.getElementById("braindump-bug-summary");
 const bugReportSubmitButton = document.getElementById("braindump-bug-submit");
 const recommendationModal = document.getElementById("braindump-modal");
@@ -40,6 +43,16 @@ const recommendationConfig = {
   owner: viewport?.dataset.recommendationOwner || "",
   repo: viewport?.dataset.recommendationRepo || "",
   labels: String(viewport?.dataset.recommendationLabels || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+};
+
+const featureRequestConfig = {
+  type: viewport?.dataset.featureRequestType || "",
+  owner: viewport?.dataset.featureRequestOwner || "",
+  repo: viewport?.dataset.featureRequestRepo || "",
+  labels: String(viewport?.dataset.featureRequestLabels || "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean)
@@ -269,6 +282,11 @@ function closeFloatingPanels(options = {}) {
     recommendationPanel.classList.remove("is-open");
   }
 
+  if (keep !== "feature-request" && featureRequestPanel) {
+    featureRequestPanel.hidden = true;
+    featureRequestPanel.classList.remove("is-open");
+  }
+
   if (keep !== "bug-report" && bugReportPanel) {
     bugReportPanel.hidden = true;
     bugReportPanel.classList.remove("is-open");
@@ -303,6 +321,21 @@ function setRecommendationPanelOpen(isOpen) {
   if (isOpen) {
     recommendationSummaryInput?.focus();
     recommendationSummaryInput?.select();
+  }
+}
+
+function setFeatureRequestPanelOpen(isOpen) {
+  if (!featureRequestPanel) return;
+
+  if (isOpen) {
+    closeFloatingPanels({ keep: "feature-request" });
+  }
+
+  featureRequestPanel.hidden = !isOpen;
+  featureRequestPanel.classList.toggle("is-open", isOpen);
+  if (isOpen) {
+    featureRequestSummaryInput?.focus();
+    featureRequestSummaryInput?.select();
   }
 }
 
@@ -361,7 +394,7 @@ function setRecommendationModalDismissed(shouldDismiss) {
 
 function openRecommendationIssue(issueUrl, recommendationFilename) {
   window.open(issueUrl, "_blank", "noopener,noreferrer");
-  showToolbarToast(`Feature request opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
+  showToolbarToast(`Recommendation opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
 }
 
 function closeRecommendationModal() {
@@ -542,11 +575,17 @@ function normalizeIssueSummary(value, maxLength = 50) {
   return summary.slice(0, maxLength).trim();
 }
 
+function formatIssueDraftInput(value, maxLength = 50) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .slice(0, maxLength);
+}
+
 function buildRecommendationIssueTitle(summary) {
   const normalizedSummary = normalizeIssueSummary(summary);
   return normalizedSummary
-    ? `Feature request: ${boardConfig.title} (${normalizedSummary})`
-    : `Feature request: ${boardConfig.title}`;
+    ? `Recommendation: ${boardConfig.title} (${normalizedSummary})`
+    : `Recommendation: ${boardConfig.title}`;
 }
 
 function buildRecommendationIssueBody(summary, details, exportFilename) {
@@ -569,20 +608,20 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     String(changedElements),
     "",
     "## Short summary",
-    normalizeIssueSummary(summary) || "Describe the feature request in one sentence.",
+    normalizeIssueSummary(summary) || "Describe the recommendation in one sentence.",
     "",
     "## Details",
     details || "If you'd like to include further notes, add them here.",
     "",
     "## Attachment",
-    `Please attach the exported feature-request file \`${exportFilename}\` to this issue.`,
-    "This feature-request flow exports a **.canvas.json file** because GitHub issue attachments do not accept `.canvas` files directly.",
+    `Please attach the exported recommendation file \`${exportFilename}\` to this issue.`,
+    "This recommendation flow exports a **.canvas.json file** because GitHub issue attachments do not accept `.canvas` files directly.",
     "Local import already accepts the **.canvas.json file** directly, so no conversion is required to bring it back into the board.",
     "If you want to turn it back into a normal board file outside the site, remove the trailing `.json` so it ends with `.canvas`.",
     "",
     "## Notes",
-    "- If you already opened a feature request issue for this board, update that issue instead of creating a new one.",
-    "- This feature request will be reviewed before it appears on the live site."
+    "- If you already opened a recommendation issue for this board, update that issue instead of creating a new one.",
+    "- This recommendation will be reviewed before it appears on the live site."
   ];
 
   return lines.join("\n");
@@ -593,11 +632,65 @@ function buildRecommendationIssueUrl(summary, details, exportFilename) {
     `https://github.com/${recommendationConfig.owner}/${recommendationConfig.repo}/issues/new`
   );
 
+  url.searchParams.set("template", "whiteboard-recommendation.md");
   url.searchParams.set("title", buildRecommendationIssueTitle(summary));
   if (recommendationConfig.labels.length > 0) {
     url.searchParams.set("labels", recommendationConfig.labels.join(","));
   }
   url.searchParams.set("body", buildRecommendationIssueBody(summary, details, exportFilename));
+
+  return url.toString();
+}
+
+function buildFeatureRequestIssueTitle(summary) {
+  const normalizedSummary = normalizeIssueSummary(summary);
+  return normalizedSummary
+    ? `Feature request: ${boardConfig.title} (${normalizedSummary})`
+    : `Feature request: ${boardConfig.title}`;
+}
+
+function buildFeatureRequestIssueBody(summary, details) {
+  const timestamp = formatTimestamp().replace("_", " ");
+  const lines = [
+    "## Board",
+    boardConfig.title,
+    "",
+    "## Page",
+    getPublicPageUrl(),
+    "",
+    "## Timestamp",
+    timestamp,
+    "",
+    "## Short summary",
+    normalizeIssueSummary(summary) || "Describe the feature request in one sentence.",
+    "",
+    "## What do you want",
+    details || "Describe the feature or improvement you want to see.",
+    "",
+    "## Why would it help",
+    "Explain the problem this would solve or the workflow it would improve.",
+    "",
+    "## Example workflow",
+    "Add a short example of how you would use it.",
+    "",
+    "## Notes",
+    "- Keep the title short and concrete, for example: `Allow snapping notes to grid`.",
+    "- If a similar feature request already exists, add your details there instead of opening a duplicate."
+  ];
+
+  return lines.join("\n");
+}
+
+function buildFeatureRequestIssueUrl(summary, details) {
+  const url = new URL(
+    `https://github.com/${featureRequestConfig.owner}/${featureRequestConfig.repo}/issues/new`
+  );
+
+  url.searchParams.set("title", buildFeatureRequestIssueTitle(summary));
+  if (featureRequestConfig.labels.length > 0) {
+    url.searchParams.set("labels", featureRequestConfig.labels.join(","));
+  }
+  url.searchParams.set("body", buildFeatureRequestIssueBody(summary, details));
 
   return url.toString();
 }
@@ -662,13 +755,13 @@ function buildBugReportIssueUrl(summary, details) {
 
 function beginRecommendationFlow() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Feature requests are not set up for this board.", "error");
+    showToolbarToast("Recommendations are not set up for this board.", "error");
     return;
   }
 
   const summary = normalizeIssueSummary(recommendationSummaryInput?.value);
   if (!summary) {
-    showToolbarToast("Add a short description for the feature request.", "error");
+    showToolbarToast("Add a short description for the recommendation.", "error");
     recommendationSummaryInput?.focus();
     return;
   }
@@ -685,6 +778,28 @@ function beginRecommendationFlow() {
   } else {
     openRecommendationModal(issueUrl, recommendationFilename);
   }
+}
+
+function beginFeatureRequestFlow() {
+  if (featureRequestConfig.type !== "issue" || !featureRequestConfig.owner || !featureRequestConfig.repo) {
+    showToolbarToast("Feature requests are not set up for this board.", "error");
+    return;
+  }
+
+  const summary = normalizeIssueSummary(featureRequestSummaryInput?.value);
+  if (!summary) {
+    showToolbarToast("Add a short description for the feature request.", "error");
+    featureRequestSummaryInput?.focus();
+    return;
+  }
+
+  const issueUrl = buildFeatureRequestIssueUrl(summary, "");
+  setFeatureRequestPanelOpen(false);
+  if (featureRequestSummaryInput) {
+    featureRequestSummaryInput.value = "";
+  }
+  window.open(issueUrl, "_blank", "noopener,noreferrer");
+  showToolbarToast("Feature request form opened in GitHub.", "success");
 }
 
 function beginBugReportFlow() {
@@ -1879,7 +1994,7 @@ window.addEventListener("keyup", (e) => {
 
 // Tools logic
 function setActiveTool(tool) {
-  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend" || tool === "settings" || tool === "bug-report" || tool === "more") return;
+  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend" || tool === "settings" || tool === "feature-request" || tool === "bug-report" || tool === "more") return;
   activeTool = tool;
   toolbarButtons.forEach(btn => {
     btn.classList.toggle("active", btn.dataset.tool === tool);
@@ -1938,6 +2053,11 @@ function handleToolbarAction(btn) {
     setRecommendationPanelOpen(shouldOpen);
     return;
   }
+  if (btn.dataset.tool === "feature-request") {
+    const shouldOpen = featureRequestPanel?.hidden ?? true;
+    setFeatureRequestPanelOpen(shouldOpen);
+    return;
+  }
   if (btn.dataset.tool === "bug-report") {
     const shouldOpen = bugReportPanel?.hidden ?? true;
     setBugReportPanelOpen(shouldOpen);
@@ -1970,7 +2090,7 @@ toolbarButtons.forEach(btn => {
 
 if (recommendationSummaryInput) {
   recommendationSummaryInput.addEventListener("input", () => {
-    recommendationSummaryInput.value = normalizeIssueSummary(recommendationSummaryInput.value);
+    recommendationSummaryInput.value = formatIssueDraftInput(recommendationSummaryInput.value);
   });
 
   recommendationSummaryInput.addEventListener("keydown", (event) => {
@@ -1990,9 +2110,31 @@ if (recommendationSubmitButton) {
   recommendationSubmitButton.addEventListener("click", beginRecommendationFlow);
 }
 
+if (featureRequestSummaryInput) {
+  featureRequestSummaryInput.addEventListener("input", () => {
+    featureRequestSummaryInput.value = formatIssueDraftInput(featureRequestSummaryInput.value);
+  });
+
+  featureRequestSummaryInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      beginFeatureRequestFlow();
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setFeatureRequestPanelOpen(false);
+    }
+  });
+}
+
+if (featureRequestSubmitButton) {
+  featureRequestSubmitButton.addEventListener("click", beginFeatureRequestFlow);
+}
+
 if (bugReportSummaryInput) {
   bugReportSummaryInput.addEventListener("input", () => {
-    bugReportSummaryInput.value = normalizeIssueSummary(bugReportSummaryInput.value);
+    bugReportSummaryInput.value = formatIssueDraftInput(bugReportSummaryInput.value);
   });
 
   bugReportSummaryInput.addEventListener("keydown", (event) => {
@@ -2035,6 +2177,12 @@ window.addEventListener("pointerdown", (event) => {
     setRecommendationPanelOpen(false);
   }
 
+  const clickedFeatureRequestButton = event.target.closest?.('[data-tool="feature-request"]');
+  const clickedInsideFeatureRequestPanel = event.target.closest?.("#braindump-feature-panel");
+  if (featureRequestPanel && !featureRequestPanel.hidden && !clickedFeatureRequestButton && !clickedInsideFeatureRequestPanel) {
+    setFeatureRequestPanelOpen(false);
+  }
+
   const clickedBugReportButton = event.target.closest?.('[data-tool="bug-report"]');
   const clickedInsideBugReportPanel = event.target.closest?.("#braindump-bug-panel");
   if (bugReportPanel && !bugReportPanel.hidden && !clickedBugReportButton && !clickedInsideBugReportPanel) {
@@ -2059,6 +2207,12 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && recommendationPanel && !recommendationPanel.hidden) {
     event.preventDefault();
     setRecommendationPanelOpen(false);
+    return;
+  }
+
+  if (event.key === "Escape" && featureRequestPanel && !featureRequestPanel.hidden) {
+    event.preventDefault();
+    setFeatureRequestPanelOpen(false);
     return;
   }
 
@@ -2101,6 +2255,7 @@ if (fileInput) {
         markBoardDirty({ scheduleLocalSave: false });
         setToolbarActionsOpen(false);
         setRecommendationPanelOpen(false);
+        setFeatureRequestPanelOpen(false);
         setBugReportPanelOpen(false);
         setSettingsPanelOpen(false);
         showToolbarToast(`Imported ${file.name}`, "success");
@@ -2150,13 +2305,13 @@ function exportCanvas() {
 
 function submitRecommendation() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Feature requests are not set up for this board.", "error");
+    showToolbarToast("Recommendations are not set up for this board.", "error");
     return;
   }
 
   const summary = normalizeIssueSummary(recommendationSummaryInput?.value);
   if (!summary) {
-    showToolbarToast("Add a short description for the feature request.", "error");
+    showToolbarToast("Add a short description for the recommendation.", "error");
     recommendationSummaryInput?.focus();
     return;
   }
@@ -2166,7 +2321,7 @@ function submitRecommendation() {
   window.open(issueUrl, "_blank", "noopener,noreferrer");
   setRecommendationPanelOpen(false);
   if (recommendationSummaryInput) recommendationSummaryInput.value = "";
-  showToolbarToast(`Feature request opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
+  showToolbarToast(`Recommendation opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
 }
 
 // Drawing logic
@@ -2207,13 +2362,17 @@ function stopDrawing() {
   if (!isDrawing) return;
   isDrawing = false;
   if (currentPath) {
+    const isSinglePoint = !currentPathData.includes(" L ");
     let w = Math.max(maxX - minX, 10);
     let h = Math.max(maxY - minY, 10);
     const viewBox = `${minX - 5} ${minY - 5} ${w + 10} ${h + 10}`;
+    const drawingMarkup = isSinglePoint
+      ? `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><circle cx="${minX}" cy="${minY}" r="3" fill="#3fdaca"></circle></svg>`
+      : `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><path d="${currentPathData}" fill="none" stroke="#3fdaca" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
     createNode("text", minX - 5, minY - 5, { 
       width: w + 10, 
       height: h + 10, 
-      text: `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><path d="${currentPathData}" fill="none" stroke="#3fdaca" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>` 
+      text: drawingMarkup
     });
     svgLayer.removeChild(currentPath);
   }

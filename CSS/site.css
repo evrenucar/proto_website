@@ -1416,11 +1416,7 @@ html.nav-pos-left .mobile-menu {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-end;
-}
-
-html.nav-pos-left .detail-action-row {
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .detail-nav-link {
@@ -1780,6 +1776,14 @@ html.nav-pos-left .detail-action-row {
     overflow-x: hidden;
   }
 
+  .detail-action-row {
+    justify-content: flex-end;
+  }
+
+  html.nav-pos-left .detail-action-row {
+    justify-content: flex-start;
+  }
+
   .mobile-menu {
     display: block;
   }
@@ -1905,7 +1909,35 @@ html.nav-pos-left .detail-action-row {
   }
 
   .detail-related-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .detail-related-grid .content-card-media {
+    aspect-ratio: 16 / 7;
+  }
+
+  .detail-related-grid .content-card-body {
+    gap: 6px;
+    padding: 10px 10px 11px;
+  }
+
+  .detail-related-grid .content-card-pill {
+    padding: 2px 5px;
+  }
+
+  .detail-related-grid .content-card-title {
+    min-height: 0;
+    font-size: 14px;
+  }
+
+  .detail-related-grid .content-card-summary {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .detail-related-grid .content-card-footer {
+    padding-top: 6px;
   }
 
   .photo-grid {

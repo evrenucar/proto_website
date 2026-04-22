@@ -875,13 +875,15 @@ function renderInfoPage(currentFile, { tag, title, intro, items }) {
       <div class="text-grid">
         ${renderTextCards(items, currentFile)}
       </div>
+      <div class="detail-endcap">
+        ${renderEndcapActions(currentFile, "index.html")}
+      </div>
     </section>
   `;
 }
 
-function renderDetailActions(item, currentFile) {
-  const fallbackHref = relativeHref(currentFile, sectionToNavFile(item.section));
-
+function renderEndcapActions(currentFile, fallbackFile) {
+  const fallbackHref = relativeHref(currentFile, fallbackFile);
   return `
     <div class="detail-action-row">
       <a class="detail-nav-link" href="#content">
@@ -899,6 +901,10 @@ function renderDetailActions(item, currentFile) {
       </a>
     </div>
   `;
+}
+
+function renderDetailActions(item, currentFile) {
+  return renderEndcapActions(currentFile, sectionToNavFile(item.section));
 }
 
 function renderDetailRelatedItems(currentFile, item, relatedItems) {
@@ -1108,12 +1114,9 @@ function renderProjectsPage(currentFile, projectsData) {
       <div class="work-grid">
         ${projectsData.map((project) => renderProjectCard(project, currentFile)).join("")}
       </div>
-    </section>
-
-    <section class="page-section note-block">
-      <p>
-        Detailed project pages can point to synced Notion content or another external source, without changing the visible layout again.
-      </p>
+      <div class="detail-endcap">
+        ${renderEndcapActions(currentFile, "index.html")}
+      </div>
     </section>
   `;
 }
@@ -1125,16 +1128,22 @@ function renderMakingPage(currentFile, makingData) {
       <div class="mini-grid">
         ${makingData.map((item) => renderMakingCard(item, currentFile)).join("")}
       </div>
+      <div class="detail-endcap">
+        ${renderEndcapActions(currentFile, "index.html")}
+      </div>
     </section>
   `;
 }
 
-function renderPhotographyPage(photographyData) {
+function renderPhotographyPage(currentFile, photographyData) {
   return `
     <section class="page-section page-section-first">
       ${renderSectionHeader("Photography", "Analog archive", photographyPage.intro)}
       <div class="photo-grid">
         ${renderPhotoGrid(photographyData)}
+      </div>
+      <div class="detail-endcap">
+        ${renderEndcapActions(currentFile, "index.html")}
       </div>
     </section>
   `;
@@ -1146,6 +1155,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
     ? relativeHref(currentFile, board.legacySourcePath)
     : "";
   const recommendationConfig = board.recommendation || {};
+  const featureRequestConfig = board.featureRequest || {};
   const bugReportConfig = board.bugReport || {};
 
   return `
@@ -1167,6 +1177,10 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
       data-recommendation-owner="${escapeHtml(recommendationConfig.owner || "")}"
       data-recommendation-repo="${escapeHtml(recommendationConfig.repo || "")}"
       data-recommendation-labels="${escapeHtml((recommendationConfig.labels || []).join(","))}"
+      data-feature-request-type="${escapeHtml(featureRequestConfig.type || "")}"
+      data-feature-request-owner="${escapeHtml(featureRequestConfig.owner || "")}"
+      data-feature-request-repo="${escapeHtml(featureRequestConfig.repo || "")}"
+      data-feature-request-labels="${escapeHtml((featureRequestConfig.labels || []).join(","))}"
       data-bug-report-type="${escapeHtml(bugReportConfig.type || "")}"
       data-bug-report-owner="${escapeHtml(bugReportConfig.owner || "")}"
       data-bug-report-repo="${escapeHtml(bugReportConfig.repo || "")}"
@@ -1205,9 +1219,9 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             <span class="braindump-toolbar-action-label">Save</span>
           </button>
-          <button type="button" class="braindump-toolbar-action braindump-toolbar-action-desktop-only" data-tool="recommend" aria-label="Send feature request" title="Send feature request">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
-            <span class="braindump-toolbar-action-label">Feature request</span>
+          <button type="button" class="braindump-toolbar-action braindump-toolbar-action-desktop-only" data-tool="recommend" aria-label="Send recommendation" title="Send recommendation">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+            <span class="braindump-toolbar-action-label">Recommend</span>
           </button>
           <button
             type="button"
@@ -1226,9 +1240,9 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               <span class="braindump-toolbar-action-label">Save</span>
             </button>
-            <button type="button" class="braindump-toolbar-action" data-tool="recommend" aria-label="Send feature request" title="Send feature request">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
-              <span class="braindump-toolbar-action-label">Feature request</span>
+            <button type="button" class="braindump-toolbar-action braindump-toolbar-action-mobile-only" data-tool="recommend" aria-label="Send recommendation" title="Send recommendation">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+              <span class="braindump-toolbar-action-label">Recommend</span>
             </button>
             <button type="button" class="braindump-toolbar-action" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1243,6 +1257,10 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 .99-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .99 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51.99H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.99Z"></path></svg>
               <span class="braindump-toolbar-action-label">Settings</span>
             </button>
+            <button type="button" class="braindump-toolbar-action" data-tool="feature-request" aria-label="Send feature request" title="Send feature request">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
+              <span class="braindump-toolbar-action-label">Feature request</span>
+            </button>
             <button type="button" class="braindump-toolbar-action" data-tool="bug-report" aria-label="Send bug report" title="Send bug report">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.31 0-6-2.69-6-6v-3a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3c0 3.31-2.69 6-6 6Z"/><path d="M12 20v-9"/><path d="M6.53 9C5.6 8.31 4.5 8 3 8"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M17.47 9c.93-.69 2.03-1 3.53-1"/><path d="M18 13h4"/><path d="M21 21c0-2.1-1.7-3.9-3.8-4"/></svg>
               <span class="braindump-toolbar-action-label">Bug report</span>
@@ -1255,10 +1273,21 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
             id="braindump-recommend-summary"
             class="braindump-issue-input"
             maxlength="50"
+            placeholder="Short description"
+            aria-label="Short description for recommendation"
+          >
+          <button type="button" id="braindump-recommend-submit" class="braindump-issue-submit" title="Send recommendation">Send recommendation</button>
+        </div>
+        <div class="braindump-issue-panel" id="braindump-feature-panel" hidden>
+          <input
+            type="text"
+            id="braindump-feature-summary"
+            class="braindump-issue-input"
+            maxlength="50"
             placeholder="Short feature summary"
             aria-label="Short description for feature request"
           >
-          <button type="button" id="braindump-recommend-submit" class="braindump-issue-submit" title="Send feature request">Send feature request</button>
+          <button type="button" id="braindump-feature-submit" class="braindump-issue-submit" title="Send feature request">Send feature request</button>
         </div>
         <div class="braindump-issue-panel" id="braindump-bug-panel" hidden>
           <input
@@ -1317,7 +1346,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         <div class="braindump-modal-panel">
           <h2 id="braindump-modal-title" class="braindump-modal-title">Before you open GitHub</h2>
           <p id="braindump-modal-description" class="braindump-modal-description">
-            Follow these steps so the feature request is submitted correctly.
+            Follow these steps so the recommendation is submitted correctly.
           </p>
           <p class="braindump-modal-file-note">
             Downloaded file:
@@ -1325,7 +1354,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           </p>
           <ol class="braindump-modal-steps">
             <li>A <strong class="braindump-file-emphasis">.canvas.json file</strong> has been downloaded automatically.</li>
-            <li>Log in to GitHub so you can send the feature request.</li>
+            <li>Log in to GitHub so you can send the recommendation.</li>
             <li>Fill out the information on the GitHub form and modify it if necessary.</li>
             <li>Do not forget to attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>.</li>
           </ol>
@@ -1340,7 +1369,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         </div>
       </div>
     </div>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=30" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=32" defer></script>
   `;
 }
 
@@ -2007,7 +2036,7 @@ async function build() {
       ogImage: photographyData[4]?.image || seo.defaultImage,
       bodyClass: "page-photography",
       structuredData: [websiteSchema],
-      content: renderPhotographyPage(photographyData)
+      content: renderPhotographyPage("photography.html", photographyData)
     },
     ...detailItems.map((item) => ({
       file: item.detailPagePath,

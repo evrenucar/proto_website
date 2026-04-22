@@ -306,6 +306,12 @@ export const braindumpPage = {
       repo: "proto_website",
       labels: ["recommendation", "whiteboard"]
     },
+    featureRequest: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["enhancement", "whiteboard"]
+    },
     bugReport: {
       type: "issue",
       owner: "evrenucar",
