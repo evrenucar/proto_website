@@ -1,0 +1,75 @@
+{
+  "nodes": [
+    {
+      "id": "eurocrate-title",
+      "type": "text",
+      "x": 100,
+      "y": 60,
+      "width": 960,
+      "height": 120,
+      "text": "Eurocrate storage system\nA universal 600×400 modular storage solution built around standard eurocontainers."
+    },
+    {
+      "id": "eurocrate-constraints",
+      "type": "text",
+      "x": 100,
+      "y": 220,
+      "width": 300,
+      "height": 220,
+      "text": "Constraints\n600×400×75mm (shallow)\n600×400×170mm (mid)\n600×400×270mm (deep)\n\nAll sizes interlock on the same 600×400 footprint."
+    },
+    {
+      "id": "eurocrate-structure",
+      "type": "text",
+      "x": 440,
+      "y": 220,
+      "width": 300,
+      "height": 220,
+      "text": "Frame structure\nSteel welded frame with crate runners.\nHDPE or teflon strips on sliding surfaces.\nHeavy-duty locking casters at base.\nWeight ballast at bottom tier."
+    },
+    {
+      "id": "eurocrate-safety",
+      "type": "text",
+      "x": 780,
+      "y": 220,
+      "width": 280,
+      "height": 220,
+      "text": "Safety\nAnti-tip interlock: activates if crate partially withdrawn, releases when fully removed.\nOnly one crate full-open at a time.\nBottom crate always heavier than top load."
+    },
+    {
+      "id": "eurocrate-subcontainers",
+      "type": "text",
+      "x": 100,
+      "y": 480,
+      "width": 300,
+      "height": 180,
+      "text": "Sub-containers\nA4/A5/A6 cardboard for small parts.\nEuroPlus flex organizer dividers.\nFitting both 400×300 and 600×400 crate sizes."
+    },
+    {
+      "id": "eurocrate-sourcing",
+      "type": "link",
+      "x": 440,
+      "y": 480,
+      "width": 300,
+      "height": 140,
+      "url": "https://www.emtrade.nl",
+      "title": "EMtrade (second-hand crates)",
+      "description": "Primary sourcing for used eurocontainers at low cost."
+    },
+    {
+      "id": "eurocrate-open-questions",
+      "type": "text",
+      "x": 780,
+      "y": 480,
+      "width": 280,
+      "height": 180,
+      "text": "Open questions\nDust sealing: thin lid material on friction surface?\nSliding surface coating: HDPE or teflon tape?\nFrame material gauge for the target load?\nMarktplaats as alternative crate source?"
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "z": 0.85
+  }
+}

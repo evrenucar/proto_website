@@ -2,7 +2,18 @@
 
 ## Scope
 
-Use this checklist when Braindump changes affect touch input, wrapped toolbar layout, viewport-height behavior, or soft-keyboard interaction.
+Use this checklist for the final mobile smoke pass when Braindump changes affect touch input, wrapped toolbar layout, viewport-height behavior, or soft-keyboard interaction.
+
+## Default Minimal Final Pass
+
+Run only the smallest subset that proves the implemented mobile-facing change works:
+
+- load the page in a real mobile context
+- check the changed touch or layout behavior directly
+- confirm the board remains controllable after the interaction
+- take one screenshot only if the result is visibly important or contested
+
+Only expand into the full checklist when the change clearly affects multiple mobile behaviors or the user asks for broader coverage.
 
 ## Environment
 
@@ -29,15 +40,15 @@ Use this checklist when Braindump changes affect touch input, wrapped toolbar la
   - screenshots written to an absolute repo path
 - Use `browser_console_messages` after the run for obvious script regressions.
 
-## Required Screenshot Set
+## Screenshot Guidance
 
-- Mobile initial state with toolbar visible
-- Text note created on mobile
-- Drawing created on mobile
-- Any viewport-height or keyboard-overlap regression
-- Any touch interaction failure that changes layout or selection state
+- No screenshot is required for every run.
+- Prefer a single screenshot of the changed mobile behavior when useful.
+- Add more screenshots only for visible failures, viewport issues, or touch regressions that are hard to describe.
 
 ## Interaction Checklist
+
+Use only the sections touched by the change. The rest are reference coverage, not default required steps.
 
 ### 1. Initial mobile layout
 

@@ -1,3 +1,21 @@
-- when I open an image. I cannot exit by clicking in the black area if I click on the left or the right of smaller images. I think the active zone is a bit larger than the image. Ideally if I click anywhere else than the image I should be able to exit the focus view.
+# General Issues And Tasks
 
-- page database and Notion content system planning now lives in `agents/page_database/page_database_plan.md` and `agents/page_database/page_database_tasks.md`.
+## Primary planning files
+
+- `.agents/holistic_planning/holistic_planning.md`
+  - strategic product summary and architecture direction
+- `.agents/holistic_planning/holistic_tasks.md`
+  - ordered task tracker, priority list, review state, testing expectations, completed review flow, and `old_tasks`
+
+## Note
+
+- Active general tasks have moved to `.agents/holistic_planning/holistic_tasks.md`.
+- Older or currently deprioritized tasks should also live there under `old_tasks`.
+- Do not duplicate active task state across both files unless there is a very specific reason.
+
+## Reference docs
+
+- Holistic product planning now lives in `.agents/holistic_planning/holistic_planning.md`.
+- Holistic product task tracking now lives in `.agents/holistic_planning/holistic_tasks.md`.
+- Page database and Notion content system planning lives in `.agents/page_database/page_database_plan.md` and `.agents/page_database/page_database_tasks.md`.
+- Braindump and Cosmoboard planning lives under `.agents/whiteboard/`.

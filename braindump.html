@@ -43,10 +43,10 @@
       } catch (error) {}
     </script>
 
-
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Evren Ucar","url":"https://evrenucar.com","description":"Portfolio website for Evren Ucar, a TU Delft graduate and freelance industrial design engineer working across mechanics, electronics, prototyping, and hands-on making."}</script>
     <script src="JavaScript/site.js?v=5" defer></script>
   </head>
-  <body class="page-braindump">
+  <body class="page-braindump page-board">
     <a class="skip-link" href="#content">Skip to content</a>
 
     <button
@@ -64,7 +64,7 @@
 
     <aside class="sidenav" id="sidenav_menu" aria-label="Primary">
       <div class="sidenav_links">
-        <a class="nav-link nav-link-first" href="index.html">About Me</a><a class="nav-link" href="projects.html">Projects</a><a class="nav-link" href="things_i_do.html">Things i do</a><a class="nav-link" href="photography.html">Photography</a><a class="nav-link" href="open-quests.html">Open-Quests</a><a class="nav-link" href="cool-bookmarks.html">Cool bookmarks</a><a class="nav-link is-current" href="braindump.html" aria-current="page">Braindump</a>
+        <a class="nav-link nav-link-first" href="index.html">About Me</a><a class="nav-link" href="projects.html">Projects</a><a class="nav-link" href="things_i_do.html">Things i do</a><a class="nav-link" href="photography.html">Photography</a><a class="nav-link" href="open-quests.html">Open-Quests</a><a class="nav-link" href="cool-bookmarks.html">Cool bookmarks</a><a class="nav-link is-current" href="braindump.html" aria-current="page">Braindump</a><a class="nav-link" href="cosmoboard.html">Cosmoboard</a>
       </div>
       <div class="sidenav_contacts">
         <button class="contact-button" type="button" aria-label="Copy Evren Ucar email address" data-copy-email data-email-user="9991racunerve" data-email-domain="moc.liamg" data-email-reversed="true"><img src="icon/gmail_white.png" alt="Email icon"></button>
@@ -95,13 +95,15 @@
       </button>
       <main id="content" class="page-content">
 
-    <link rel="stylesheet" href="CSS/braindump.css?v=12">
+    <link rel="stylesheet" href="CSS/braindump.css?v=26">
     <div
       class="braindump-viewport"
       id="braindump-viewport"
+      data-board-app="true"
       data-board-slug="braindump"
       data-board-title="Braindump"
       data-board-source="content/boards/braindump/current.canvas"
+      data-board-source-version="44941955bcd3"
       data-board-legacy-source="content/braindump-state.json"
       data-board-repo-path="content/boards/braindump/current.canvas"
       data-board-storage-key="board:braindump"
@@ -122,7 +124,7 @@
       data-bug-report-repo="proto_website"
       data-bug-report-labels="bug,whiteboard"
     >
-      <div class="braindump-canvas" id="braindump-canvas">
+      <div class="braindump-canvas" id="braindump-canvas" data-board-role="canvas">
         <svg class="braindump-grid" aria-hidden="true" viewBox="-120000 -120000 240000 240000">
           <defs>
             <pattern id="braindump-grid-pattern" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
@@ -131,10 +133,10 @@
           </defs>
           <rect x="-120000" y="-120000" width="240000" height="240000" fill="url(#braindump-grid-pattern)"></rect>
         </svg>
-        <svg id="braindump-svg-layer"></svg>
+        <svg id="braindump-svg-layer" data-board-role="svg-layer"></svg>
       </div>
-      <div class="braindump-toolbar-shell">
-        <div class="braindump-toolbar">
+      <div class="braindump-toolbar-shell" data-board-ui="toolbar-shell">
+        <div class="braindump-toolbar" data-board-ui="toolbar">
           <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
           </button>
@@ -164,6 +166,7 @@
             class="braindump-toolbar-more"
             id="braindump-toolbar-more"
             data-tool="more"
+            data-board-ui="toolbar-more"
             aria-label="More board actions"
             aria-controls="braindump-toolbar-actions"
             aria-expanded="false"
@@ -171,7 +174,7 @@
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
           </button>
-          <div class="braindump-toolbar-actions" id="braindump-toolbar-actions" aria-label="Board actions">
+          <div class="braindump-toolbar-actions" id="braindump-toolbar-actions" data-board-ui="toolbar-actions" aria-label="Board actions">
             <button type="button" class="braindump-toolbar-action braindump-toolbar-action-mobile-only" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               <span class="braindump-toolbar-action-label">Save</span>
@@ -185,7 +188,7 @@
               <span class="braindump-toolbar-action-label">Export</span>
             </button>
             <label class="braindump-file-label braindump-toolbar-action" aria-label="Import .canvas or .canvas.json" title="Import (.canvas / .canvas.json)">
-              <input type="file" id="braindump-import" accept=".canvas,.canvas.json,.json" hidden>
+              <input type="file" id="braindump-import" data-board-ui="import-input" accept=".canvas,.canvas.json,.json" hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span class="braindump-toolbar-action-label">Import</span>
             </label>
@@ -203,7 +206,7 @@
             </button>
           </div>
         </div>
-        <div class="braindump-issue-panel" id="braindump-recommend-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-recommend-panel" data-board-ui="recommend-panel" hidden>
           <input
             type="text"
             id="braindump-recommend-summary"
@@ -214,7 +217,7 @@
           >
           <button type="button" id="braindump-recommend-submit" class="braindump-issue-submit" title="Send recommendation">Send recommendation</button>
         </div>
-        <div class="braindump-issue-panel" id="braindump-feature-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-feature-panel" data-board-ui="feature-panel" hidden>
           <input
             type="text"
             id="braindump-feature-summary"
@@ -225,7 +228,7 @@
           >
           <button type="button" id="braindump-feature-submit" class="braindump-issue-submit" title="Send feature request">Send feature request</button>
         </div>
-        <div class="braindump-issue-panel" id="braindump-bug-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-bug-panel" data-board-ui="bug-panel" hidden>
           <input
             type="text"
             id="braindump-bug-summary"
@@ -236,7 +239,7 @@
           >
           <button type="button" id="braindump-bug-submit" class="braindump-issue-submit" title="Send bug report">Send bug report</button>
         </div>
-        <div class="braindump-settings-panel" id="braindump-settings-panel" hidden>
+        <div class="braindump-settings-panel" id="braindump-settings-panel" data-board-ui="settings-panel" hidden>
           <section class="braindump-settings-section" aria-labelledby="braindump-settings-title">
             <div class="braindump-settings-header">
               <h2 id="braindump-settings-title" class="braindump-settings-title">Settings</h2>
@@ -268,11 +271,12 @@
             </ul>
           </section>
         </div>
-        <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" role="status" aria-live="polite" hidden></div>
+        <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" data-board-ui="toolbar-toast" role="status" aria-live="polite" hidden></div>
       </div>
       <div
         id="braindump-modal"
         class="braindump-modal"
+        data-board-ui="recommend-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="braindump-modal-title"
@@ -305,7 +309,8 @@
         </div>
       </div>
     </div>
-    <script src="JavaScript/braindump.js?v=32" defer></script>
+
+    <script src="JavaScript/braindump.js?v=46" defer></script>
 
       </main>
 
@@ -317,7 +322,7 @@
           <button class="footer-copy-button" type="button" aria-label="Copy Evren Ucar email address" data-copy-email data-email-user="9991racunerve" data-email-domain="moc.liamg" data-email-reversed="true">Copy email</button>
         </div>
         <nav class="footer-block footer-links footer-nav" aria-label="Footer navigation">
-          <a href="index.html">About Me</a><a href="projects.html">Projects</a><a href="things_i_do.html">Things i do</a><a href="photography.html">Photography</a><a href="open-quests.html">Open-Quests</a><a href="cool-bookmarks.html">Cool bookmarks</a><a href="braindump.html">Braindump</a>
+          <a href="index.html">About Me</a><a href="projects.html">Projects</a><a href="things_i_do.html">Things i do</a><a href="photography.html">Photography</a><a href="open-quests.html">Open-Quests</a><a href="cool-bookmarks.html">Cool bookmarks</a><a href="braindump.html">Braindump</a><a href="cosmoboard.html">Cosmoboard</a>
         </nav>
         <div class="footer-block footer-links footer-social">
           <a href="https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/" target="_blank" rel="noreferrer">LinkedIn</a>

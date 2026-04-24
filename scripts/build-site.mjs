@@ -1,9 +1,10 @@
+import { createHash } from "node:crypto";
 import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  boardPages,
   bookmarksPage,
-  braindumpPage,
   homePage,
   makingPage,
   navigation,
@@ -25,18 +26,19 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const buildDate = new Date().toISOString().slice(0, 10);
 const boardsDir = path.join(rootDir, "content", "boards");
+const registryFile = path.join(rootDir, "src", "registry.json");
 const preservedBoardsDir = path.join(rootDir, ".build-preserve", "boards");
-const legacyBoardSourcePath = braindumpPage.board?.legacySourcePath
-  ? path.join(rootDir, braindumpPage.board.legacySourcePath)
-  : null;
-const preservedLegacyBoardSourcePath = path.join(
-  rootDir,
-  ".build-preserve",
-  "legacy-braindump-state.json"
-);
+const legacyBoardFiles = boardPages
+  .map((page) => page.board?.legacySourcePath)
+  .filter(Boolean)
+  .map((legacySourcePath) => ({
+    sourcePath: path.join(rootDir, legacySourcePath),
+    preservedPath: path.join(rootDir, ".build-preserve", path.basename(legacySourcePath))
+  }));
 const notionProjectOverridesPath = path.join(rootDir, "src", "notion-projects.json");
 const notionItemsPath = path.join(rootDir, "src", "notion-items.json");
 const photographyItemsPath = path.join(rootDir, "photography_assets", "photos.json");
+let boardSourceVersionMap = new Map();
 
 const sectionMeta = {
   projects: {
@@ -69,6 +71,29 @@ function escapeHtml(value) {
 
 function trimGeneratedWhitespace(value) {
   return String(value || "").replace(/[ \t]+\n/g, "\n");
+}
+
+function hashContent(value) {
+  return createHash("sha1").update(String(value || "")).digest("hex").slice(0, 12);
+}
+
+async function buildBoardSourceVersionMap() {
+  const entries = await Promise.all(
+    boardPages.map(async (page) => {
+      try {
+        const sourceContent = await readFile(path.join(rootDir, page.board.sourcePath), "utf8");
+        return [page.board.sourcePath, hashContent(sourceContent)];
+      } catch (error) {
+        return [page.board.sourcePath, ""];
+      }
+    })
+  );
+
+  return new Map(entries);
+}
+
+function getBoardSourceVersion(sourcePath) {
+  return boardSourceVersionMap.get(sourcePath) || "";
 }
 
 function pageTitle(title) {
@@ -932,6 +957,20 @@ function renderDetailPage(item, currentFile, relatedItems = []) {
     .filter(Boolean);
   const sectionClass = sectionToCssToken(item.section);
 
+  const boardEmbed = item.board
+    ? `
+      <section class="detail-board-section">
+        <div class="detail-board-header">
+          <h2 class="detail-board-heading">Board</h2>
+          <p class="detail-board-copy">The working board for this project. Pan to explore — open the full board for the editing surface.</p>
+        </div>
+        ${renderEmbeddedBoardPreviewAssets(currentFile)}
+        ${renderEmbeddedBoardPreview(currentFile, item.board, {
+          fullBoardHref: item.board.pageFile || ""
+        })}
+      </section>`
+    : "";
+
   return `
     <article class="page-section page-section-first detail-page detail-page--${escapeHtml(sectionClass)}">
       <div class="detail-page-intro">
@@ -974,6 +1013,7 @@ function renderDetailPage(item, currentFile, relatedItems = []) {
       <div class="article-content">
         ${resolveInlineContentPaths(currentFile, item.detailPage?.contentHtml || "")}
       </div>
+      ${boardEmbed}
       <div class="detail-endcap">
         ${renderDetailRelatedItems(currentFile, item, relatedItems)}
         ${renderDetailActions(item, currentFile)}
@@ -988,6 +1028,17 @@ function renderHomePage(currentFile, { projectsData, makingData, openQuestsData,
     .filter(Boolean);
   const makingPreview = makingData.slice(0, 6);
   const photographyPreview = photographyData.slice(0, 6);
+  const homeBoardPreviewContent = {
+    braindump: {
+      copy:
+        "The original board stays loose and utility-first. It is where sketches, saved references, and spatial notes can stay rough without losing structure."
+    },
+    cosmoboard: {
+      copy:
+        "The onboarding board turns the whiteboard system into a navigable product direction. The intro now lives inside the canvas instead of being pinned to the viewport."
+    }
+  };
+  const homeBoardPreviewPages = boardPages.filter((page) => homeBoardPreviewContent[page.board?.slug]);
 
   const facts = homePage.facts
     .map(
@@ -1022,6 +1073,43 @@ function renderHomePage(currentFile, { projectsData, makingData, openQuestsData,
     )
     .join("");
 
+  const boardPreviewSection = homeBoardPreviewPages.length > 0
+    ? `
+    <section class="page-section board-preview-section">
+      ${renderSectionHeader("Boards", "Board previews", [
+        "Read-only board previews sit directly on the home page so the whiteboard system is visible in context without turning the page into a second full editor."
+      ])}
+      ${renderEmbeddedBoardPreviewAssets(currentFile)}
+      <div class="board-preview-grid">
+        ${homeBoardPreviewPages
+          .map((page) => {
+            const previewContent = homeBoardPreviewContent[page.board.slug];
+
+            return `
+              <article class="text-card board-preview-card">
+                <div class="board-preview-copy">
+                  <h3>${escapeHtml(page.board.title)}</h3>
+                  <p>${escapeHtml(previewContent.copy)}</p>
+                  <div class="text-card-actions">
+                    <a class="action-link" href="${relativeHref(currentFile, page.file)}">Open the full ${escapeHtml(
+                      page.board.title
+                    )}</a>
+                  </div>
+                </div>
+                <div class="board-preview-embed">
+                  ${renderEmbeddedBoardPreview(currentFile, page.board, {
+                    fullBoardHref: page.file
+                  })}
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `
+    : "";
+
   return `
     <section class="home-hero">
       <img class="main-photo" src="${homePage.hero.image.src}" alt="${escapeHtml(homePage.hero.image.alt)}">
@@ -1051,6 +1139,8 @@ function renderHomePage(currentFile, { projectsData, makingData, openQuestsData,
         ${processCards}
       </div>
     </section>
+
+    ${boardPreviewSection}
 
     <section class="page-section">
       ${renderSectionHeader("Projects", "Selected projects", [
@@ -1149,8 +1239,43 @@ function renderPhotographyPage(currentFile, photographyData) {
   `;
 }
 
-function renderBraindumpPage(currentFile, board = braindumpPage.board) {
+function renderBoardIntroPanel(currentFile, panel) {
+  if (!panel) {
+    return "";
+  }
+
+  const highlights = (panel.highlights || [])
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
+  const actions = (panel.actions || [])
+    .map((action) => {
+      const href = action.external ? action.href : relativeHref(currentFile, action.href);
+      const externalAttrs = action.external ? ' target="_blank" rel="noreferrer"' : "";
+      return `<a class="board-page-panel-link" href="${escapeHtml(href)}"${externalAttrs}>${escapeHtml(
+        action.label
+      )}</a>`;
+    })
+    .join("");
+
+  return `
+    <aside class="board-page-panel" aria-label="${escapeHtml(panel.title || "Board intro")}">
+      <p class="board-page-panel-eyebrow">${escapeHtml(panel.eyebrow || "Board")}</p>
+      <h1 class="board-page-panel-title">${escapeHtml(panel.title || "")}</h1>
+      ${renderParagraphs(panel.copy || [], "board-page-panel-copy")}
+      <ul class="board-page-panel-list">
+        ${highlights}
+      </ul>
+      <div class="board-page-panel-actions">
+        ${actions}
+      </div>
+      <p class="board-page-panel-note">${escapeHtml(panel.note || "")}</p>
+    </aside>
+  `;
+}
+
+function renderBoardPage(currentFile, board, introPanel = null) {
   const boardSourceHref = relativeHref(currentFile, board.sourcePath);
+  const boardSourceVersion = getBoardSourceVersion(board.sourcePath);
   const legacyBoardSourceHref = board.legacySourcePath
     ? relativeHref(currentFile, board.legacySourcePath)
     : "";
@@ -1159,13 +1284,15 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
   const bugReportConfig = board.bugReport || {};
 
   return `
-    <link rel="stylesheet" href="CSS/braindump.css?v=12">
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=26">
     <div
       class="braindump-viewport"
       id="braindump-viewport"
+      data-board-app="true"
       data-board-slug="${escapeHtml(board.slug)}"
       data-board-title="${escapeHtml(board.title)}"
       data-board-source="${escapeHtml(boardSourceHref)}"
+      data-board-source-version="${escapeHtml(boardSourceVersion)}"
       data-board-legacy-source="${escapeHtml(legacyBoardSourceHref)}"
       data-board-repo-path="${escapeHtml(board.sourcePath)}"
       data-board-storage-key="${escapeHtml(board.storageKey)}"
@@ -1186,7 +1313,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
       data-bug-report-repo="${escapeHtml(bugReportConfig.repo || "")}"
       data-bug-report-labels="${escapeHtml((bugReportConfig.labels || []).join(","))}"
     >
-      <div class="braindump-canvas" id="braindump-canvas">
+      <div class="braindump-canvas" id="braindump-canvas" data-board-role="canvas">
         <svg class="braindump-grid" aria-hidden="true" viewBox="-120000 -120000 240000 240000">
           <defs>
             <pattern id="braindump-grid-pattern" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
@@ -1195,10 +1322,10 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           </defs>
           <rect x="-120000" y="-120000" width="240000" height="240000" fill="url(#braindump-grid-pattern)"></rect>
         </svg>
-        <svg id="braindump-svg-layer"></svg>
+        <svg id="braindump-svg-layer" data-board-role="svg-layer"></svg>
       </div>
-      <div class="braindump-toolbar-shell">
-        <div class="braindump-toolbar">
+      <div class="braindump-toolbar-shell" data-board-ui="toolbar-shell">
+        <div class="braindump-toolbar" data-board-ui="toolbar">
           <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
           </button>
@@ -1228,6 +1355,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
             class="braindump-toolbar-more"
             id="braindump-toolbar-more"
             data-tool="more"
+            data-board-ui="toolbar-more"
             aria-label="More board actions"
             aria-controls="braindump-toolbar-actions"
             aria-expanded="false"
@@ -1235,7 +1363,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
           </button>
-          <div class="braindump-toolbar-actions" id="braindump-toolbar-actions" aria-label="Board actions">
+          <div class="braindump-toolbar-actions" id="braindump-toolbar-actions" data-board-ui="toolbar-actions" aria-label="Board actions">
             <button type="button" class="braindump-toolbar-action braindump-toolbar-action-mobile-only" data-tool="save" aria-label="Save Board (Ctrl+S)" title="Save (Ctrl+S)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               <span class="braindump-toolbar-action-label">Save</span>
@@ -1249,7 +1377,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
               <span class="braindump-toolbar-action-label">Export</span>
             </button>
             <label class="braindump-file-label braindump-toolbar-action" aria-label="Import .canvas or .canvas.json" title="Import (.canvas / .canvas.json)">
-              <input type="file" id="braindump-import" accept=".canvas,.canvas.json,.json" hidden>
+              <input type="file" id="braindump-import" data-board-ui="import-input" accept=".canvas,.canvas.json,.json" hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span class="braindump-toolbar-action-label">Import</span>
             </label>
@@ -1267,7 +1395,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
             </button>
           </div>
         </div>
-        <div class="braindump-issue-panel" id="braindump-recommend-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-recommend-panel" data-board-ui="recommend-panel" hidden>
           <input
             type="text"
             id="braindump-recommend-summary"
@@ -1278,7 +1406,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           >
           <button type="button" id="braindump-recommend-submit" class="braindump-issue-submit" title="Send recommendation">Send recommendation</button>
         </div>
-        <div class="braindump-issue-panel" id="braindump-feature-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-feature-panel" data-board-ui="feature-panel" hidden>
           <input
             type="text"
             id="braindump-feature-summary"
@@ -1289,7 +1417,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           >
           <button type="button" id="braindump-feature-submit" class="braindump-issue-submit" title="Send feature request">Send feature request</button>
         </div>
-        <div class="braindump-issue-panel" id="braindump-bug-panel" hidden>
+        <div class="braindump-issue-panel" id="braindump-bug-panel" data-board-ui="bug-panel" hidden>
           <input
             type="text"
             id="braindump-bug-summary"
@@ -1300,7 +1428,7 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
           >
           <button type="button" id="braindump-bug-submit" class="braindump-issue-submit" title="Send bug report">Send bug report</button>
         </div>
-        <div class="braindump-settings-panel" id="braindump-settings-panel" hidden>
+        <div class="braindump-settings-panel" id="braindump-settings-panel" data-board-ui="settings-panel" hidden>
           <section class="braindump-settings-section" aria-labelledby="braindump-settings-title">
             <div class="braindump-settings-header">
               <h2 id="braindump-settings-title" class="braindump-settings-title">Settings</h2>
@@ -1332,11 +1460,12 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
             </ul>
           </section>
         </div>
-        <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" role="status" aria-live="polite" hidden></div>
+        <div class="braindump-toolbar-toast" id="braindump-toolbar-toast" data-board-ui="toolbar-toast" role="status" aria-live="polite" hidden></div>
       </div>
       <div
         id="braindump-modal"
         class="braindump-modal"
+        data-board-ui="recommend-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="braindump-modal-title"
@@ -1369,8 +1498,77 @@ function renderBraindumpPage(currentFile, board = braindumpPage.board) {
         </div>
       </div>
     </div>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=32" defer></script>
+    ${renderBoardIntroPanel(currentFile, introPanel)}
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=46" defer></script>
   `;
+}
+
+function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
+  const { fullBoardHref = "" } = options;
+  const boardSourceHref = relativeHref(currentFile, board.sourcePath);
+  const boardSourceVersion = getBoardSourceVersion(board.sourcePath);
+  const legacyBoardSourceHref = board.legacySourcePath
+    ? relativeHref(currentFile, board.legacySourcePath)
+    : "";
+  const fullHref = fullBoardHref ? relativeHref(currentFile, fullBoardHref) : "";
+  const previewStorageKey = `${board.storageKey}:preview`;
+  const previewLegacyStorageKey = board.legacyStorageKey ? `${board.legacyStorageKey}:preview` : "";
+
+  return `
+    <div
+      class="braindump-viewport"
+      data-board-app="true"
+      data-board-mode="preview"
+      data-board-slug="${escapeHtml(board.slug)}"
+      data-board-title="${escapeHtml(board.title)}"
+      data-board-source="${escapeHtml(boardSourceHref)}"
+      data-board-source-version="${escapeHtml(boardSourceVersion)}"
+      data-board-legacy-source="${escapeHtml(legacyBoardSourceHref)}"
+      data-board-repo-path="${escapeHtml(board.sourcePath)}"
+      data-board-storage-key="${escapeHtml(previewStorageKey)}"
+      data-board-legacy-storage-key="${escapeHtml(previewLegacyStorageKey)}"
+      data-board-full-href="${escapeHtml(fullHref)}"
+    >
+      <div class="braindump-canvas" data-board-role="canvas">
+        <svg class="braindump-grid" aria-hidden="true" viewBox="-120000 -120000 240000 240000">
+          <defs>
+            <pattern id="braindump-grid-pattern-${escapeHtml(board.slug)}" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+              <circle class="braindump-grid-dot" cx="1" cy="1" r="1"></circle>
+            </pattern>
+          </defs>
+          <rect x="-120000" y="-120000" width="240000" height="240000" fill="url(#braindump-grid-pattern-${escapeHtml(board.slug)})"></rect>
+        </svg>
+        <svg data-board-role="svg-layer"></svg>
+      </div>
+      <div class="braindump-toolbar-shell" data-board-ui="toolbar-shell">
+        <div class="braindump-toolbar" data-board-ui="toolbar">
+          <button type="button" data-tool="pan" aria-label="Pan" title="Pan">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heroicon-hand"><path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
+          </button>
+        </div>
+        <div class="braindump-toolbar-toast" data-board-ui="toolbar-toast" role="status" aria-live="polite" hidden></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEmbeddedBoardPreviewAssets(currentFile) {
+  return `
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=26">
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=46" defer></script>
+  `;
+}
+
+function createBoardPageDefinition(page) {
+  return {
+    file: page.file,
+    title: page.title,
+    description: page.description,
+    ogImage: seo.defaultImage,
+    bodyClass: `page-${page.board.slug} page-board`,
+    structuredData: [websiteSchema],
+    content: renderBoardPage(page.file, page.board, page.introPanel || null)
+  };
 }
 
 function renderPlaceholderPage(title, bodyCopy) {
@@ -1590,6 +1788,7 @@ function normalizeNotionItem(item) {
     lastUpdatedLabel: formatDateLabel(dateModified),
     detailPage,
     detailPagePath,
+    board: item.board || null,
     cardVariant: item.card?.variant || collectionConfig.cardVariant || "",
     cardSize: item.card?.size || collectionConfig.defaultCardSize || "",
     cardFields: normalizeFieldList(item.card?.fields, normalizeFieldList(collectionConfig.defaultCardFields)),
@@ -1659,16 +1858,18 @@ async function preserveBoardContent() {
     }
   }
 
-  if (!legacyBoardSourcePath) return;
-
-  try {
-    await access(legacyBoardSourcePath);
-    await cp(legacyBoardSourcePath, preservedLegacyBoardSourcePath, { force: true });
-  } catch (error) {
-    if (error && error.code !== "ENOENT") {
-      throw error;
-    }
-  }
+  await Promise.all(
+    legacyBoardFiles.map(async ({ sourcePath, preservedPath }) => {
+      try {
+        await access(sourcePath);
+        await cp(sourcePath, preservedPath, { force: true });
+      } catch (error) {
+        if (error && error.code !== "ENOENT") {
+          throw error;
+        }
+      }
+    })
+  );
 }
 
 async function restoreBoardContent() {
@@ -1684,10 +1885,11 @@ async function restoreBoardContent() {
     }
   }
 
-  if (legacyBoardSourcePath) {
+  for (const { preservedPath } of legacyBoardFiles) {
     try {
-      await access(preservedLegacyBoardSourcePath);
+      await access(preservedPath);
       hasPreservedLegacyBoard = true;
+      break;
     } catch (error) {
       if (error && error.code !== "ENOENT") {
         throw error;
@@ -1706,15 +1908,19 @@ async function restoreBoardContent() {
     await cp(preservedBoardsDir, boardsDir, { recursive: true, force: true });
   }
 
-  if (legacyBoardSourcePath && hasPreservedLegacyBoard) {
-    try {
-      await mkdir(path.dirname(legacyBoardSourcePath), { recursive: true });
-      await cp(preservedLegacyBoardSourcePath, legacyBoardSourcePath, { force: true });
-    } catch (error) {
-      if (error && error.code !== "ENOENT") {
-        throw error;
-      }
-    }
+  if (hasPreservedLegacyBoard) {
+    await Promise.all(
+      legacyBoardFiles.map(async ({ sourcePath, preservedPath }) => {
+        try {
+          await mkdir(path.dirname(sourcePath), { recursive: true });
+          await cp(preservedPath, sourcePath, { force: true });
+        } catch (error) {
+          if (error && error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+      })
+    );
   }
 
   await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
@@ -1951,7 +2157,35 @@ ${urls}
 `;
 }
 
-async function build() {
+export async function build() {
+  boardSourceVersionMap = await buildBoardSourceVersionMap();
+
+  // Load and validate content registry
+  try {
+    const registryRaw = await readFile(registryFile, "utf8");
+    const registry = JSON.parse(registryRaw);
+    const types = ["boards", "notes", "assets", "embeds"];
+    const counts = types.map((t) => `${(registry[t] || []).length} ${t}`).join(", ");
+    console.log(`[registry] v${registry.version || 0}: ${counts}`);
+
+    // Validate that registered source files exist
+    const allEntries = types.flatMap((t) =>
+      (registry[t] || []).map((e) => ({ type: t, slug: e.slug, path: e.sourcePath || e.file }))
+    );
+    await Promise.all(
+      allEntries.map(async ({ type, slug, path: p }) => {
+        if (!p) return;
+        try {
+          await access(path.join(rootDir, p));
+        } catch {
+          console.warn(`[registry] WARNING: ${type}/${slug} references missing file: ${p}`);
+        }
+      })
+    );
+  } catch (err) {
+    console.warn(`[registry] Could not load registry: ${err.message}`);
+  }
+
   const { projectsData, makingData, openQuestsData, coolBookmarksData, photographyData, detailItems } =
     await loadContentData();
   await preserveBoardContent();
@@ -2020,15 +2254,7 @@ async function build() {
         items: coolBookmarksData
       })
     },
-    {
-      file: "braindump.html",
-      title: braindumpPage.title,
-      description: braindumpPage.description,
-      ogImage: seo.defaultImage,
-      bodyClass: "page-braindump",
-      structuredData: [],
-      content: renderBraindumpPage("braindump.html", braindumpPage.board)
-    },
+    ...boardPages.map(createBoardPageDefinition),
     {
       file: "photography.html",
       title: "Photography",
@@ -2111,6 +2337,35 @@ async function build() {
 
   await restoreBoardContent();
 
+  // Copy apps directory to content/apps
+  const srcAppsDir = path.join(rootDir, "src", "apps");
+  const destAppsDir = path.join(rootDir, "content", "apps");
+  try {
+    await access(srcAppsDir);
+    await cp(srcAppsDir, destAppsDir, { recursive: true, force: true });
+  } catch (err) {
+    if (err.code !== "ENOENT") console.warn("[apps] Failed to copy apps:", err.message);
+  }
+
+  // Export base data for the runtime base/database node type
+  const baseDataDir = path.join(rootDir, "content", "base-data");
+  await mkdir(baseDataDir, { recursive: true });
+  const allContentItems = [...projectsData, ...makingData, ...openQuestsData, ...coolBookmarksData];
+  const baseItems = allContentItems.map((item) => ({
+    slug: item.slug || "",
+    section: item.section || "",
+    title: (item.title || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]+\s*/u, ""),
+    category: item.category || "",
+    year: item.year || "",
+    publishingStatus: item.publishingStatus || "",
+    effort: item.effort || "",
+    summary: item.summary || "",
+    dateAdded: item.dateAdded || "",
+    dateModified: item.dateModified || item.lastUpdated || "",
+    hasBoard: !!item.board?.sourcePath
+  }));
+  await writeFile(path.join(baseDataDir, "items.json"), JSON.stringify(baseItems, null, 0), "utf8");
+
   await Promise.all([
     writeFile(
       path.join(rootDir, "robots.txt"),
@@ -2121,7 +2376,9 @@ async function build() {
   ]);
 }
 
-build().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  build().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

@@ -1,0 +1,181 @@
+{
+  "nodes": [
+    {
+      "id": "cosmo-title",
+      "type": "text",
+      "x": 120,
+      "y": 80,
+      "width": 1220,
+      "height": 170,
+      "text": "Cosmoboard\nA first onboarding board inside the current site\nFile-first. Local-first. Oriented, not just captured."
+    },
+    {
+      "id": "cosmo-origin",
+      "type": "text",
+      "x": 120,
+      "y": 290,
+      "width": 420,
+      "height": 240,
+      "text": "This is the first concrete slice of the broader Cosmoboard direction. It stays inside evrenucar.com and uses the same board surface as Braindump, but shifts the focus from freeform capture toward orientation."
+    },
+    {
+      "id": "cosmo-structure",
+      "type": "text",
+      "x": 580,
+      "y": 290,
+      "width": 420,
+      "height": 240,
+      "text": "The board introduces how boards, markdown, bases, and embeds should work together. Boards stay spatial, markdown stays durable, bases organize files and metadata, and GitHub remains the near-term collaboration bridge."
+    },
+    {
+      "id": "cosmo-next",
+      "type": "text",
+      "x": 1040,
+      "y": 290,
+      "width": 300,
+      "height": 240,
+      "text": "Near term\nGitHub handles async review and versioning for now.\nPreview-first embeds, multiple boards per page, markdown references, and deeper base views are the next layers after this starter board."
+    },
+    {
+      "id": "cosmo-boards",
+      "type": "text",
+      "x": 120,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "text": "Boards\nBoards map a topic or project spatially.\nUse the canvas for orientation, grouping, and navigation."
+    },
+    {
+      "id": "cosmo-markdown",
+      "type": "text",
+      "x": 420,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "text": "Markdown\nMarkdown holds notes, specs, and durable writing.\nKeep the longer thinking in files, not only on the board."
+    },
+    {
+      "id": "cosmo-bases",
+      "type": "text",
+      "x": 720,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "text": "Bases\nBases query and sort files, notes, and projects.\nTreat them as stable anchors behind the board."
+    },
+    {
+      "id": "cosmo-embeds",
+      "type": "text",
+      "x": 1020,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "text": "Embeds\nEmbeds default to previews before live mode.\nUse live views only when the extra motion earns its place."
+    },
+    {
+      "id": "cosmo-braindump",
+      "type": "board-preview",
+      "x": 120,
+      "y": 790,
+      "width": 320,
+      "height": 304,
+      "boardSlug": "braindump",
+      "boardSource": "content/boards/braindump/current.canvas",
+      "boardHref": "braindump.html",
+      "title": "Braindump",
+      "description": "A linked board preview. Open the broader freeform board when you want the wider working surface."
+    },
+    {
+      "id": "cosmo-board-file",
+      "type": "link",
+      "x": 480,
+      "y": 790,
+      "width": 320,
+      "height": 180,
+      "url": "content/boards/cosmoboard/current.canvas",
+      "title": "Open Board File",
+      "description": "The canvas file is the board. Edit it locally first, then rebuild and ship."
+    },
+    {
+      "id": "cosmo-github",
+      "type": "link",
+      "x": 840,
+      "y": 790,
+      "width": 440,
+      "height": 180,
+      "url": "https://github.com/evrenucar/proto_website",
+      "title": "View Repo",
+      "description": "Remote review and publish layer. Keep the working copy here on disk, then push the board file when it is ready."
+    },
+    {
+      "id": "cosmo-direction-md",
+      "type": "markdown",
+      "x": 1340,
+      "y": 290,
+      "width": 380,
+      "height": 680,
+      "file": "content/boards/cosmoboard/direction.md",
+      "title": "Cosmoboard direction",
+      "href": "content/boards/cosmoboard/direction.md"
+    },
+    {
+      "id": "cosmo-projects-base",
+      "type": "base",
+      "x": 120,
+      "y": 570,
+      "width": 700,
+      "height": 380,
+      "source": "content/base-data/items.json",
+      "collection": "",
+      "filter": "section=projects",
+      "columns": ["title", "publishingStatus", "year", "effort"],
+      "title": "Projects"
+    },
+    {
+      "id": "cosmo-embed-test-1",
+      "type": "link",
+      "x": 860,
+      "y": 570,
+      "width": 380,
+      "height": 180,
+      "url": "https://en.wikipedia.org/wiki/Infinite_canvas",
+      "embedMode": "preview"
+    },
+    {
+      "id": "cosmo-embed-test-2",
+      "type": "link",
+      "x": 860,
+      "y": 770,
+      "width": 380,
+      "height": 180,
+      "url": "https://github.com",
+      "embedMode": "preview"
+    },
+    {
+      "id": "cosmo-app-test-1",
+      "type": "app",
+      "x": 860,
+      "y": 970,
+      "width": 380,
+      "height": 220,
+      "source": "content/apps/excalidraw-proto.json",
+      "embedMode": "preview"
+    },
+    {
+      "id": "cosmo-yt-test-1",
+      "type": "link",
+      "x": 860,
+      "y": 1210,
+      "width": 380,
+      "height": 180,
+      "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "embedMode": "preview"
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "z": 0.9
+  }
+}

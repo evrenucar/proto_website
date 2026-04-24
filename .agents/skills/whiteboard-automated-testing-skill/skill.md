@@ -1,17 +1,17 @@
 ---
 name: whiteboard-automated-testing-skill
-description: Test the Braindump whiteboard on desktop and mobile with repeatable browser checks, screenshot evidence, and archived run logs. Use when whiteboard changes touch pan and zoom, drawing, text notes, selection, drag and resize behavior, toolbar actions, persistence, import and export, recommendation flow, or mobile touch interactions, and when Codex should log results under previous-tests.
+description: Use when whiteboard work is implementation-complete and needs a final browser verification pass. Default to one minimal smoke check focused on the changed behavior, and expand to broader desktop or mobile coverage only for risky interaction, persistence, or touch changes, or when the user asks for deeper testing.
 ---
 
 # Whiteboard Automated Testing Skill
 
 ## Overview
 
-Use this skill to run Braindump regression checks in the browser and leave behind evidence that another agent can audit quickly.
+Use this skill to run a final Braindump or Cosmoboard browser check after implementation is done.
 
-- Prioritize screenshots over prose when proving that a fix works.
-- Reset local state before each run so results are not polluted by an old board.
-- Archive every meaningful run under `previous-tests/<date>-<label>/`.
+- Default to the smallest smoke test that proves the changed behavior works.
+- Reset local state before the final run so results are not polluted by an old board.
+- Archive one meaningful final run under `previous-tests/<date>-<label>/` when evidence is needed.
 
 ## Load First
 
@@ -49,22 +49,25 @@ Use this skill to run Braindump regression checks in the browser and leave behin
 
 ### 4. Run the correct reference
 
-- Desktop coverage: [desktop-testing.md](desktop-testing.md)
-- Mobile coverage: [mobile-testing.md](mobile-testing.md)
+- Pick the smallest relevant reference:
+  - Desktop coverage: [desktop-testing.md](desktop-testing.md)
+  - Mobile coverage: [mobile-testing.md](mobile-testing.md)
+- Do not run both desktop and mobile by default unless the change clearly affects both.
 
 ### 5. Archive the run
 
 - Create `previous-tests/<YYYY-MM-DD>-<short-label>/`
 - Save:
   - `test-log.md`
-  - screenshots that prove passes and failures
+  - screenshots only when they help prove passes or failures
   - optional console or network dumps if they explain the result
+- Skip intermediate archive folders during normal implementation unless debugging would be hard to reconstruct later.
 
 ## Output Requirements
 
 - State the exact server URL used.
 - State the viewport or device profile used.
-- Mark each interaction as `pass`, `fail`, `blocked`, or `not run`.
+- Mark only the interactions you actually ran as `pass`, `fail`, `blocked`, or `not run`.
 - For every failure, include:
   - the observed behavior
   - the expected behavior

@@ -1,19 +1,53 @@
 # Agent Notes
 
-This repo is the personal website for Evren Ucar.
+This repo is still the personal website for Evren Ucar, but it is also now the active prototype host for the broader Cosmoboard product direction inside `evrenucar.com`.
 
-## What the user asked for
+## Primary planning files
 
-- Clean up the website and the project file structure.
-- Keep things lightweight so the pages are easier to manage.
-- Update the text and descriptions.
-- Improve SEO.
-- Prepare the project so Notion pages can later be linked to projects, with a GitHub Action pulling the latest state.
-- Use Playwright for visual cleanup and checking.
+- `.agents/holistic_planning/holistic_planning.md`
+  - strategic product summary and architecture direction
+- `.agents/holistic_planning/holistic_tasks.md`
+  - ordered task tracker, priority list, review state, testing expectations, and old task parking area
 
-## Important correction from the user
+## Current mission
 
-Do not redesign the website into a new visual system.
+- Keep the portfolio website working and visually close to the existing site.
+- Continue using Braindump as the current working whiteboard and canvas prototype.
+- Build the broader tool inside this website first instead of spinning up a separate product site now.
+- Next major product surface should be a new `cosmoboard` page that acts as an onboarding board and feature map.
+
+## Critical product direction
+
+- `Cosmoboard` as the product/system name is acceptable for now.
+- Markdown and `.canvas` should stay at the core of the system.
+- Markdown and canvases should be interchangeable and easy to embed into each other.
+- Multiple boards per page and multiple embeds per page are expected.
+- Nesting can go deep:
+  - markdown in markdown
+  - canvas in canvas
+  - markdown in canvas
+  - canvas in markdown
+- The filesystem hierarchy should remain the primary source of organization.
+- Embed behavior should default to preview-first, but live iframe-style embeds must also be possible.
+- Local files and folders should aim for read and write behavior where browser and device capabilities allow it.
+- Saved embedded web app sessions are a higher priority than forcing users into new tabs.
+- GitHub should be the main collaboration and versioning bridge for now, alongside local-first behavior.
+- Realtime collaboration is a later phase, but the intent is broad coverage across boards, markdown, and structured data if feasible.
+- Obsidian portability is an important goal.
+- Obsidian-like file portability is preferred, but some near-term structured UX can borrow cleaner ideas from Notion-like databases.
+
+## Current implementation scope
+
+- Keep all near-term product work inside the current site.
+- Do not make a standalone Cosmoboard website yet.
+- Braindump remains the active prototype and testing surface.
+- After Braindump, the next serious pilot should be a `cosmoboard` onboarding page on the current site.
+- That onboarding page should contain boards, markdown files, and database/base-like views inside one board experience.
+- Users should eventually be able to create new notes, pages, and related content from within that system.
+
+## Important visual constraint
+
+Do not redesign the website into a new visual system yet.
 
 Keep the site close to the original look and feel:
 
@@ -23,7 +57,7 @@ Keep the site close to the original look and feel:
 - teal accent color
 - photography page should stay close to the older denser gallery layout
 
-The user explicitly did not want a full visual rebrand.
+The user explicitly did not want a full visual rebrand for the current site.
 
 ## Writing style
 
@@ -45,15 +79,39 @@ Use the user's updated background where relevant:
 - also works with analog photography, lino printing, metalworking, and other hands-on processes
 - currently helping build a darkroom and a small metal casting kiln at OMA Collective
 
-## Current implementation direction
+## Technical constraints
 
-- Keep the site visually close to the original.
-- It is fine to improve structure behind the scenes.
-- Lightweight static generation is acceptable.
-- Future Notion sync support is acceptable as long as it does not change the visible design too much.
-- For general items, use `agents/general_issues_and_tasks.md`.
-- For page database and Notion-backed content system work, use `agents/page_database/page_database_tasks.md`.
-- Project-specific agent skills live under `.agents/skills/`.
-- For Braindump browser verification, use `.agents/skills/whiteboard-automated-testing-skill/skill.md` and `agents/whiteboard/whiteboard_automated_testing_skill.md`.
-- Always verify visual changes with Playwright before closing work.
-- CRITICAL RULE: Everytime you add a new feature, you MUST TEST it in the browser (using browser subagent if applicable) before proceeding!
+- Keep the site lightweight.
+- Prefer simple static generation over heavy frameworks where practical.
+- Ensure the site can remain statically hosted.
+- Local-first behavior is a product requirement, not just a fallback.
+- Portability and import/export matter from the start.
+- Keep mobile, tablet, and desktop behavior in scope.
+
+## Working doc map
+
+- Use `.agents/holistic_planning/holistic_planning.md` for the broader product architecture.
+- Use `.agents/holistic_planning/holistic_tasks.md` for the ordered task list and task state.
+- Use `.agents/general_issues_and_tasks.md` for short shared notes and pointers when needed, not as the primary task tracker.
+- Use `.agents/page_database/page_database_tasks.md` for page database and structured content work.
+- Use `.agents/whiteboard/` docs for Braindump and Cosmoboard engine planning.
+- Project-specific skills live under `.agents/skills/`.
+
+## Testing rule
+
+- Default to one minimal verification pass near the end of implementation, not repeated browser testing during normal in-progress work.
+- For Braindump browser verification, use `.agents/skills/whiteboard-automated-testing-skill/skill.md` and `.agents/whiteboard/whiteboard_automated_testing_skill.md`.
+- Keep the default check narrow:
+  - confirm the changed flow works
+  - confirm there are no obvious console or layout regressions
+  - collect proof only when it materially helps
+- Only expand into broader Playwright coverage when:
+  - the user explicitly asks for it
+  - the change is high-risk or cross-device
+  - persistence, save, import/export, or touch interaction behavior changed
+
+## Local server rule
+
+- Always start a local server before reporting progress on site work when the repo can be previewed locally.
+- Share the active local preview address with the user at the start of a session, whenever the preview address changes, and when you pause work or terminate the session.
+- Prefer including both the localhost address and the most useful LAN IP when available at those moments; do not repeat the LAN IP in routine progress updates.

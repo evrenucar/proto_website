@@ -3,8 +3,8 @@
 ## Purpose
 
 - Project-specific skill path: `.agents/skills/whiteboard-automated-testing-skill/`
-- Use this skill whenever Braindump work needs browser verification on desktop or mobile.
-- The skill is focused on repeatable interaction checks, screenshot evidence, and archived test logs.
+- Use this skill for the final browser verification pass after Braindump or Cosmoboard implementation work is functionally complete.
+- Keep the default run minimal and focused on the changed behavior, not broad repeated regression sweeps during implementation.
 
 ## What It Contains
 
@@ -25,6 +25,6 @@
 
 ## Evidence Standard
 
-- Take screenshots that prove the intended behavior.
-- Log pass and fail results in a dated folder under `previous-tests/`.
-- Reset Braindump localStorage before test runs so old boards do not contaminate the result.
+- Only take screenshots when they materially prove the changed behavior or a visible bug.
+- Prefer one final dated log under `previous-tests/` instead of archiving every intermediate debugging run.
+- Reset Braindump localStorage before the final run so old boards do not contaminate the result.

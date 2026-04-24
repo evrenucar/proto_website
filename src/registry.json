@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "comment": "Filesystem-first content registry. Files are the source of truth — this registry maps them into named collections that the build pipeline and runtime can consume. Add entries here when adding new content files; the filesystem structure is the primary organization, the registry is a lightweight index.",
+
+  "boards": [
+    {
+      "slug": "braindump",
+      "title": "Braindump",
+      "file": "braindump.html",
+      "sourcePath": "content/boards/braindump/current.canvas",
+      "legacySourcePath": "content/braindump-state.json",
+      "storageKey": "board:braindump",
+      "legacyStorageKey": "braindump-canvas",
+      "description": "The original freeform capture board. Sketches, references, and spatial notes.",
+      "tags": ["primary"]
+    },
+    {
+      "slug": "cosmoboard",
+      "title": "Cosmoboard",
+      "file": "cosmoboard.html",
+      "sourcePath": "content/boards/cosmoboard/current.canvas",
+      "storageKey": "board:cosmoboard",
+      "description": "Onboarding board for the Cosmoboard direction — oriented, not just captured.",
+      "tags": ["primary", "onboarding"]
+    },
+    {
+      "slug": "eurocrate-storage",
+      "title": "Eurocrate storage",
+      "file": "content/boards/eurocrate-storage.html",
+      "sourcePath": "content/boards/projects/eurocrate-storage/current.canvas",
+      "storageKey": "board:eurocrate-storage",
+      "description": "Working board for the 600×400 modular eurocontainer storage system.",
+      "tags": ["project"],
+      "projectSlug": "eurocrate-storage-universal-solution"
+    }
+  ],
+
+  "notes": [
+    {
+      "slug": "cosmoboard-direction",
+      "title": "Cosmoboard direction",
+      "file": "content/boards/cosmoboard/direction.md",
+      "description": "Overview of the Cosmoboard system — file-first, local-first, spatial orientation.",
+      "tags": ["meta", "direction"]
+    }
+  ],
+
+  "assets": [],
+
+  "apps": [
+    {
+      "slug": "excalidraw-proto",
+      "appName": "Excalidraw",
+      "file": "content/apps/excalidraw-proto.json",
+      "description": "A quick scratchpad session for wireframes.",
+      "tags": ["sketch", "ui"]
+    }
+  ],
+
+  "embeds": []
+}
