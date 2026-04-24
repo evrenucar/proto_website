@@ -1372,12 +1372,12 @@ function renderBoardPage(currentFile, board, introPanel = null) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
               <span class="braindump-toolbar-action-label">Recommend</span>
             </button>
-            <button type="button" class="braindump-toolbar-action" data-tool="export" aria-label="Export .canvas" title="Export (.canvas)">
+            <button type="button" class="braindump-toolbar-action" data-tool="export" aria-label="Export project bundle" title="Export project bundle">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span class="braindump-toolbar-action-label">Export</span>
             </button>
-            <label class="braindump-file-label braindump-toolbar-action" aria-label="Import .canvas or .canvas.json" title="Import (.canvas / .canvas.json)">
-              <input type="file" id="braindump-import" data-board-ui="import-input" accept=".canvas,.canvas.json,.json" hidden>
+            <label class="braindump-file-label braindump-toolbar-action" aria-label="Import .canvas, .canvas.json, or .zip" title="Import (.canvas / .canvas.json / .zip)">
+              <input type="file" id="braindump-import" data-board-ui="import-input" accept=".canvas,.canvas.json,.json,.zip" hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span class="braindump-toolbar-action-label">Import</span>
             </label>
@@ -1497,9 +1497,37 @@ function renderBoardPage(currentFile, board, introPanel = null) {
           </div>
         </div>
       </div>
+      <div
+        id="braindump-export-modal"
+        class="braindump-modal"
+        data-board-ui="export-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="braindump-export-modal-title"
+        hidden
+      >
+        <div class="braindump-modal-panel">
+          <h2 id="braindump-export-modal-title" class="braindump-modal-title">Export Project Bundle</h2>
+          <p class="braindump-modal-description">
+            This will download a <code>.zip</code> file containing your board and all of its local assets.
+          </p>
+          <label class="braindump-modal-checkbox" for="braindump-export-subpages">
+            <input type="checkbox" id="braindump-export-subpages" checked>
+            <span>Include linked sub-pages (boards & markdown)</span>
+          </label>
+          <p class="braindump-modal-file-note" style="margin-top: 1rem;">
+            Estimated size: <strong id="braindump-export-size-estimate">Calculating...</strong>
+          </p>
+          <div class="braindump-modal-actions">
+            <button type="button" id="braindump-export-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+            <button type="button" id="braindump-export-confirm" class="braindump-modal-button braindump-modal-button-primary">Export .zip</button>
+          </div>
+        </div>
+      </div>
     </div>
     ${renderBoardIntroPanel(currentFile, introPanel)}
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=46" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/vendor/fflate.min.js")}" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=48" defer></script>
   `;
 }
 
@@ -1555,7 +1583,7 @@ function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
 function renderEmbeddedBoardPreviewAssets(currentFile) {
   return `
     <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=26">
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=46" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=48" defer></script>
   `;
 }
 
@@ -2190,6 +2218,7 @@ export async function build() {
     await loadContentData();
   await preserveBoardContent();
   await rm(path.join(rootDir, "content"), { recursive: true, force: true });
+  await restoreBoardContent();
 
   const pages = [
     {
@@ -2334,8 +2363,6 @@ export async function build() {
       );
     })
   );
-
-  await restoreBoardContent();
 
   // Copy apps directory to content/apps
   const srcAppsDir = path.join(rootDir, "src", "apps");

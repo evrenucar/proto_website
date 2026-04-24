@@ -96,21 +96,25 @@ _(no active items — see near_term_priority for next work)_
 
 ## medium_term_priority
 
-- [ ] Add dual portable import and export flows for `.canvas` (Git-friendly vs Bundle).
+- [A] Add dual portable import and export flows for `.canvas` (Git-friendly vs Bundle).
   - Scope:
     - keep `.canvas.json` export with embedded Base64 for Git-friendly recommendations and quick text patches.
-    - add a `JSZip` bundle export for full project handoffs (.zip) that converts Base64 back into raw `.png` assets.
+    - add a bundle export for full project handoffs (.zip) that converts Base64 back into raw assets.
     - provide UI options to include or exclude linked sub-pages in the bundle.
-  - Testing:
-    - export a board as `.canvas`
-    - export a linked content example as a portable bundle
-    - re-import both exports and compare behavior
-    - take screenshots of:
-      - export UI
-      - successful re-import state
-    - validate that no critical linked content is silently dropped
+  - Proof:
+    - `JavaScript/vendor/fflate.min.js` is vendored and loaded on generated board pages for offline bundle support.
+    - Generated board pages include `#braindump-export-modal`, `.zip` import fallback support, and the "Include linked sub-pages" option.
+    - `exportProjectBundle(includeSubpages)` packages file nodes, Base64 assets, linked board-preview sources, and markdown files.
+    - `.zip` import rewrites bundled file, markdown, and board-preview references to temporary Blob URLs.
+    - `scripts/extract-assets.mjs` plus `npm run extract-assets -- <canvas-file>` extracts accepted recommendation Base64 images into binary asset files and rewrites the canvas JSON.
+    - Regression tests added:
+      - `tests/export-bundling-build.test.mjs`
+      - `tests/export-bundling-runtime.test.mjs`
+      - `tests/export-bundling-e2e.test.mjs`
+      - `tests/extract-assets.test.mjs`
+    - Browser e2e test writes proof screenshots to `.tmp/export-bundling-e2e/export-modal.png` and `.tmp/export-bundling-e2e/imported-bundle.png`.
   - Validation:
-    - confirm the system is meaningfully portable, not only locally persistent
+    - Bundle import/export is meaningfully portable for the current board, image asset, markdown, and linked board-preview cases.
 
 - [x] Add local file and folder read/write support with capability detection and graceful fallback.
   - Proof:
@@ -125,6 +129,15 @@ _(no active items — see near_term_priority for next work)_
     - keep GitHub as the main collaboration bridge for now
     - support recommendation submission, issue or PR flow, and board-aware context
     - keep local-first editing working without GitHub
+  - Progress:
+    - recommendation issue handoff now includes board slug and source repo path in the prefilled GitHub body
+    - browser regression added in `tests/recommendation-flow-e2e.test.mjs`
+    - verified the real toolbar flow: recommendation entry, exported `.canvas.json` download, handoff modal, and prefilled GitHub issue URL
+  - Notes:
+    - Chrome may keep stale local board state or a cached `JavaScript/braindump.js`, which can make markdown nodes and board-preview SVGs appear broken only in that browser.
+    - Current mitigation: hard reload or clear site data for `127.0.0.1:4173`; keep the runtime backward-compatible with legacy node fields.
+    - Preserve regression coverage for stale local state with legacy `markdown.source` and `board-preview.file`.
+    - Continue the broader plan in this order: finish GitHub recommendation/versioning flow, define the shared-entity model, then defer realtime collaboration until async GitHub/versioning and shared entities are stable.
   - Testing:
     - verify local-first editing still works without auth
     - verify recommendation/export flow opens the correct GitHub path
@@ -190,6 +203,14 @@ _(no active items — see near_term_priority for next work)_
   - canonical board at `content/boards/cosmoboard/current.canvas`
   - board renders with text nodes, link nodes, and working board-preview node
 
+- [A] Create a Node.js server-side extraction script for recommendation parsing.
+  - `scripts/extract-assets.mjs` parses `.canvas` / `.canvas.json` files.
+  - It extracts `data:image/...;base64,...` strings from node fields.
+  - It saves extracted images as binary files, defaulting to `content/assets/images/`.
+  - It rewrites the canvas JSON to point at the extracted asset paths.
+  - It is exposed through `npm run extract-assets -- <canvas-file>`.
+  - Verified by `tests/extract-assets.test.mjs`.
+
 - [A] Generalize Braindump into a reusable Cosmoboard engine.
   - `mountCosmoboard(hostElement)` factory replaces single-page globals
   - `data-board-app`, `data-board-role`, `data-board-ui` data attributes replace hardcoded IDs
@@ -216,15 +237,4 @@ _(no active items — see near_term_priority for next work)_
       - clicked-outside dismissal behavior after the fix
     - validate that the visible image bounds match the interactive hit area
 
-- [ ] Create a Node.js server-side extraction script (\
-pm run extract-assets\) for recommendation parsing.
-  - Scope:
-    - Parse a \.canvas.json\ file after a GitHub recommendation is accepted.
-    - Extract any \data:image/...\ Base64 strings from nodes.
-    - Save extracted images as binary files in \content/assets/\.
-    - Replace Base64 strings with the new file paths in the JSON and overwrite the .canvas file to maintain a clean Git history.
-  - Testing:
-    - Run script against a .canvas file with multiple Base64 images.
-    - Verify images are saved to disk.
-    - Verify JSON is updated correctly without losing other node data.
 

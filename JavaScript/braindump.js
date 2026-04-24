@@ -860,6 +860,41 @@ function getYouTubeVideoId(url) {
   return "";
 }
 
+function parseYouTubeStartSeconds(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return 0;
+
+  if (/^\d+$/.test(raw)) {
+    return Number(raw);
+  }
+
+  const match = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/i);
+  if (!match) return 0;
+
+  const hours = Number(match[1] || 0);
+  const minutes = Number(match[2] || 0);
+  const seconds = Number(match[3] || 0);
+  return (hours * 3600) + (minutes * 60) + seconds;
+}
+
+function getYouTubeEmbedUrl(url) {
+  const videoId = getYouTubeVideoId(url);
+  if (!videoId) return "";
+
+  const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+  try {
+    const parsed = new URL(url);
+    const start = parseYouTubeStartSeconds(parsed.searchParams.get("start") || parsed.searchParams.get("t"));
+    if (start > 0) {
+      embedUrl.searchParams.set("start", String(start));
+    }
+  } catch (error) {
+    return embedUrl.toString();
+  }
+
+  return embedUrl.toString();
+}
+
 function applyBookmarkPreview(nodeObj, el, preview) {
   if (preview.title) {
     nodeObj.title = preview.title;
@@ -957,6 +992,12 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
   const lines = [
     "## Board",
     boardConfig.title,
+    "",
+    "## Board slug",
+    boardConfig.slug || "",
+    "",
+    "## Board repo path",
+    boardConfig.repoPath || "",
     "",
     "## Page",
     getPublicPageUrl(),
@@ -2626,7 +2667,15 @@ async function updateExportSizeEstimate() {
           }
         } catch(e) {} // ignore local fetch failures
       }
-    } else if (includeSubpages && node.type === "board-preview" && node.file) {
+    } else if (includeSubpages && node.type === "board-preview" && node.boardSource) {
+      try {
+        const res = await fetch(node.boardSource, { method: 'HEAD' });
+        if (res.ok) {
+          const length = res.headers.get("content-length");
+          if (length) totalBytes += parseInt(length, 10);
+        }
+      } catch(e) {}
+    } else if (includeSubpages && node.type === "markdown" && node.file) {
       try {
         const res = await fetch(node.file, { method: 'HEAD' });
         if (res.ok) {
@@ -2672,6 +2721,62 @@ if (exportModal) {
       closeExportModal();
     }
   });
+}
+
+function getBundleEntryMime(key) {
+  const ext = key.split(".").pop().toLowerCase();
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "gif") return "image/gif";
+  if (ext === "svg") return "image/svg+xml";
+  if (ext === "webp") return "image/webp";
+  if (ext === "md") return "text/markdown";
+  if (ext === "canvas" || ext === "json") return "application/json";
+  return "application/octet-stream";
+}
+
+async function readProjectBundleFile(file) {
+  if (!window.fflate) {
+    throw new Error("Bundler library not loaded.");
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const unzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
+
+  let jsonStr = null;
+  let boardFileKey = null;
+  for (const key in unzipped) {
+    if (key.endsWith(".canvas") || key.endsWith(".canvas.json")) {
+      jsonStr = new TextDecoder().decode(unzipped[key]);
+      boardFileKey = key;
+      break;
+    }
+  }
+
+  if (!jsonStr) {
+    throw new Error("No board file found in bundle.");
+  }
+
+  const importedState = JSON.parse(jsonStr);
+  const blobUrlMap = {};
+  for (const key in unzipped) {
+    if (key !== boardFileKey && !key.endsWith("/")) {
+      const blob = new Blob([unzipped[key]], { type: getBundleEntryMime(key) });
+      blobUrlMap[key] = URL.createObjectURL(blob);
+    }
+  }
+
+  for (const node of importedState.nodes || []) {
+    if (node.type === "file" && node.file && blobUrlMap[node.file]) {
+      node.file = blobUrlMap[node.file];
+    } else if (node.type === "board-preview" && node.boardSource && blobUrlMap[node.boardSource]) {
+      node.boardSource = blobUrlMap[node.boardSource];
+    } else if (node.type === "markdown" && node.file && blobUrlMap[node.file]) {
+      node.file = blobUrlMap[node.file];
+    }
+  }
+
+  return importedState;
 }
 
 window.addEventListener("pointerdown", (event) => {
@@ -2755,44 +2860,7 @@ if (fileInput) {
         return;
       }
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const unzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
-        
-        let jsonStr = null;
-        let boardFileKey = null;
-        for (const key in unzipped) {
-          if (key.endsWith(".canvas") || key.endsWith(".canvas.json")) {
-            jsonStr = new TextDecoder().decode(unzipped[key]);
-            boardFileKey = key;
-            break;
-          }
-        }
-        if (!jsonStr) {
-          showToolbarToast("No board file found in bundle.", "error");
-          return;
-        }
-        
-        const importedState = JSON.parse(jsonStr);
-        const blobUrlMap = {};
-        for (const key in unzipped) {
-          if (key.startsWith("assets/") && key !== boardFileKey) {
-            const ext = key.split('.').pop().toLowerCase();
-            let mime = "application/octet-stream";
-            if (ext === "png") mime = "image/png";
-            else if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";
-            else if (ext === "gif") mime = "image/gif";
-            else if (ext === "svg") mime = "image/svg+xml";
-            const blob = new Blob([unzipped[key]], { type: mime });
-            blobUrlMap[key] = URL.createObjectURL(blob);
-          }
-        }
-
-        for (const node of importedState.nodes) {
-          if (node.type === "file" && node.file && blobUrlMap[node.file]) {
-            node.file = blobUrlMap[node.file];
-          }
-        }
-        
+        const importedState = await readProjectBundleFile(file);
         loadState(importedState);
         persistLocalState(serializeState());
         setComparisonBaseline(serializeState());
@@ -2805,7 +2873,7 @@ if (fileInput) {
         setSettingsPanelOpen(false);
         showToolbarToast(`Imported bundle ${file.name}`, "success");
       } catch(err) {
-        showToolbarToast("Failed to import bundle.", "error");
+        showToolbarToast(err.message === "No board file found in bundle." ? err.message : "Failed to import bundle.", "error");
       }
       fileInput.value = "";
       return;
@@ -2884,44 +2952,7 @@ async function openLocalFile() {
           showToolbarToast("Bundler library not loaded.", "error");
           return;
         }
-        const arrayBuffer = await file.arrayBuffer();
-        const unzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
-        
-        let jsonStr = null;
-        let boardFileKey = null;
-        for (const key in unzipped) {
-          if (key.endsWith(".canvas") || key.endsWith(".canvas.json")) {
-            jsonStr = new TextDecoder().decode(unzipped[key]);
-            boardFileKey = key;
-            break;
-          }
-        }
-        if (!jsonStr) {
-          showToolbarToast("No board file found in bundle.", "error");
-          return;
-        }
-        
-        const importedState = JSON.parse(jsonStr);
-        const blobUrlMap = {};
-        for (const key in unzipped) {
-          if (key.startsWith("assets/") && key !== boardFileKey) {
-            const ext = key.split('.').pop().toLowerCase();
-            let mime = "application/octet-stream";
-            if (ext === "png") mime = "image/png";
-            else if (ext === "jpg" || ext === "jpeg") mime = "image/jpeg";
-            else if (ext === "gif") mime = "image/gif";
-            else if (ext === "svg") mime = "image/svg+xml";
-            const blob = new Blob([unzipped[key]], { type: mime });
-            blobUrlMap[key] = URL.createObjectURL(blob);
-          }
-        }
-
-        for (const node of importedState.nodes) {
-          if (node.type === "file" && node.file && blobUrlMap[node.file]) {
-            node.file = blobUrlMap[node.file];
-          }
-        }
-        
+        const importedState = await readProjectBundleFile(file);
         loadState(importedState);
         currentFileHandle = handle;
         showToolbarToast(`Opened bundle ${file.name}`, "success");
@@ -3037,6 +3068,11 @@ async function exportProjectBundle(includeSubpages) {
     return "bin";
   }
 
+  function getBundleFilename(source, fallback) {
+    const cleanSource = String(source || "").split("#")[0].split("?")[0];
+    return cleanSource.split("/").pop() || fallback;
+  }
+
   for (let node of state.nodes) {
     if (node.type === "file" && node.file) {
       if (node.file.startsWith("data:")) {
@@ -3064,21 +3100,21 @@ async function exportProjectBundle(includeSubpages) {
           node.file = zipPath;
         }
       }
-    } else if (includeSubpages && node.type === "board-preview" && node.file) {
+    } else if (includeSubpages && node.type === "board-preview" && node.boardSource) {
+      const u8arr = await fetchAsUint8Array(node.boardSource);
+      if (u8arr) {
+        const filename = getBundleFilename(node.boardSource, `board_${node.id}.canvas`);
+        const zipPath = `boards/${node.id}_${filename}`;
+        zipData[zipPath] = u8arr;
+        node.boardSource = zipPath;
+      }
+    } else if (includeSubpages && node.type === "markdown" && node.file) {
       const u8arr = await fetchAsUint8Array(node.file);
       if (u8arr) {
-        const parts = node.file.split("/");
-        let filename = parts[parts.length - 1] || `board_${node.id}.canvas`;
-        zipData[filename] = u8arr;
-        node.file = filename;
-      }
-    } else if (includeSubpages && node.type === "markdown" && node.source) {
-      const u8arr = await fetchAsUint8Array(node.source);
-      if (u8arr) {
-        const parts = node.source.split("/");
-        let filename = parts[parts.length - 1] || `doc_${node.id}.md`;
-        zipData[filename] = u8arr;
-        node.source = filename;
+        const filename = getBundleFilename(node.file, `doc_${node.id}.md`);
+        const zipPath = `markdown/${node.id}_${filename}`;
+        zipData[zipPath] = u8arr;
+        node.file = zipPath;
       }
     }
   }
@@ -3236,15 +3272,15 @@ function createNode(type, x, y, data = {}) {
     nodeObj.width = Number(data.width) > 0 ? Number(data.width) : BOARD_PREVIEW_MIN_NODE_WIDTH;
     nodeObj.height = Number(data.height) > 0 ? Number(data.height) : 300;
     nodeObj.boardSlug = String(data.boardSlug || "");
-    nodeObj.boardSource = String(data.boardSource || "");
-    nodeObj.boardHref = String(data.boardHref || "");
+    nodeObj.boardSource = String(data.boardSource || data.file || data.source || "");
+    nodeObj.boardHref = String(data.boardHref || data.href || "");
     nodeObj.title = String(data.title || nodeObj.boardSlug || "Board preview");
     nodeObj.description = String(data.description || "");
   } else if (type === "markdown") {
     nodeObj.type = "markdown";
-    nodeObj.file = String(data.file || "");
+    nodeObj.file = String(data.file || data.source || "");
     nodeObj.title = String(data.title || "");
-    nodeObj.href = String(data.href || "");
+    nodeObj.href = String(data.href || nodeObj.file || "");
     nodeObj.width = Number(data.width) > 0 ? Number(data.width) : 340;
     nodeObj.height = Number(data.height) > 0 ? Number(data.height) : 400;
   } else if (type === "base") {
@@ -3365,11 +3401,7 @@ function renderLinkNode(nodeObj, el) {
       el.style.height = `${nodeObj.height}px`;
     }
 
-    let embedUrl = nodeObj.url;
-    const ytId = getYouTubeVideoId(nodeObj.url);
-    if (ytId) {
-      embedUrl = `https://www.youtube.com/embed/${ytId}`;
-    }
+    const embedUrl = getYouTubeEmbedUrl(nodeObj.url) || nodeObj.url;
 
     shell.innerHTML = `
       <div class="bd-embed-header">
@@ -3383,7 +3415,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
       </div>
-      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" loading="lazy"></iframe>
+      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
     `;
 
     const toggleBtn = shell.querySelector(".bd-embed-toggle-btn");

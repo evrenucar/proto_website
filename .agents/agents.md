@@ -113,5 +113,6 @@ Use the user's updated background where relevant:
 ## Local server rule
 
 - Always start a local server before reporting progress on site work when the repo can be previewed locally.
+- Before the final response for site work, run the build command and make sure a local preview server is running.
 - Share the active local preview address with the user at the start of a session, whenever the preview address changes, and when you pause work or terminate the session.
 - Prefer including both the localhost address and the most useful LAN IP when available at those moments; do not repeat the LAN IP in routine progress updates.

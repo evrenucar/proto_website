@@ -14,11 +14,11 @@ assert.ok(Array.isArray(boardPages));
 assert.equal(boardPages.length >= 2, true);
 assert.deepEqual(
   boardPages.map((page) => page.file),
-  ["braindump.html", "cosmoboard.html"]
+  ["braindump.html", "cosmoboard.html", "content/boards/eurocrate-storage.html"]
 );
 assert.deepEqual(
   boardPages.map((page) => page.board.slug),
-  ["braindump", "cosmoboard"]
+  ["braindump", "cosmoboard", "eurocrate-storage"]
 );
 assert.equal(boardPages.every((page) => !("pagePath" in page.board)), true);
 
@@ -61,8 +61,8 @@ assert.equal(boardPreviewNodes.some((node) => node.boardHref === "braindump.html
 assert.equal(linkTargets.includes("content/boards/cosmoboard/current.canvas"), true);
 assert.equal(linkTargets.includes("https://github.com/evrenucar/proto_website"), true);
 assert.equal(homeHtml.match(/data-board-mode="preview"/g)?.length, 2);
-assert.equal(homeHtml.match(/CSS\/braindump\.css\?v=19/g)?.length, 1);
-assert.equal(homeHtml.match(/JavaScript\/braindump\.js\?v=38/g)?.length, 1);
+assert.equal(homeHtml.match(/CSS\/braindump\.css\?v=26/g)?.length, 1);
+assert.equal(homeHtml.match(/JavaScript\/braindump\.js\?v=48/g)?.length, 1);
 assert.equal(homeHtml.match(/data-board-source-version="[a-f0-9]{12}"/g)?.length >= 2, true);
 assert.match(homeHtml, /data-board-slug="braindump"/);
 assert.match(homeHtml, /data-board-full-href="braindump\.html"/);
@@ -72,12 +72,16 @@ assert.match(homeHtml, /data-board-full-href="cosmoboard\.html"/);
 assert.match(homeHtml, /Open the full Cosmoboard/i);
 
 const braindumpHtml = await readFile(path.join(rootDir, "braindump.html"), "utf8");
+const eurocrateHtml = await readFile(path.join(rootDir, "content", "boards", "eurocrate-storage.html"), "utf8");
 assert.match(braindumpHtml, /data-board-app="true"/);
 assert.match(braindumpHtml, /data-board-role="canvas"/);
 assert.match(html, /data-board-ui="toolbar-shell"/);
 assert.match(html, /data-board-ui="toolbar"/);
 assert.match(braindumpHtml, /data-board-ui="toolbar-shell"/);
 assert.match(braindumpHtml, /data-board-ui="toolbar"/);
+assert.match(eurocrateHtml, /data-board-slug="eurocrate-storage"/);
+assert.match(eurocrateHtml, /data-board-ui="toolbar-shell"/);
+assert.match(eurocrateHtml, /id="braindump-export-modal"/);
 
 const runtimeSource = await readFile(path.join(rootDir, "JavaScript", "braindump.js"), "utf8");
 assert.match(runtimeSource, /data-board-ui="toolbar-shell"/);

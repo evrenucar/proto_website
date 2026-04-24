@@ -122,7 +122,7 @@
       "id": "cosmo-projects-base",
       "type": "base",
       "x": 120,
-      "y": 570,
+      "y": 1140,
       "width": 700,
       "height": 380,
       "source": "content/base-data/items.json",
@@ -135,7 +135,7 @@
       "id": "cosmo-embed-test-1",
       "type": "link",
       "x": 860,
-      "y": 570,
+      "y": 1140,
       "width": 380,
       "height": 180,
       "url": "https://en.wikipedia.org/wiki/Infinite_canvas",
@@ -144,8 +144,8 @@
     {
       "id": "cosmo-embed-test-2",
       "type": "link",
-      "x": 860,
-      "y": 770,
+      "x": 1260,
+      "y": 1140,
       "width": 380,
       "height": 180,
       "url": "https://github.com",
@@ -155,7 +155,7 @@
       "id": "cosmo-app-test-1",
       "type": "app",
       "x": 860,
-      "y": 970,
+      "y": 1380,
       "width": 380,
       "height": 220,
       "source": "content/apps/excalidraw-proto.json",
@@ -164,8 +164,8 @@
     {
       "id": "cosmo-yt-test-1",
       "type": "link",
-      "x": 860,
-      "y": 1210,
+      "x": 1260,
+      "y": 1380,
       "width": 380,
       "height": 180,
       "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -174,8 +174,8 @@
   ],
   "edges": [],
   "viewport": {
-    "x": 0,
+    "x": 170,
     "y": 0,
-    "z": 0.9
+    "z": 0.74
   }
 }

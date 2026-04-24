@@ -448,6 +448,8 @@ flowchart LR
 - Plugin support
 - Full portability to obsidian, notion, figma, figjam, miro, roar, affine, anytype. And full portabilityi from these tools to here as well
 - Note: Live web embeds cannot render sites like GitHub or Google due to `X-Frame-Options` and `Content-Security-Policy` headers blocking iframes. The current custom fallback header (with an "Open" button) handles this gracefully, but true rendering would require a server-side proxy or browser extension.
+- Why not have core encryption implementation. Instead of security everything could be very cleanly encrypted in the base system. Even if security is comprimized data is safe.
+- Right click functionality for additional featyres would be nice
 
 ## External References
 

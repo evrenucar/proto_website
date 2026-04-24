@@ -30,6 +30,10 @@ To enable seamless project portability and Git-friendly collaboration for Cosmob
     - \exportProjectBundle(includeSubpages)\: Handles asset fetching, Base64-to-Uint8Array conversion, and ZIP generation.
     - \openLocalFile()\: Enhanced to detect \.zip\ files, unzip them, and map internal \ssets/\ to temporary **Blob URLs** for instant rendering.
     - Fallback handlers for browsers without the File System Access API.
+- **Server-Side Extraction Script**
+  - **Location**: \scripts/extract-assets.mjs\
+  - **Command**: `npm run extract-assets -- <path-to-canvas-or-canvas-json>`
+  - **Purpose**: Converts accepted recommendation Base64 image data URLs into binary files under \content/assets/images\ and rewrites the canvas JSON to point at those asset paths.
 
 ## Usage Instructions
 
@@ -45,9 +49,8 @@ To enable seamless project portability and Git-friendly collaboration for Cosmob
 3. The board will load, and all bundled images will render using temporary Blob URLs.
 
 ## Pending Work / Future Steps
-- **Server-Side Extraction Script**: A Node.js script (\
-pm run extract-assets\) is documented in \holistic_planning.md\ but not yet implemented. It should be used to parse accepted recommendations and convert Base64 assets into binary files in the repository.
 - **Recursive Sub-page Bundling**: Currently, sub-pages are fetched as individual files. Deep recursive bundling could be explored if project complexity grows.
+- **End-to-End Bundle Regression Artifacts**: Automated/static tests cover the generator, runtime field mappings, extraction script, and browser re-import flow. Local screenshot artifacts are written to `.tmp/export-bundling-e2e/` when `node tests/export-bundling-e2e.test.mjs` runs.
 
 ## Related Documentation
 - [holistic_planning.md](file:///c:/Users/evren/Documents/GitHub/proto_website/.agents/holistic_planning/holistic_planning.md)

@@ -23,10 +23,49 @@ const mimeTypes = {
   ".xml": "application/xml; charset=utf-8"
 };
 
+const localRouteAliases = {
+  project: "projects.html"
+};
+
 function resolveRequestPath(urlPath) {
   const cleanPath = urlPath.split("?")[0];
   const target = cleanPath === "/" ? "index.html" : cleanPath.replace(/^\/+/, "");
-  return path.join(rootDir, target);
+  return path.join(rootDir, localRouteAliases[target] || target);
+}
+
+function resolveExistingFilePath(filePath) {
+  const safePath = path.normalize(filePath);
+
+  if (!safePath.startsWith(rootDir)) {
+    return { forbidden: true, filePath: safePath };
+  }
+
+  if (existsSync(safePath) && statSync(safePath).isDirectory()) {
+    const indexPath = path.join(safePath, "index.html");
+    if (existsSync(indexPath)) {
+      return { filePath: indexPath };
+    }
+
+    const htmlPath = `${safePath}.html`;
+    if (existsSync(htmlPath)) {
+      return { filePath: htmlPath };
+    }
+
+    return { filePath: indexPath };
+  }
+
+  if (existsSync(safePath)) {
+    return { filePath: safePath };
+  }
+
+  if (!path.extname(safePath)) {
+    const htmlPath = `${safePath}.html`;
+    if (existsSync(htmlPath)) {
+      return { filePath: htmlPath };
+    }
+  }
+
+  return { filePath: safePath };
 }
 
 function getNetworkAccessUrls() {
@@ -38,18 +77,15 @@ function getNetworkAccessUrls() {
 
 const server = http.createServer((request, response) => {
   const filePath = resolveRequestPath(request.url || "/");
-  const safePath = path.normalize(filePath);
+  const resolvedPath = resolveExistingFilePath(filePath);
 
-  if (!safePath.startsWith(rootDir)) {
+  if (resolvedPath.forbidden) {
     response.writeHead(403);
     response.end("Forbidden");
     return;
   }
 
-  const finalPath =
-    existsSync(safePath) && statSync(safePath).isDirectory()
-      ? path.join(safePath, "index.html")
-      : safePath;
+  const finalPath = resolvedPath.filePath;
 
   if (!existsSync(finalPath)) {
     response.writeHead(404, { "Content-Type": mimeTypes[".html"] });

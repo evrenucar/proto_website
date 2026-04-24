@@ -5,7 +5,8 @@
   "scripts": {
     "sync:notion": "node scripts/sync-notion.mjs",
     "build": "node scripts/build-site.mjs",
-    "preview": "node scripts/preview-server.mjs"
+    "preview": "node scripts/preview-server.mjs",
+    "extract-assets": "node scripts/extract-assets.mjs"
   },
   "devDependencies": {
     "playwright": "^1.59.1"
