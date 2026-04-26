@@ -1,21 +1,19 @@
-# General Issues And Tasks
+# Cross-Domain Inbox
 
-## Primary planning files
+## Purpose
+Short shared notes and pointers that do not belong in a single domain doc.
 
-- `.agents/holistic_planning/holistic_planning.md`
-  - strategic product summary and architecture direction
-- `.agents/holistic_planning/holistic_tasks.md`
-  - ordered task tracker, priority list, review state, testing expectations, completed review flow, and `old_tasks`
+## Read when
+Looking for unresolved cross-cutting notes or quick pointers between domains.
 
-## Note
+## Skip when
+Working on a specific domain (use the domain task file instead).
 
-- Active general tasks have moved to `.agents/holistic_planning/holistic_tasks.md`.
-- Older or currently deprioritized tasks should also live there under `old_tasks`.
-- Do not duplicate active task state across both files unless there is a very specific reason.
+## Canonical for
+Cross-domain notes, unresolved quick items, temporary pointers.
 
-## Reference docs
+---
 
-- Holistic product planning now lives in `.agents/holistic_planning/holistic_planning.md`.
-- Holistic product task tracking now lives in `.agents/holistic_planning/holistic_tasks.md`.
-- Page database and Notion content system planning lives in `.agents/page_database/page_database_plan.md` and `.agents/page_database/page_database_tasks.md`.
-- Braindump and Cosmoboard planning lives under `.agents/whiteboard/`.
+- Chrome can keep stale local board state or a cached board runtime. If Cosmoboard looks broken only in Chrome, clear site data for `127.0.0.1:4173` or hard reload.
+- Do not remove legacy field tolerance for `markdown.source` and `board-preview.file` yet. Imported bundles and old localStorage states may still contain them.
+- Generated pages are build outputs. After changing build scripts, board data, or route behavior, run `npm run build`.

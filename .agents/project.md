@@ -1,66 +1,60 @@
-# Project Summary
+# Project Facts
 
-## Project
+## Purpose
+Durable product facts, visual constraints, writing style, and technical direction.
+
+## Read when
+Starting any task that touches the product surface, design, or technical architecture.
+
+## Skip when
+Looking for active task state, backlog, or implementation history.
+
+## Canonical for
+Visual constraints, content direction, writing style, technical direction, repo structure.
+
+---
+
+## Product
 
 `proto_website` is currently both:
 
 - the personal portfolio website for Evren Ucar
-- the active prototype host for the broader Cosmoboard product direction
+- the active prototype host for the Cosmoboard product direction
 
-For now, all product exploration should happen inside `evrenucar.com`. A separate standalone product site can come later.
+All product exploration happens inside `evrenucar.com` for now. A separate standalone product site can come later.
 
-## Current goals
+## Core Product Direction
 
-- Keep the website easy to maintain.
-- Preserve the current site feel while improving structure behind the scenes.
-- Continue improving copy, SEO, and content systems where useful.
-- Use Braindump as the current prototype canvas.
-- Add a future `cosmoboard` page that acts as an onboarding board and feature map for the larger tool direction.
-
-## Core product direction
-
-- Markdown and `.canvas` should stay at the core.
+- Markdown and `.canvas` are the core formats.
 - Markdown and canvases should work together in both directions.
-- Multiple boards per page are expected.
-- Multiple nested embeds are expected:
-  - markdown in markdown
-  - canvas in canvas
-  - markdown in canvas
-  - canvas in markdown
+- Multiple boards per page are expected, including deep nesting.
 - The filesystem should remain the primary hierarchy and source of organization.
-- Preview-first embeds should be the default, but live embeds should also be possible.
-- Structured data should stay portable toward Obsidian-like workflows, while near-term UX can borrow practical ideas from Notion-like databases.
-- Saved web app sessions inside markdown or canvas matter more than simply opening tools in new tabs.
-- GitHub should be used as the main collaboration and versioning bridge for now.
-- Realtime collaboration is a later phase, but the target is broad support across boards, markdown, and structured data if practical.
+- Preview-first embeds by default, live embeds also possible.
+- Structured data stays portable toward Obsidian-like workflows, with cleaner UX allowed.
+- Saved web app sessions inside markdown or canvas matter more than opening tools in new tabs.
+- GitHub is the main collaboration bridge for now.
+- Realtime collaboration is a later phase, targeting broad support if practical.
 
-## Immediate product scope
+## Visual Constraints
 
-- Keep Braindump working well inside the current site.
-- Treat Braindump as the active prototype and experimentation surface.
-- The next serious pilot after Braindump should be a dedicated `cosmoboard` page.
-- That page should function like an onboarding board where users can see:
-  - other boards
-  - markdown files
-  - database/base-like views
-  - linked content inside the same interface
-- Users should eventually be able to create new notes, pages, and related content from within that experience.
-
-## Visual constraints
-
-The site should remain close to the original version.
-
-That means:
+The site should remain close to the original version:
 
 - dark overall look
 - left sidebar navigation
 - simple typography
 - teal highlights
-- photography page should keep a dense image-grid style
+- photography page keeps a dense image-grid style
 
-Avoid turning it into a completely different brand or layout while this work still lives inside the current portfolio site.
+Avoid turning it into a completely different brand or layout while work still lives inside the current portfolio site.
 
-## Content constraints
+## Writing Style
+
+- keep it simple and honest
+- write like normal direct communication
+- use proper punctuation
+- avoid em dashes
+
+## Content Direction
 
 The text should reflect:
 
@@ -71,7 +65,7 @@ The text should reflect:
 - outside work there is a strong making practice including analog photography, lino printing, metalworking, and related hands-on processes
 - OMA Collective work currently includes a darkroom build and a small metal casting kiln
 
-## Technical direction
+## Technical Direction
 
 - Keep the site lightweight.
 - Prefer simple static generation over heavy frameworks where practical.
@@ -80,11 +74,10 @@ The text should reflect:
 - Treat portability as a core requirement.
 - Support import and export paths for key artifacts.
 - Keep desktop, tablet, and mobile behavior in scope.
-- Use Playwright when checking layout and interaction changes.
 
-## Existing repo direction
+## Repo Structure
 
-The repo already includes:
+The repo includes:
 
 - shared site data in `src/site-data.mjs`
 - a lightweight build script in `scripts/build-site.mjs`
@@ -93,13 +86,3 @@ The repo already includes:
 - Braindump-specific runtime and styling
 - SEO support such as `robots.txt` and `sitemap.xml`
 - documentation for page database, whiteboard, save-flow, and holistic planning work under `.agents/`
-
-## Key planning docs
-
-- `.agents/holistic_planning/holistic_planning.md`
-- `.agents/whiteboard/cosmoboard_portability.md`
-- `.agents/whiteboard/cosmoboard_implementation_plan.md`
-- `.agents/whiteboard/online_save_plan.md`
-- `.agents/page_database/page_database_plan.md`
-
-Any future work should preserve the original site feel while moving the repo toward a file-first, local-first, portable Cosmoboard system.
