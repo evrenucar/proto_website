@@ -200,11 +200,13 @@ try {
 
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
-  await page.goto(`${baseUrl}/cosmoboard`, { waitUntil: "networkidle", timeout: 15000 });
+  await page.goto(`${baseUrl}/cosmoboard`, { waitUntil: "domcontentloaded", timeout: 15000 });
+  await page.waitForSelector("[data-tool='more']", { timeout: 15000 });
   await page.evaluate(() => {
     localStorage.removeItem("board:cosmoboard");
   });
-  await page.reload({ waitUntil: "networkidle", timeout: 15000 });
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 15000 });
+  await page.waitForSelector("[data-tool='more']", { timeout: 15000 });
 
   await page.locator("[data-tool='more']").click();
   await page.locator(".braindump-toolbar-actions.is-open [data-tool='export']").click();

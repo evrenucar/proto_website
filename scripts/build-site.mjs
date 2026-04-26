@@ -1282,9 +1282,16 @@ function renderBoardPage(currentFile, board, introPanel = null) {
   const recommendationConfig = board.recommendation || {};
   const featureRequestConfig = board.featureRequest || {};
   const bugReportConfig = board.bugReport || {};
+  const boardIndex = boardPages.map((page) => ({
+    slug: page.board.slug,
+    title: page.board.title,
+    file: relativeHref(currentFile, page.file),
+    source: relativeHref(currentFile, page.board.sourcePath),
+    description: page.board.description || ""
+  }));
 
   return `
-    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=26">
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=30">
     <div
       class="braindump-viewport"
       id="braindump-viewport"
@@ -1295,6 +1302,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
       data-board-source-version="${escapeHtml(boardSourceVersion)}"
       data-board-legacy-source="${escapeHtml(legacyBoardSourceHref)}"
       data-board-repo-path="${escapeHtml(board.sourcePath)}"
+      data-board-index="${escapeHtml(JSON.stringify(boardIndex))}"
       data-board-storage-key="${escapeHtml(board.storageKey)}"
       data-board-legacy-storage-key="${escapeHtml(board.legacyStorageKey || "")}"
       data-board-save-endpoint="${escapeHtml(board.saveEndpoint || "/api/save-board")}"
@@ -1385,6 +1393,10 @@ function renderBoardPage(currentFile, board, introPanel = null) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 .99-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .99 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51.99H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.99Z"></path></svg>
               <span class="braindump-toolbar-action-label">Settings</span>
             </button>
+            <button type="button" class="braindump-toolbar-action" data-tool="new-markdown" aria-label="New markdown (X)" title="New markdown (X)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <span class="braindump-toolbar-action-label">Markdown</span>
+            </button>
             <button type="button" class="braindump-toolbar-action" data-tool="feature-request" aria-label="Send feature request" title="Send feature request">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
               <span class="braindump-toolbar-action-label">Feature request</span>
@@ -1473,9 +1485,9 @@ function renderBoardPage(currentFile, board, introPanel = null) {
         hidden
       >
         <div class="braindump-modal-panel">
-          <h2 id="braindump-modal-title" class="braindump-modal-title">Before you open GitHub</h2>
+          <h2 id="braindump-modal-title" class="braindump-modal-title">Before GitHub review</h2>
           <p id="braindump-modal-description" class="braindump-modal-description">
-            Follow these steps so the recommendation is submitted correctly.
+            This opens a GitHub review request. It does not publish or overwrite the live board.
           </p>
           <p class="braindump-modal-file-note">
             Downloaded file:
@@ -1483,9 +1495,9 @@ function renderBoardPage(currentFile, board, introPanel = null) {
           </p>
           <ol class="braindump-modal-steps">
             <li>A <strong class="braindump-file-emphasis">.canvas.json file</strong> has been downloaded automatically.</li>
-            <li>Log in to GitHub so you can send the recommendation.</li>
-            <li>Fill out the information on the GitHub form and modify it if necessary.</li>
-            <li>Do not forget to attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>.</li>
+            <li>GitHub opens with the board slug, repo path, and current source version already filled in.</li>
+            <li>Attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>. Recommendations are reviewed before they appear on the live board.</li>
+            <li>If you already opened a recommendation for this board, update that existing issue instead of creating a new one.</li>
           </ol>
           <label class="braindump-modal-checkbox" for="braindump-modal-dismiss">
             <input type="checkbox" id="braindump-modal-dismiss">
@@ -1507,9 +1519,9 @@ function renderBoardPage(currentFile, board, introPanel = null) {
         hidden
       >
         <div class="braindump-modal-panel">
-          <h2 id="braindump-export-modal-title" class="braindump-modal-title">Export Project Bundle</h2>
+          <h2 id="braindump-export-modal-title" class="braindump-modal-title">Export Board</h2>
           <p class="braindump-modal-description">
-            This will download a <code>.zip</code> file containing your board and all of its local assets.
+            Export either the current board as one <code>.canvas</code> file or a portable <code>.zip</code> bundle with local assets.
           </p>
           <label class="braindump-modal-checkbox" for="braindump-export-subpages">
             <input type="checkbox" id="braindump-export-subpages" checked>
@@ -1520,6 +1532,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
           </p>
           <div class="braindump-modal-actions">
             <button type="button" id="braindump-export-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+            <button type="button" id="braindump-export-canvas" class="braindump-modal-button braindump-modal-button-secondary">Export .canvas</button>
             <button type="button" id="braindump-export-confirm" class="braindump-modal-button braindump-modal-button-primary">Export .zip</button>
           </div>
         </div>
@@ -1527,7 +1540,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
     </div>
     ${renderBoardIntroPanel(currentFile, introPanel)}
     <script src="${relativeHref(currentFile, "JavaScript/vendor/fflate.min.js")}" defer></script>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=48" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=58" defer></script>
   `;
 }
 
@@ -1541,6 +1554,13 @@ function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
   const fullHref = fullBoardHref ? relativeHref(currentFile, fullBoardHref) : "";
   const previewStorageKey = `${board.storageKey}:preview`;
   const previewLegacyStorageKey = board.legacyStorageKey ? `${board.legacyStorageKey}:preview` : "";
+  const boardIndex = boardPages.map((page) => ({
+    slug: page.board.slug,
+    title: page.board.title,
+    file: relativeHref(currentFile, page.file),
+    source: relativeHref(currentFile, page.board.sourcePath),
+    description: page.board.description || ""
+  }));
 
   return `
     <div
@@ -1553,6 +1573,7 @@ function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
       data-board-source-version="${escapeHtml(boardSourceVersion)}"
       data-board-legacy-source="${escapeHtml(legacyBoardSourceHref)}"
       data-board-repo-path="${escapeHtml(board.sourcePath)}"
+      data-board-index="${escapeHtml(JSON.stringify(boardIndex))}"
       data-board-storage-key="${escapeHtml(previewStorageKey)}"
       data-board-legacy-storage-key="${escapeHtml(previewLegacyStorageKey)}"
       data-board-full-href="${escapeHtml(fullHref)}"
@@ -1582,8 +1603,8 @@ function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
 
 function renderEmbeddedBoardPreviewAssets(currentFile) {
   return `
-    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=26">
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=48" defer></script>
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=30">
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=58" defer></script>
   `;
 }
 
@@ -2185,14 +2206,52 @@ ${urls}
 `;
 }
 
+async function buildEntityIndex(registry) {
+  const entries = Array.isArray(registry.entities) ? registry.entities : [];
+  const entities = await Promise.all(
+    entries.map(async (entry) => {
+      const sourcePath = entry.sourcePath || entry.file || "";
+      let sourceRecord = {};
+
+      if (sourcePath) {
+        try {
+          sourceRecord = JSON.parse(await readFile(path.join(rootDir, sourcePath), "utf8"));
+        } catch (error) {
+          console.warn(`[entities] WARNING: could not load ${entry.slug || sourcePath}: ${error.message}`);
+        }
+      }
+
+      const tags = new Set([...(sourceRecord.tags || []), ...(entry.tags || [])]);
+
+      return {
+        ...sourceRecord,
+        slug: entry.slug || sourceRecord.slug || "",
+        type: entry.type || sourceRecord.type || "note",
+        title: entry.title || sourceRecord.title || entry.slug || "",
+        summary: sourceRecord.summary || entry.description || "",
+        sourcePath,
+        projectSlug: entry.projectSlug || sourceRecord.projectSlug || "",
+        tags: [...tags]
+      };
+    })
+  );
+
+  return {
+    version: registry.version || 1,
+    generatedAt: buildDate,
+    entities
+  };
+}
+
 export async function build() {
   boardSourceVersionMap = await buildBoardSourceVersionMap();
+  let registry = { version: 0 };
 
   // Load and validate content registry
   try {
     const registryRaw = await readFile(registryFile, "utf8");
-    const registry = JSON.parse(registryRaw);
-    const types = ["boards", "notes", "assets", "embeds"];
+    registry = JSON.parse(registryRaw);
+    const types = ["boards", "notes", "assets", "entities", "apps", "embeds"];
     const counts = types.map((t) => `${(registry[t] || []).length} ${t}`).join(", ");
     console.log(`[registry] v${registry.version || 0}: ${counts}`);
 
@@ -2374,23 +2433,39 @@ export async function build() {
     if (err.code !== "ENOENT") console.warn("[apps] Failed to copy apps:", err.message);
   }
 
+  // Export shared entity data for board nodes and structured views.
+  const entityIndex = await buildEntityIndex(registry);
+  const entityDataDir = path.join(rootDir, "content", "entities");
+  await mkdir(entityDataDir, { recursive: true });
+  await writeFile(path.join(entityDataDir, "index.json"), JSON.stringify(entityIndex, null, 0), "utf8");
+  const entityByProjectSlug = new Map(
+    entityIndex.entities
+      .filter((entity) => entity.projectSlug)
+      .map((entity) => [entity.projectSlug, entity])
+  );
+
   // Export base data for the runtime base/database node type
   const baseDataDir = path.join(rootDir, "content", "base-data");
   await mkdir(baseDataDir, { recursive: true });
   const allContentItems = [...projectsData, ...makingData, ...openQuestsData, ...coolBookmarksData];
-  const baseItems = allContentItems.map((item) => ({
-    slug: item.slug || "",
-    section: item.section || "",
-    title: (item.title || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]+\s*/u, ""),
-    category: item.category || "",
-    year: item.year || "",
-    publishingStatus: item.publishingStatus || "",
-    effort: item.effort || "",
-    summary: item.summary || "",
-    dateAdded: item.dateAdded || "",
-    dateModified: item.dateModified || item.lastUpdated || "",
-    hasBoard: !!item.board?.sourcePath
-  }));
+  const baseItems = allContentItems.map((item) => {
+    const entity = entityByProjectSlug.get(item.slug || "");
+    return {
+      slug: item.slug || "",
+      section: item.section || "",
+      title: (item.title || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]+\s*/u, ""),
+      category: item.category || "",
+      year: item.year || "",
+      publishingStatus: item.publishingStatus || "",
+      effort: item.effort || "",
+      summary: item.summary || "",
+      dateAdded: item.dateAdded || "",
+      dateModified: item.dateModified || item.lastUpdated || "",
+      hasBoard: !!item.board?.sourcePath,
+      entityRef: entity?.slug || "",
+      entityTitle: entity?.title || ""
+    };
+  });
   await writeFile(path.join(baseDataDir, "items.json"), JSON.stringify(baseItems, null, 0), "utf8");
 
   await Promise.all([

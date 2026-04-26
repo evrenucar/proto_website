@@ -47,6 +47,18 @@
 
   "assets": [],
 
+  "entities": [
+    {
+      "slug": "eurocrate-storage-system",
+      "title": "Eurocrate storage system",
+      "type": "project",
+      "sourcePath": "src/entities/eurocrate-storage-system.json",
+      "projectSlug": "eurocrate-storage-universal-solution",
+      "description": "Shared project entity reused by the project detail page, project board, Cosmoboard, and base views.",
+      "tags": ["project", "storage", "workspace"]
+    }
+  ],
+
   "apps": [
     {
       "slug": "excalidraw-proto",

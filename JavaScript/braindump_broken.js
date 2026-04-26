@@ -334,7 +334,15 @@ const exportModal = queryBoard("#braindump-export-modal");
 const exportModalSubpagesCheckbox = queryBoard("#braindump-export-subpages");
 const exportModalSizeEstimate = queryBoard("#braindump-export-size-estimate");
 const exportModalCancelBtn = queryBoard("#braindump-export-cancel");
+const exportModalCanvasBtn = queryBoard("#braindump-export-canvas");
 const exportModalConfirmBtn = queryBoard("#braindump-export-confirm");
+let markdownPanel = null;
+let markdownNewButton = null;
+let markdownTitleInput = null;
+let markdownFilenameInput = null;
+let markdownBodyInput = null;
+let markdownCancelButton = null;
+let markdownSaveButton = null;
 
 const boardMode = viewport?.dataset.boardMode || "full";
 const isPreviewMode = boardMode === "preview";
@@ -353,6 +361,143 @@ const boardConfig = {
   allowRecommendations: !isPreviewMode && viewport?.dataset.boardAllowRecommendations === "true",
   fullBoardHref: viewport?.dataset.boardFullHref || ""
 };
+
+function parseBoardReferenceIndex() {
+  try {
+    const parsed = JSON.parse(viewport?.dataset.boardIndex || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+const boardReferenceIndex = parseBoardReferenceIndex();
+
+function escapeHtmlText(value) {
+  return String(value ?? "").replace(/[<>&"]/g, (char) => ({
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+    '"': "&quot;"
+  })[char]);
+}
+
+let markdownEditorSession = {
+  mode: "create",
+  nodeId: "",
+  sourcePath: "",
+  filenameTouched: false
+};
+
+function buildDefaultMarkdownDraft() {
+  const title = "New note";
+  return {
+    title,
+    filename: `note-${formatTimestamp()}.md`,
+    content: `# ${title}\n\n`
+  };
+}
+
+function createMarkdownActionButton() {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "braindump-toolbar-action";
+  button.dataset.tool = "new-markdown";
+  button.setAttribute("aria-label", "Create markdown note");
+  button.setAttribute("title", "Create markdown note");
+  button.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+    <span class="braindump-toolbar-action-label">New markdown</span>
+  `;
+  return button;
+}
+
+function createMarkdownPanel() {
+  const panel = document.createElement("div");
+  panel.id = "braindump-markdown-panel";
+  panel.className = "braindump-markdown-panel";
+  panel.setAttribute("data-board-ui", "markdown-panel");
+  panel.hidden = true;
+  panel.innerHTML = `
+    <div class="braindump-markdown-panel-header">
+      <h2 class="braindump-settings-title">Markdown note</h2>
+      <p class="braindump-settings-copy">Create or edit a board-local <code>.md</code> file. The board keeps the rendered preview, the file keeps the writing.</p>
+    </div>
+    <label class="braindump-markdown-field" for="braindump-markdown-title">
+      <span class="braindump-settings-label">Title</span>
+      <input id="braindump-markdown-title" class="braindump-markdown-input" type="text" maxlength="80" placeholder="Note title">
+    </label>
+    <label class="braindump-markdown-field" for="braindump-markdown-filename">
+      <span class="braindump-settings-label">Filename</span>
+      <input id="braindump-markdown-filename" class="braindump-markdown-input" type="text" maxlength="120" placeholder="note-name.md" spellcheck="false">
+    </label>
+    <label class="braindump-markdown-field" for="braindump-markdown-body">
+      <span class="braindump-settings-label">Content</span>
+      <textarea id="braindump-markdown-body" class="braindump-markdown-textarea" placeholder="# Note"></textarea>
+    </label>
+    <div class="braindump-markdown-actions">
+      <button type="button" id="braindump-markdown-cancel" class="braindump-settings-reset">Cancel</button>
+      <button type="button" id="braindump-markdown-save" class="braindump-issue-submit">Save markdown</button>
+    </div>
+  `;
+
+  return panel;
+}
+
+function bindToolbarActionButton(button) {
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+
+  button.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    lastToolbarTouchTime = Date.now();
+    handleToolbarAction(button);
+  }, { passive: false });
+
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleToolbarAction(button);
+  });
+}
+
+function ensureMarkdownAuthoringUi() {
+  if (isPreviewMode || !toolbarShell || !toolbarActions || markdownPanel) return;
+
+  markdownPanel = createMarkdownPanel();
+  toolbarShell.appendChild(markdownPanel);
+
+  markdownTitleInput = markdownPanel.querySelector("#braindump-markdown-title");
+  markdownFilenameInput = markdownPanel.querySelector("#braindump-markdown-filename");
+  markdownBodyInput = markdownPanel.querySelector("#braindump-markdown-body");
+  markdownCancelButton = markdownPanel.querySelector("#braindump-markdown-cancel");
+  markdownSaveButton = markdownPanel.querySelector("#braindump-markdown-save");
+
+  markdownTitleInput?.addEventListener("input", () => {
+    if (!markdownFilenameInput || markdownEditorSession.filenameTouched) return;
+    markdownFilenameInput.value = sanitizeMarkdownFilename(markdownTitleInput.value);
+  });
+
+  markdownFilenameInput?.addEventListener("input", () => {
+    markdownEditorSession.filenameTouched = true;
+  });
+
+  markdownCancelButton?.addEventListener("click", closeMarkdownPanel);
+  markdownSaveButton?.addEventListener("click", () => {
+    void saveMarkdownFromPanel();
+  });
+  markdownBodyInput?.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      void saveMarkdownFromPanel();
+    }
+  });
+}
+
+ensureMarkdownAuthoringUi();
 
 const recommendationConfig = {
   type: viewport?.dataset.recommendationType || "",
@@ -659,6 +804,11 @@ function closeFloatingPanels(options = {}) {
     settingsPanel.hidden = true;
     settingsPanel.classList.remove("is-open");
   }
+
+  if (keep !== "markdown" && markdownPanel) {
+    markdownPanel.hidden = true;
+    markdownPanel.classList.remove("is-open");
+  }
 }
 
 function setSettingsPanelOpen(isOpen) {
@@ -671,6 +821,59 @@ function setSettingsPanelOpen(isOpen) {
 
   settingsPanel.hidden = !isOpen;
   settingsPanel.classList.toggle("is-open", isOpen);
+}
+
+function sanitizeMarkdownFilename(value) {
+  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "note";
+  const withoutExtension = raw.replace(/\.md$/i, "");
+  const sanitized = sanitizeFileSegment(withoutExtension);
+  return `${sanitized}.md`;
+}
+
+function markdownTitleFromFilename(value) {
+  return String(value || "").trim().replace(/\.md$/i, "") || "Note";
+}
+
+function setMarkdownPanelOpen(isOpen) {
+  if (!markdownPanel) return;
+
+  if (isOpen) {
+    closeFloatingPanels({ keep: "markdown" });
+  }
+
+  markdownPanel.hidden = !isOpen;
+  markdownPanel.classList.toggle("is-open", isOpen);
+  if (isOpen) {
+    markdownTitleInput?.focus();
+    markdownTitleInput?.select();
+  }
+}
+
+function openMarkdownPanelForDraft(draft, options = {}) {
+  ensureMarkdownAuthoringUi();
+  if (!markdownPanel || !markdownTitleInput || !markdownFilenameInput || !markdownBodyInput) return;
+
+  markdownEditorSession = {
+    mode: options.mode || "create",
+    nodeId: options.nodeId || "",
+    sourcePath: options.sourcePath || "",
+    filenameTouched: false
+  };
+
+  markdownTitleInput.value = String(draft.title || "");
+  markdownFilenameInput.value = sanitizeMarkdownFilename(draft.filename || draft.title || "note");
+  markdownBodyInput.value = String(draft.content || "");
+  setMarkdownPanelOpen(true);
+}
+
+function closeMarkdownPanel() {
+  markdownEditorSession = {
+    mode: "create",
+    nodeId: "",
+    sourcePath: "",
+    filenameTouched: false
+  };
+  setMarkdownPanelOpen(false);
 }
 
 function setRecommendationPanelOpen(isOpen) {
@@ -844,12 +1047,12 @@ function getYouTubeVideoId(url) {
       return parsed.pathname.slice(1) || "";
     }
 
-    if (hostname === "youtube.com" || hostname === "m.youtube.com") {
+    if (hostname === "youtube.com" || hostname === "m.youtube.com" || hostname === "youtube-nocookie.com") {
       if (parsed.pathname === "/watch") {
         return parsed.searchParams.get("v") || "";
       }
 
-      if (parsed.pathname.startsWith("/shorts/") || parsed.pathname.startsWith("/embed/")) {
+      if (parsed.pathname.startsWith("/shorts/") || parsed.pathname.startsWith("/embed/") || parsed.pathname.startsWith("/live/")) {
         return parsed.pathname.split("/")[2] || "";
       }
     }
@@ -881,7 +1084,7 @@ function getYouTubeEmbedUrl(url) {
   const videoId = getYouTubeVideoId(url);
   if (!videoId) return "";
 
-  const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+  const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
   try {
     const parsed = new URL(url);
     const start = parseYouTubeStartSeconds(parsed.searchParams.get("start") || parsed.searchParams.get("t"));
@@ -920,6 +1123,20 @@ async function fetchBookmarkPreview(nodeObj, el) {
   const videoId = getYouTubeVideoId(nodeObj.url);
 
   if (videoId) {
+    // Try to get real dimensions from our local proxy if available
+    try {
+      const metaRes = await fetch(`/api/get-video-meta?url=${encodeURIComponent(nodeObj.url)}`);
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        if (meta.width && meta.height) {
+          nodeObj.embedRatio = meta.width / meta.height;
+          markBoardDirty();
+        }
+      }
+    } catch (e) {
+      // Ignore proxy failures, fallback to oembed
+    }
+
     const fallbackTitle = nodeObj.title || "YouTube video";
     applyBookmarkPreview(nodeObj, el, {
       title: fallbackTitle,
@@ -934,6 +1151,10 @@ async function fetchBookmarkPreview(nodeObj, el) {
       if (!response.ok) return;
 
       const data = await response.json();
+      if (data.width && data.height) {
+        nodeObj.embedRatio = data.width / data.height;
+        markBoardDirty();
+      }
       applyBookmarkPreview(nodeObj, el, {
         title: data.title || fallbackTitle,
         description: nodeObj.description || "YouTube video",
@@ -999,6 +1220,9 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     "## Board repo path",
     boardConfig.repoPath || "",
     "",
+    "## Board source version",
+    boardConfig.sourceVersion || "unknown",
+    "",
     "## Page",
     getPublicPageUrl(),
     "",
@@ -1023,8 +1247,13 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     "Local import already accepts the **.canvas.json file** directly, so no conversion is required to bring it back into the board.",
     "If you want to turn it back into a normal board file outside the site, remove the trailing `.json` so it ends with `.canvas`.",
     "",
+    "## Review and versioning",
+    "This issue is a review request, not a direct publish or overwrite action.",
+    "The exported file can be compared against the board source version above before any accepted change is merged.",
+    "Local board editing and import/export continue to work without GitHub auth.",
+    "",
     "## Notes",
-    "- If you already opened a recommendation issue for this board, update that issue instead of creating a new one.",
+    "- If you already opened a recommendation issue for this board, update that existing issue instead of creating a new one.",
     "- This recommendation will be reviewed before it appears on the live site."
   ];
 
@@ -1248,11 +1477,16 @@ function downloadStateFile(filename, mimeType = "application/octet-stream") {
 }
 
 function serializeState() {
-  return { nodes, edges, viewport: { x: camera.x, y: camera.y, z: camera.z } };
+  return {
+    nodes: nodes.map((node) => JSON.parse(JSON.stringify(node))),
+    edges: edges.map((edge) => JSON.parse(JSON.stringify(edge))),
+    viewport: { x: camera.x, y: camera.y, z: camera.z }
+  };
 }
 
 function persistLocalState(state) {
   const serialized = JSON.stringify(state);
+  if (isPreviewMode) return serialized;
   localStorage.setItem(boardConfig.storageKey, serialized);
   if (boardConfig.legacyStorageKey && boardConfig.legacyStorageKey !== boardConfig.storageKey) {
     localStorage.setItem(boardConfig.legacyStorageKey, serialized);
@@ -1262,6 +1496,7 @@ function persistLocalState(state) {
 }
 
 function getSavedState() {
+  if (isPreviewMode) return null;
   const rawState =
     localStorage.getItem(boardConfig.storageKey) ||
     (boardConfig.legacyStorageKey ? localStorage.getItem(boardConfig.legacyStorageKey) : null);
@@ -1297,39 +1532,6 @@ function getSavedState() {
   return null;
 }
 
-// In preview mode the embedded board never writes to its own storage key, so
-// canvas edits that have only autosaved to localStorage (not yet flushed to
-// the .canvas file) don't show up via fetchBoardState. Read the full canvas's
-// draft directly so the preview reflects unsaved edits.
-function getCanvasDraftStateForPreview() {
-  const previewKey = boardConfig.storageKey;
-  if (!previewKey || !previewKey.endsWith(":preview")) return null;
-  const canvasKey = previewKey.slice(0, -":preview".length);
-  if (!canvasKey || canvasKey === previewKey) return null;
-
-  const rawState = localStorage.getItem(canvasKey);
-  if (!rawState) return null;
-
-  if (!boardConfig.sourceVersion) {
-    return rawState;
-  }
-
-  let meta = null;
-  try {
-    const rawMeta = localStorage.getItem(`${canvasKey}${BOARD_STATE_META_SUFFIX}`);
-    meta = rawMeta ? JSON.parse(rawMeta) : null;
-  } catch (error) {
-    meta = null;
-  }
-
-  const slugMatches = !meta || !meta.slug || meta.slug === boardConfig.slug;
-  const versionMatches = meta && meta.sourceVersion === boardConfig.sourceVersion;
-  if (slugMatches && versionMatches) {
-    return rawState;
-  }
-  return null;
-}
-
 async function fetchBoardState(sourcePath) {
   if (!sourcePath) return null;
   const response = await fetch(sourcePath, { cache: "no-store" });
@@ -1339,6 +1541,12 @@ async function fetchBoardState(sourcePath) {
 
 function buildSaveUrl() {
   const url = new URL(boardConfig.saveEndpoint, window.location.origin);
+  if (boardConfig.slug) url.searchParams.set("slug", boardConfig.slug);
+  return url.toString();
+}
+
+function buildMarkdownSaveUrl() {
+  const url = new URL("/api/save-markdown", window.location.origin);
   if (boardConfig.slug) url.searchParams.set("slug", boardConfig.slug);
   return url.toString();
 }
@@ -1547,6 +1755,68 @@ function normalizeLinkUrl(value) {
   }
 }
 
+function normalizeBoardComparableUrl(value) {
+  try {
+    const parsed = new URL(value, window.location.href);
+    parsed.hash = "";
+    parsed.search = "";
+    return parsed.href.replace(/\/$/, "");
+  } catch (error) {
+    return "";
+  }
+}
+
+function isSameOriginUrl(value) {
+  try {
+    return new URL(value, window.location.href).origin === window.location.origin;
+  } catch (error) {
+    return false;
+  }
+}
+
+function buildBoardPreviewData(entry, fallbackUrl = "") {
+  return {
+    boardSlug: String(entry.slug || ""),
+    boardSource: String(entry.source || fallbackUrl || ""),
+    boardHref: String(entry.file || fallbackUrl || ""),
+    title: String(entry.title || entry.slug || "Board preview"),
+    description: String(entry.description || ""),
+    width: BOARD_PREVIEW_MIN_NODE_WIDTH,
+    height: 300
+  };
+}
+
+function resolveBoardReferenceFromUrl(value) {
+  const normalizedUrl = normalizeLinkUrl(value);
+  if (!normalizedUrl) return null;
+
+  const comparable = normalizeBoardComparableUrl(normalizedUrl);
+  const match = boardReferenceIndex.find((entry) => {
+    const pageUrl = normalizeBoardComparableUrl(entry.file || "");
+    const sourceUrl = normalizeBoardComparableUrl(entry.source || "");
+    return comparable === pageUrl || comparable === sourceUrl;
+  });
+
+  if (match) {
+    return buildBoardPreviewData(match, normalizedUrl);
+  }
+
+  if (isSameOriginUrl(normalizedUrl)) {
+    const parsed = new URL(normalizedUrl, window.location.href);
+    if (parsed.pathname.endsWith(".canvas") || parsed.pathname.endsWith(".canvas.json")) {
+      const filename = parsed.pathname.split("/").pop() || "Board";
+      return buildBoardPreviewData({
+        slug: filename.replace(/\.canvas(?:\.json)?$/i, ""),
+        title: filename.replace(/\.canvas(?:\.json)?$/i, ""),
+        source: normalizedUrl,
+        file: normalizedUrl
+      });
+    }
+  }
+
+  return null;
+}
+
 function focusLinkEditor(nodeId, options = {}) {
   const nodeObj = nodes.find(n => n.id === nodeId);
   const el = getBoardElementById(nodeId);
@@ -1600,6 +1870,25 @@ function finalizeLinkEditing(nodeObj, input) {
     markBoardDirty();
     renderNode(nodeObj);
     return false;
+  }
+
+  const boardReference = resolveBoardReferenceFromUrl(normalizedUrl);
+  if (boardReference) {
+    const oldType = nodeObj.type;
+    Object.assign(nodeObj, {
+      type: "board-preview",
+      url: undefined,
+      embedMode: undefined,
+      isEditingUrl: undefined,
+      ...boardReference
+    });
+    const el = getBoardElementById(nodeObj.id);
+    if (el && oldType !== nodeObj.type) {
+      el.querySelector(".bd-link-shell")?.remove();
+    }
+    renderNode(nodeObj);
+    markBoardDirty();
+    return true;
   }
 
   const urlChanged = nodeObj.url !== normalizedUrl;
@@ -1684,7 +1973,7 @@ function shouldUseTouchSelectBehavior() {
 }
 
 function isTouchPlacementTool(tool) {
-  return tool === "text" || tool === "bookmark" || tool === "page";
+  return tool === "text" || tool === "bookmark" || tool === "page" || tool === "markdown";
 }
 
 function isTouchEditableTarget(target) {
@@ -2041,6 +2330,23 @@ function placeToolNodeAt(clientX, clientY, tool = activeTool) {
     return newNode;
   }
 
+  if (tool === "markdown") {
+    const dimensions = { width: 380, height: 420 };
+    const position = shouldUseTouchSelectBehavior()
+      ? getCenteredNodeCanvasPosition(dimensions.width, dimensions.height)
+      : screenToCanvas(clientX, clientY);
+    const draft = buildDefaultMarkdownDraft();
+    const newNode = createNode("markdown", position.x, position.y, {
+      file: "",
+      href: "",
+      title: draft.title,
+      ...dimensions
+    });
+    autoCreateMarkdownFile(newNode);
+    setActiveTool("select");
+    return newNode;
+  }
+
   if (tool === "bookmark" || tool === "page") {
     const dimensions = { width: 320, height: 132 };
     const position = screenToCanvas(clientX, clientY);
@@ -2081,6 +2387,20 @@ function placeToolNodeAt(clientX, clientY, tool = activeTool) {
 
 // Handle Mouse & Touch Pan/Zoom
 viewport.addEventListener("wheel", (e) => {
+  // Allow scrolling inside selected markdown nodes
+  const scrollableMarkdown = e.target.closest(".bd-markdown-body, .bd-markdown-edit-area");
+  if (scrollableMarkdown) {
+    const nodeEl = scrollableMarkdown.closest(".bd-item");
+    if (nodeEl?.classList.contains("selected")) {
+      // Check if the element can scroll in the requested direction
+      const el = scrollableMarkdown;
+      const canScrollDown = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+      const canScrollUp = el.scrollTop > 0;
+      if ((e.deltaY > 0 && canScrollDown) || (e.deltaY < 0 && canScrollUp)) {
+        return; // Allow natural scroll inside markdown body
+      }
+    }
+  }
   e.preventDefault(); // Default to zoom for all scroll actions
   // Trackpad pinch-to-zoom sends ctrlKey with small deltaY — use a larger multiplier
   const sensitivity = e.ctrlKey ? -0.016 : -0.002;
@@ -2369,6 +2689,26 @@ viewport.addEventListener("mousedown", (e) => {
   }
 });
 
+
+// Finish markdown inline editing when clicking outside the active markdown node
+viewport.addEventListener("mousedown", (e) => {
+  const editingShells = canvas.querySelectorAll(".bd-markdown-editing");
+  if (!editingShells.length) return;
+  editingShells.forEach((shell) => {
+    const nodeEl = shell.closest(".bd-item");
+    if (!nodeEl) return;
+    if (nodeEl.contains(e.target)) return;
+    const nodeObj = nodes.find((n) => n.id === nodeEl.id);
+    if (nodeObj) {
+      const activeInput = shell.querySelector(".bd-markdown-block-input[style*='display: block']");
+      if (activeInput) {
+        saveMarkdownBlock(activeInput);
+      }
+      saveFullMarkdownFile(nodeObj);
+      shell.classList.remove("bd-markdown-editing");
+    }
+  });
+}, true);
 viewport.addEventListener("click", (e) => {
   if (Date.now() - lastViewportTouchTime < 700) return;
   if (e.button !== 0) return;
@@ -2380,6 +2720,77 @@ viewport.addEventListener("click", (e) => {
     placeToolNodeAt(e.clientX, e.clientY, "text");
   } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "draw") {
     placeToolNodeAt(e.clientX, e.clientY, activeTool);
+  }
+});
+
+// Drag-and-drop file imports for the viewport
+viewport.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  viewport.style.border = "2px dashed #3fdaca";
+});
+
+viewport.addEventListener("dragenter", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+viewport.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  viewport.style.border = "none";
+});
+
+viewport.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  viewport.style.border = "none";
+
+  const files = e.dataTransfer?.files;
+  if (!files || files.length === 0) return;
+
+  const canvasPos = screenToCanvas(e.clientX, e.clientY);
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!file.name.toLowerCase().endsWith(".md")) continue;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const content = event.target.result;
+      const filename = file.name;
+
+      try {
+        const response = await fetch(buildMarkdownSaveUrl(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: filename,
+            path: "",
+            content: content
+          })
+        });
+
+        const result = await response.json();
+        if (response.ok && result.url) {
+          createNode("markdown", canvasPos.x + (i * 20), canvasPos.y + (i * 20), {
+            file: result.url,
+            href: result.url,
+            title: filename.replace(/\.md$/i, ""),
+            width: 380,
+            height: 420
+          });
+          if (typeof showToolbarToast === "function") {
+            showToolbarToast(`Imported ${filename}`, "success");
+          }
+        }
+      } catch (err) {
+        if (typeof showToolbarToast === "function") {
+          showToolbarToast(`Failed to import ${filename}`, "error");
+        }
+      }
+    };
+    reader.readAsText(file);
   }
 });
 
@@ -2440,7 +2851,7 @@ window.addEventListener("keydown", (e) => {
     if (!_activeBoardViewport && !viewport.matches(":focus-within")) return;
   }
   // Undo/Redo/Cut/Copy/Delete
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) { e.preventDefault(); saveLocalFile(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) { e.preventDefault(); saveBoard(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && e.shiftKey) { e.preventDefault(); saveLocalFileAs(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); openLocalFile(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
@@ -2453,7 +2864,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "t" || e.key === "T") setActiveTool("text");
   if (e.key === "v" || e.key === "V") setActiveTool("select");
   if (e.key === "l" || e.key === "L") setActiveTool("bookmark");
-  if (e.key === "x" || e.key === "X") { e.preventDefault(); openMarkdownPanel(); }
+  if (e.key === "x" || e.key === "X") setActiveTool("markdown");
   if (e.code === "Space") {
     e.preventDefault();
     if (activeTool !== "pan") {
@@ -2481,7 +2892,8 @@ window.addEventListener("keyup", (e) => {
 
 // Tools logic
 function setActiveTool(tool) {
-  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend" || tool === "settings" || tool === "feature-request" || tool === "bug-report" || tool === "more") return;
+  if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend" || tool === "settings" || tool === "feature-request" || tool === "bug-report" || tool === "more" || tool === "new-markdown") return;
+  if (tool === "markdown" && isPreviewMode) return;
   if (isPreviewMode && (tool === "text" || tool === "draw" || tool === "bookmark")) return;
   activeTool = tool;
   toolbarButtons.forEach(btn => {
@@ -2490,6 +2902,7 @@ function setActiveTool(tool) {
   viewport.dataset.mode = tool;
   if (tool === "draw") viewport.style.cursor = getDrawCursor();
   else if (tool === "pan") viewport.style.cursor = "grab";
+  else if (tool === "markdown") viewport.style.cursor = "cell";
   else viewport.style.cursor = "default";
 }
 
@@ -2546,6 +2959,19 @@ function handleToolbarAction(btn) {
     setFeatureRequestPanelOpen(shouldOpen);
     return;
   }
+  if (btn.dataset.tool === "new-markdown") {
+    void beginMarkdownCreateFlow();
+    return;
+  }
+  if (btn.dataset.tool === "markdown-db") {
+    const dimensions = { width: 450, height: 500 };
+    const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
+    createNode("markdown-db", position.x, position.y, {
+      title: "Markdown Database",
+      ...dimensions
+    });
+    return;
+  }
   if (btn.dataset.tool === "bug-report") {
     const shouldOpen = bugReportPanel?.hidden ?? true;
     setBugReportPanelOpen(shouldOpen);
@@ -2554,14 +2980,7 @@ function handleToolbarAction(btn) {
   if (btn.dataset.tool === "open") return openLocalFile();
   if (btn.dataset.tool === "save") return saveLocalFile();
   if (btn.dataset.tool === "export") return openExportModal();
-  if (btn.dataset.tool === "new-markdown") return openMarkdownPanel();
-  if (btn.dataset.tool === "markdown-db") {
-    const dimensions = { width: 460, height: 360 };
-    const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-    createNode("markdown-db", position.x, position.y, { title: "Markdown index", ...dimensions });
-    return;
-  }
-
+  
   setActiveTool(btn.dataset.tool);
 }
 
@@ -2681,6 +3100,34 @@ function closeExportModal() {
   if (exportModal) exportModal.hidden = true;
 }
 
+async function fetchResourceSizeBytes(url) {
+  const value = String(url || "");
+  if (!value) return 0;
+
+  if (value.startsWith("data:")) {
+    const base64Len = value.includes(",") ? value.split(",")[1].length : value.length;
+    return Math.round((base64Len * 3) / 4);
+  }
+
+  try {
+    const headResponse = await fetch(value, { method: "HEAD" });
+    if (headResponse.ok) {
+      const length = Number(headResponse.headers.get("content-length"));
+      if (Number.isFinite(length) && length > 0) return length;
+    }
+  } catch (error) {
+    // Some local/static servers do not support HEAD with content-length.
+  }
+
+  try {
+    const response = await fetch(value, { cache: "no-store" });
+    if (!response.ok) return 0;
+    return (await response.arrayBuffer()).byteLength;
+  } catch (error) {
+    return 0;
+  }
+}
+
 async function updateExportSizeEstimate() {
   if (!exportModalSizeEstimate) return;
   exportModalSizeEstimate.textContent = "Calculating...";
@@ -2694,36 +3141,11 @@ async function updateExportSizeEstimate() {
 
   for (const node of state.nodes) {
     if (node.type === "file" && node.file) {
-      if (node.file.startsWith("data:")) {
-        // Base64 size estimation
-        const base64Len = node.file.indexOf(",") > -1 ? node.file.split(",")[1].length : node.file.length;
-        totalBytes += Math.round((base64Len * 3) / 4);
-      } else {
-        try {
-          // Attempt to get Content-Length without downloading the whole file
-          const res = await fetch(node.file, { method: 'HEAD' });
-          if (res.ok) {
-            const length = res.headers.get("content-length");
-            if (length) totalBytes += parseInt(length, 10);
-          }
-        } catch(e) {} // ignore local fetch failures
-      }
+      totalBytes += await fetchResourceSizeBytes(node.file);
     } else if (includeSubpages && node.type === "board-preview" && node.boardSource) {
-      try {
-        const res = await fetch(node.boardSource, { method: 'HEAD' });
-        if (res.ok) {
-          const length = res.headers.get("content-length");
-          if (length) totalBytes += parseInt(length, 10);
-        }
-      } catch(e) {}
+      totalBytes += await fetchResourceSizeBytes(node.boardSource);
     } else if (includeSubpages && node.type === "markdown" && node.file) {
-      try {
-        const res = await fetch(node.file, { method: 'HEAD' });
-        if (res.ok) {
-          const length = res.headers.get("content-length");
-          if (length) totalBytes += parseInt(length, 10);
-        }
-      } catch(e) {}
+      totalBytes += await fetchResourceSizeBytes(node.file);
     }
   }
 
@@ -2743,6 +3165,13 @@ function openExportModal() {
 
 if (exportModalCancelBtn) {
   exportModalCancelBtn.addEventListener("click", closeExportModal);
+}
+
+if (exportModalCanvasBtn) {
+  exportModalCanvasBtn.addEventListener("click", () => {
+    closeExportModal();
+    exportCanvas();
+  });
 }
 
 if (exportModalConfirmBtn) {
@@ -2845,6 +3274,12 @@ window.addEventListener("pointerdown", (event) => {
     setSettingsPanelOpen(false);
   }
 
+  const clickedMarkdownButton = event.target.closest?.('[data-tool="new-markdown"]');
+  const clickedInsideMarkdownPanel = markdownPanel?.contains(event.target);
+  if (markdownPanel && !markdownPanel.hidden && !clickedMarkdownButton && !clickedInsideMarkdownPanel) {
+    closeMarkdownPanel();
+  }
+
   if (!toolbarActions?.classList.contains("is-open")) return;
   const clickedMoreButton = event.target.closest?.('[data-tool="more"]');
   const clickedInsideActions = toolbarActions?.contains(event.target);
@@ -2875,6 +3310,12 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && settingsPanel && !settingsPanel.hidden) {
     event.preventDefault();
     setSettingsPanelOpen(false);
+    return;
+  }
+
+  if (event.key === "Escape" && markdownPanel && !markdownPanel.hidden) {
+    event.preventDefault();
+    closeMarkdownPanel();
     return;
   }
 
@@ -3333,6 +3774,13 @@ function createNode(type, x, y, data = {}) {
     nodeObj.title = String(data.title || "Base");
     nodeObj.width = Number(data.width) > 0 ? Number(data.width) : 680;
     nodeObj.height = Number(data.height) > 0 ? Number(data.height) : 480;
+  } else if (type === "entity") {
+    nodeObj.type = "entity";
+    nodeObj.source = String(data.source || "content/entities/index.json");
+    nodeObj.entityRef = String(data.entityRef || data.slug || "");
+    nodeObj.title = String(data.title || "");
+    nodeObj.width = Number(data.width) > 0 ? Number(data.width) : 340;
+    nodeObj.height = Number(data.height) > 0 ? Number(data.height) : 220;
   } else if (type === "app" || type === "session") {
     nodeObj.type = "app";
     nodeObj.source = String(data.source || ""); // path to the app session json manifest
@@ -3456,7 +3904,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
       </div>
-      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
     `;
 
     const toggleBtn = shell.querySelector(".bd-embed-toggle-btn");
@@ -3695,10 +4143,14 @@ function parseMarkdownToHtml(md) {
   const html = [];
   let inCode = false;
   let inList = false;
+  let inOrderedList = false;
   let inBlockquote = false;
+  let inTable = false;
+  let tableHeaderDone = false;
 
-  const closeList = () => { if (inList) { html.push("</ul>"); inList = false; } };
+  const closeList = () => { if (inList) { html.push("</ul>"); inList = false; } if (inOrderedList) { html.push("</ol>"); inOrderedList = false; } };
   const closeBlockquote = () => { if (inBlockquote) { html.push("</blockquote>"); inBlockquote = false; } };
+  const closeTable = () => { if (inTable) { html.push("</tbody></table>"); inTable = false; tableHeaderDone = false; } };
 
   const inlineEscape = (text) =>
     text
@@ -3711,17 +4163,49 @@ function parseMarkdownToHtml(md) {
       .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="bd-markdown-img">')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
 
-  for (const rawLine of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+
     // Fenced code block
     if (rawLine.startsWith("```")) {
-      closeList(); closeBlockquote();
+      closeList(); closeBlockquote(); closeTable();
       if (inCode) { html.push("</code></pre>"); inCode = false; }
       else { html.push("<pre><code>"); inCode = true; }
       continue;
     }
     if (inCode) { html.push(inlineEscape(rawLine)); continue; }
+
+    // Table detection: line with pipes
+    if (rawLine.includes("|")) {
+      const cells = rawLine.split("|").map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length);
+      // Check if next line is separator (for header)
+      if (!inTable && i + 1 < lines.length && /^[\s|:-]+$/.test(lines[i + 1]) && lines[i + 1].includes("|")) {
+        closeList(); closeBlockquote();
+        html.push("<table><thead><tr>");
+        cells.forEach(c => html.push(`<th>${inlineMarkup(c)}</th>`));
+        html.push("</tr></thead><tbody>");
+        inTable = true;
+        tableHeaderDone = false;
+        continue;
+      }
+      // Separator line after header
+      if (inTable && !tableHeaderDone && /^[\s|:-]+$/.test(rawLine)) {
+        tableHeaderDone = true;
+        continue;
+      }
+      // Table body row
+      if (inTable) {
+        html.push("<tr>");
+        cells.forEach(c => html.push(`<td>${inlineMarkup(c)}</td>`));
+        html.push("</tr>");
+        continue;
+      }
+    } else {
+      closeTable();
+    }
 
     // Horizontal rule
     if (/^[-*_]{3,}$/.test(rawLine.trim())) {
@@ -3746,11 +4230,29 @@ function parseMarkdownToHtml(md) {
     }
     closeBlockquote();
 
+    // Checkbox list items
+    const cbMatch = rawLine.match(/^[-*+]\s+\[([ xX])\]\s+(.+)/);
+    if (cbMatch) {
+      if (!inList) { html.push('<ul class="bd-markdown-checklist">'); inList = true; }
+      const checked = cbMatch[1].toLowerCase() === "x" ? ' checked disabled' : ' disabled';
+      html.push(`<li><input type="checkbox"${checked}> ${inlineMarkup(cbMatch[2])}</li>`);
+      continue;
+    }
+
     // Unordered list
     const liMatch = rawLine.match(/^[-*+]\s+(.+)/);
     if (liMatch) {
       if (!inList) { html.push("<ul>"); inList = true; }
       html.push(`<li>${inlineMarkup(liMatch[1])}</li>`);
+      continue;
+    }
+
+    // Ordered list
+    const olMatch = rawLine.match(/^(\d+)\.\s+(.+)/);
+    if (olMatch) {
+      closeList();
+      if (!inOrderedList) { html.push("<ol>"); inOrderedList = true; }
+      html.push(`<li>${inlineMarkup(olMatch[2])}</li>`);
       continue;
     }
     closeList();
@@ -3762,686 +4264,386 @@ function parseMarkdownToHtml(md) {
     html.push(`<p>${inlineMarkup(rawLine)}</p>`);
   }
 
-  closeList(); closeBlockquote();
+  closeList(); closeBlockquote(); closeTable();
   if (inCode) html.push("</code></pre>");
   return html.join("\n");
 }
 
-function renderMarkdownLineToHtml(rawLine) {
-  // Inline markup only. Block-level prefixes (headings, list bullet, blockquote)
-  // are handled by class hooks on the line wrapper so the line stays a single DOM
-  // element that the caret can sit inside.
-  const escapeAndInline = (text) =>
-    text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+function toRootRelativeLocalPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
 
-  if (!rawLine.trim()) return "&nbsp;";
-
-  const heading = rawLine.match(/^(#{1,6})\s+(.+)$/);
-  if (heading) return escapeAndInline(heading[2]);
-
-  const bullet = rawLine.match(/^(\s*)([-*+])\s+(.+)$/);
-  if (bullet) return `<span class="bd-md-line-bullet">•</span>${escapeAndInline(bullet[3])}`;
-
-  const ordered = rawLine.match(/^(\s*)(\d+)\.\s+(.+)$/);
-  if (ordered) return `<span class="bd-md-line-bullet">${ordered[2]}.</span>${escapeAndInline(ordered[3])}`;
-
-  const quote = rawLine.match(/^>\s?(.*)$/);
-  if (quote) return escapeAndInline(quote[1]);
-
-  if (/^[-*_]{3,}$/.test(rawLine.trim())) return '<span class="bd-md-line-rule"></span>';
-
-  return escapeAndInline(rawLine);
-}
-
-function getMarkdownLineClass(rawLine) {
-  if (!rawLine.trim()) return "bd-md-line bd-md-line--blank";
-  const heading = rawLine.match(/^(#{1,6})\s+/);
-  if (heading) return `bd-md-line bd-md-line--h${heading[1].length}`;
-  if (/^(\s*)([-*+])\s+/.test(rawLine)) return "bd-md-line bd-md-line--li";
-  if (/^(\s*)(\d+)\.\s+/.test(rawLine)) return "bd-md-line bd-md-line--li bd-md-line--ol";
-  if (/^>\s?/.test(rawLine)) return "bd-md-line bd-md-line--quote";
-  if (/^[-*_]{3,}$/.test(rawLine.trim())) return "bd-md-line bd-md-line--hr";
-  return "bd-md-line";
-}
-
-function getMarkdownLineIndent(rawLine) {
-  // Check for bullet or ordered list with leading whitespace
-  const listMatch = rawLine.match(/^(\s*)([-*+]|\d+\.)\s/);
-  if (listMatch && listMatch[1].length > 0) {
-    return Math.floor(listMatch[1].length / 2);
-  }
-  return 0;
-}
-
-function applyMarkdownLineIndent(lineEl, rawLine) {
-  const indent = getMarkdownLineIndent(rawLine);
-  const bullet = lineEl.querySelector(".bd-md-line-bullet");
-  if (indent > 0) {
-    lineEl.style.paddingLeft = `${18 + indent * 18}px`;
-    // Also move the bullet to match the indent
-    if (bullet) {
-      bullet.style.left = `${4 + indent * 18}px`;
-    }
-  } else {
-    lineEl.style.paddingLeft = "";
-    if (bullet) {
-      bullet.style.left = "";
-    }
-  }
-}
-
-function buildMarkdownLineEl(rawLine) {
-  const lineEl = document.createElement("div");
-  lineEl.className = getMarkdownLineClass(rawLine);
-  lineEl.dataset.raw = rawLine;
-  lineEl.innerHTML = renderMarkdownLineToHtml(rawLine);
-  applyMarkdownLineIndent(lineEl, rawLine);
-  return lineEl;
-}
-
-function setMarkdownLineRendered(lineEl) {
-  const raw = lineEl.dataset.raw ?? lineEl.textContent ?? "";
-  lineEl.dataset.raw = raw;
-  lineEl.className = getMarkdownLineClass(raw);
-  lineEl.innerHTML = renderMarkdownLineToHtml(raw);
-  lineEl.classList.remove("bd-md-line--active");
-  applyMarkdownLineIndent(lineEl, raw);
-}
-
-function setMarkdownLineRaw(lineEl) {
-  const raw = lineEl.dataset.raw ?? lineEl.textContent ?? "";
-  lineEl.dataset.raw = raw;
-  lineEl.className = "bd-md-line bd-md-line--active";
-  lineEl.textContent = raw;
-  // Clear indent style in raw mode - the spaces are visible in the text
-  lineEl.style.paddingLeft = "";
-}
-
-function readMarkdownEditorContent(body) {
-  const lines = [];
-  body.querySelectorAll(".bd-md-line").forEach((line) => {
-    const raw = line.classList.contains("bd-md-line--active")
-      ? (line.textContent || "")
-      : (line.dataset.raw ?? "");
-    lines.push(raw);
-  });
-  return lines.join("\n");
-}
-
-const _markdownSaveTimers = new WeakMap();
-
-function scheduleMarkdownSave(nodeObj, body) {
-  if (!nodeObj || !body) return;
-  const existing = _markdownSaveTimers.get(nodeObj);
-  if (existing) window.clearTimeout(existing);
-  const timer = window.setTimeout(() => {
-    _markdownSaveTimers.delete(nodeObj);
-    void saveMarkdownNodeFile(nodeObj, body);
-  }, 600);
-  _markdownSaveTimers.set(nodeObj, timer);
-}
-
-async function saveMarkdownNodeFile(nodeObj, body) {
-  const filePath = String(nodeObj?.file || "");
-  if (!filePath) return;
-  const filename = filePath.split("/").pop() || "note.md";
-  const sourcePath = filePath.replace(/^\//, "");
-  const content = readMarkdownEditorContent(body);
-  nodeObj._rawMarkdown = content;
   try {
-    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+    const parsed = new URL(raw, window.location.href);
+    if (parsed.origin !== window.location.origin) return "";
+    return parsed.pathname;
+  } catch (error) {
+    return "";
+  }
+}
+
+function getMarkdownSourceCandidates(nodeObj) {
+  const values = [nodeObj?.file, nodeObj?.source, nodeObj?.href]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const seen = new Set();
+  const deduped = [];
+
+  values.forEach((value) => {
+    if (seen.has(value)) return;
+    seen.add(value);
+    deduped.push(value);
+  });
+
+  return deduped;
+}
+
+async function fetchTextFromCandidates(candidates = []) {
+  let lastError = null;
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, { cache: "no-store" });
+      if (!response.ok) {
+        lastError = new Error(String(response.status));
+        continue;
+      }
+
+      return {
+        text: await response.text(),
+        sourcePath: candidate
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Could not load markdown file.");
+}
+
+function getMarkdownDraftForNode(nodeObj) {
+  const primarySource = getMarkdownSourceCandidates(nodeObj)[0] || "";
+  const filename = sanitizeMarkdownFilename(primarySource || nodeObj?.title || "note");
+  return {
+    title: String(nodeObj?.title || markdownTitleFromFilename(filename)),
+    filename,
+    content: ""
+  };
+}
+
+async function beginMarkdownCreateFlow() {
+  openMarkdownPanelForDraft(buildDefaultMarkdownDraft(), { mode: "create" });
+}
+
+async function beginMarkdownEditing(nodeObj) {
+  if (!nodeObj || nodeObj.type !== "markdown") return;
+
+  const draft = getMarkdownDraftForNode(nodeObj);
+  let sourcePath = "";
+
+  try {
+    const loaded = await fetchTextFromCandidates(getMarkdownSourceCandidates(nodeObj));
+    draft.content = loaded.text.replace(/\r\n?/g, "\n");
+    sourcePath = toRootRelativeLocalPath(loaded.sourcePath);
+  } catch (error) {
+    showToolbarToast("Could not load markdown file for editing.", "error");
+    return;
+  }
+
+  openMarkdownPanelForDraft(draft, {
+    mode: "edit",
+    nodeId: nodeObj.id,
+    sourcePath
+  });
+}
+
+function refreshMarkdownNode(nodeObj) {
+  const el = getBoardElementById(nodeObj?.id || "");
+  if (!el) return;
+  el.querySelector(".bd-markdown-shell")?.remove();
+  renderMarkdownNode(nodeObj, el);
+}
+
+async function saveMarkdownFromPanel() {
+  if (!markdownTitleInput || !markdownFilenameInput || !markdownBodyInput || !markdownSaveButton) return;
+
+  const filename = sanitizeMarkdownFilename(markdownFilenameInput.value || markdownTitleInput.value || "note");
+  const title = String(markdownTitleInput.value || markdownTitleFromFilename(filename)).trim();
+  const content = markdownBodyInput.value.replace(/\r\n?/g, "\n");
+  const sourcePath = markdownEditorSession.sourcePath || "";
+  const isEditing = markdownEditorSession.mode === "edit" && markdownEditorSession.nodeId;
+
+  markdownSaveButton.disabled = true;
+  try {
+    const response = await fetch(buildMarkdownSaveUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, path: sourcePath, content })
+      body: JSON.stringify({
+        filename,
+        path: sourcePath,
+        content
+      })
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    if (typeof markBoardDirty === "function") markBoardDirty();
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.url) {
+      throw new Error(result?.error || "Markdown save failed.");
+    }
+
+    if (isEditing) {
+      const nodeObj = nodes.find((node) => node.id === markdownEditorSession.nodeId);
+      if (!nodeObj) {
+        throw new Error("Markdown node no longer exists.");
+      }
+
+      nodeObj.file = result.url;
+      nodeObj.href = result.url;
+      nodeObj.title = title;
+      refreshMarkdownNode(nodeObj);
+      markBoardDirty();
+    } else {
+      const width = 380;
+      const height = 420;
+      const centeredPosition = getCenteredNodeCanvasPosition(width, height);
+      createNode("markdown", centeredPosition.x, centeredPosition.y, {
+        file: result.url,
+        href: result.url,
+        title,
+        width,
+        height
+      });
+    }
+
+    closeMarkdownPanel();
+    showToolbarToast(`Saved markdown to ${result.path}`, "success");
   } catch (error) {
-    showToolbarToast(`Save failed: ${error.message}`, "error");
+    showToolbarToast(error.message || "Markdown save failed.", "error");
+  } finally {
+    markdownSaveButton.disabled = false;
   }
 }
 
-function attachMarkdownEditor(nodeObj, body) {
-  body.contentEditable = "true";
-  body.spellcheck = true;
-  body.classList.add("bd-markdown-editor");
-
-  const findLineFromNode = (node) => {
-    let current = node;
-    while (current && current !== body) {
-      if (current.nodeType === 1 && current.classList?.contains("bd-md-line")) {
-        return current;
-      }
-      current = current.parentNode;
-    }
-    return null;
-  };
-
-  const clearActiveLine = () => {
-    const previous = body.querySelector(".bd-md-line--active");
-    if (previous) {
-      previous.dataset.raw = previous.textContent || "";
-      setMarkdownLineRendered(previous);
-      scheduleMarkdownSave(nodeObj, body);
-    }
-  };
-
-  const setActiveLine = (newActive) => {
-    const previous = body.querySelector(".bd-md-line--active");
-    if (previous && previous !== newActive) {
-      // commit text edited while active
-      previous.dataset.raw = previous.textContent || "";
-      setMarkdownLineRendered(previous);
-      scheduleMarkdownSave(nodeObj, body);
-    }
-    if (newActive && !newActive.classList.contains("bd-md-line--active")) {
-      setMarkdownLineRaw(newActive);
-      // Ensure body has focus for keyboard events
-      if (!body.contains(document.activeElement)) {
-        body.focus();
-      }
-    }
-  };
-
-  // Suppress selectionchange's auto-activation/clearing during click-driven
-  // activation, where we manage selection ourselves across the raw-mode swap.
-  let _suppressSelectionChange = false;
-
-  const handleSelectionChange = () => {
-    if (!body.isConnected) {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-      return;
-    }
-    if (_suppressSelectionChange) return;
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const anchor = sel.anchorNode;
-    if (!anchor || !body.contains(anchor)) {
-      // Selection moved outside - clear active line
-      clearActiveLine();
-      return;
-    }
-    const lineEl = findLineFromNode(anchor);
-    if (!lineEl) return;
-    if (!lineEl.classList.contains("bd-md-line--active")) {
-      setActiveLine(lineEl);
-    }
-  };
-
-  document.addEventListener("selectionchange", handleSelectionChange);
-
-  // Clear active line when focus leaves the editor
-  body.addEventListener("focusout", (e) => {
-    // Check if focus is moving outside the body
-    if (!body.contains(e.relatedTarget)) {
-      clearActiveLine();
-    }
-  });
-
-  body.addEventListener("input", () => {
-    const active = body.querySelector(".bd-md-line--active");
-    if (active) {
-      active.dataset.raw = active.textContent || "";
-    }
-    scheduleMarkdownSave(nodeObj, body);
-  });
-
-  // Handle paste to properly parse multi-line markdown
-  body.addEventListener("paste", (event) => {
-    event.preventDefault();
-    const text = event.clipboardData?.getData("text/plain") || "";
-    if (!text) return;
-
-    const sel = window.getSelection();
-    const active = body.querySelector(".bd-md-line--active");
-
-    const lines = text.split(/\r\n|\r|\n/);
-
-    if (lines.length === 1) {
-      // Single line paste - insert at cursor
-      document.execCommand("insertText", false, lines[0]);
-      return;
-    }
-
-    // Multi-line paste
-    if (active) {
-      const offset = sel?.anchorOffset ?? (active.textContent || "").length;
-      const currentText = active.textContent || "";
-      const before = currentText.slice(0, offset);
-      const after = currentText.slice(offset);
-
-      // Update current line with first pasted line appended
-      active.textContent = before + lines[0];
-      active.dataset.raw = active.textContent;
-
-      // Insert middle lines
-      let lastInserted = active;
-      for (let i = 1; i < lines.length - 1; i++) {
-        const newLine = buildMarkdownLineEl(lines[i]);
-        lastInserted.after(newLine);
-        lastInserted = newLine;
-      }
-
-      // Insert last line with remaining text
-      const lastLine = buildMarkdownLineEl(lines[lines.length - 1] + after);
-      lastInserted.after(lastLine);
-
-      // Set active to last line and position cursor
-      setMarkdownLineRendered(active);
-      setMarkdownLineRaw(lastLine);
-      const range = document.createRange();
-      const cursorPos = lines[lines.length - 1].length;
-      if (lastLine.firstChild) {
-        range.setStart(lastLine.firstChild, cursorPos);
-      } else {
-        range.setStart(lastLine, 0);
-      }
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } else {
-      // No active line - append all lines
-      lines.forEach((line) => body.appendChild(buildMarkdownLineEl(line)));
-    }
-    scheduleMarkdownSave(nodeObj, body);
-  });
-
-  body.addEventListener("keydown", (event) => {
-    event.stopPropagation();
-    const active = body.querySelector(".bd-md-line--active");
-    if (!active) return;
-
-    // Tab key - indent/outdent (works on any line, focuses on bullets)
-    if (event.key === "Tab") {
-      event.preventDefault();
-      const sel = window.getSelection();
-      const cursorOffset = sel?.anchorOffset ?? 0;
-      const text = active.textContent || "";
-
-      if (event.shiftKey) {
-        // Outdent - remove up to 2 leading spaces
-        const leadingSpaces = text.match(/^(\s*)/)?.[1] || "";
-        const removeCount = Math.min(2, leadingSpaces.length);
-        if (removeCount > 0) {
-          active.textContent = text.slice(removeCount);
-          active.dataset.raw = active.textContent;
-          // Adjust cursor position
-          const newOffset = Math.max(0, cursorOffset - removeCount);
-          if (active.firstChild) {
-            const range = document.createRange();
-            range.setStart(active.firstChild, Math.min(newOffset, active.textContent.length));
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-          }
-          scheduleMarkdownSave(nodeObj, body);
-        }
-      } else {
-        // Indent - add 2 spaces at start
-        active.textContent = "  " + text;
-        active.dataset.raw = active.textContent;
-        // Adjust cursor position
-        const newOffset = cursorOffset + 2;
-        if (active.firstChild) {
-          const range = document.createRange();
-          range.setStart(active.firstChild, Math.min(newOffset, active.textContent.length));
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-        scheduleMarkdownSave(nodeObj, body);
-      }
-      return;
-    }
-
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      const sel = window.getSelection();
-      const offset = sel?.anchorOffset ?? (active.textContent || "").length;
-      const text = active.textContent || "";
-      const before = text.slice(0, offset);
-      const after = text.slice(offset);
-      active.textContent = before;
-      active.dataset.raw = before;
-      setMarkdownLineRendered(active);
-
-      // Detect bullet/list pattern to continue on new line
-      let newLineContent = after;
-      const bulletMatch = text.match(/^(\s*)([-*+])\s/);
-      const orderedMatch = text.match(/^(\s*)(\d+)\.\s/);
-      if (bulletMatch && after === "") {
-        // If just pressing enter on empty bullet, don't add another bullet
-        // This lets users exit bullet mode by pressing Enter on empty bullet
-        const bulletContent = text.replace(/^(\s*)([-*+])\s*/, "");
-        if (bulletContent.trim()) {
-          newLineContent = bulletMatch[1] + bulletMatch[2] + " " + after;
-        }
-      } else if (bulletMatch) {
-        newLineContent = bulletMatch[1] + bulletMatch[2] + " " + after;
-      } else if (orderedMatch && after === "") {
-        const orderedContent = text.replace(/^(\s*)(\d+)\.\s*/, "");
-        if (orderedContent.trim()) {
-          const nextNum = parseInt(orderedMatch[2], 10) + 1;
-          newLineContent = orderedMatch[1] + nextNum + ". " + after;
-        }
-      } else if (orderedMatch) {
-        const nextNum = parseInt(orderedMatch[2], 10) + 1;
-        newLineContent = orderedMatch[1] + nextNum + ". " + after;
-      }
-
-      const newLine = buildMarkdownLineEl(newLineContent);
-      active.after(newLine);
-      setMarkdownLineRaw(newLine);
-      const range = document.createRange();
-      // Position cursor after the bullet prefix if present
-      const cursorPos = newLineContent.length - after.length;
-      if (newLine.firstChild) {
-        range.setStart(newLine.firstChild, cursorPos);
-      } else {
-        range.setStart(newLine, 0);
-      }
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      scheduleMarkdownSave(nodeObj, body);
-      return;
-    }
-
-    if (event.key === "Backspace") {
-      const sel = window.getSelection();
-      const offset = sel?.anchorOffset ?? 0;
-      if (offset === 0 && active.previousElementSibling?.classList?.contains("bd-md-line")) {
-        event.preventDefault();
-        const prev = active.previousElementSibling;
-        const prevText = prev.dataset.raw ?? prev.textContent ?? "";
-        const currentText = active.textContent || "";
-        active.remove();
-        prev.textContent = prevText + currentText;
-        prev.dataset.raw = prev.textContent;
-        setMarkdownLineRaw(prev);
-        const range = document.createRange();
-        if (prev.firstChild) {
-          range.setStart(prev.firstChild, prevText.length);
-        } else {
-          range.setStart(prev, 0);
-        }
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        scheduleMarkdownSave(nodeObj, body);
-        return;
-      }
-    }
-
-    // Delete key - handle whole line deletion when whole line is selected
-    if (event.key === "Delete") {
-      const sel = window.getSelection();
-      const text = active.textContent || "";
-      // Check if whole line is selected (selection spans entire content)
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        const selectedText = range.toString();
-        // If whole line selected or at end of line with next sibling
-        if (selectedText === text && text.length > 0) {
-          event.preventDefault();
-          const prev = active.previousElementSibling;
-          const next = active.nextElementSibling;
-          active.remove();
-          scheduleMarkdownSave(nodeObj, body);
-          // Move cursor to end of previous line if exists, else start of next
-          if (prev?.classList?.contains("bd-md-line")) {
-            const prevText = prev.dataset.raw ?? prev.textContent ?? "";
-            setMarkdownLineRaw(prev);
-            const newRange = document.createRange();
-            if (prev.firstChild) {
-              newRange.setStart(prev.firstChild, prevText.length);
-            } else {
-              newRange.setStart(prev, 0);
-            }
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-          } else if (next?.classList?.contains("bd-md-line")) {
-            setMarkdownLineRaw(next);
-            const newRange = document.createRange();
-            newRange.setStart(next, 0);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-          }
-          return;
-        }
-      }
-    }
-
-    // Arrow Up - move to previous line, cursor at end
-    if (event.key === "ArrowUp") {
-      const prev = active.previousElementSibling;
-      if (prev?.classList?.contains("bd-md-line")) {
-        event.preventDefault();
-        const sel = window.getSelection();
-        setActiveLine(prev);
-        const prevText = prev.textContent || "";
-        const range = document.createRange();
-        if (prev.firstChild) {
-          range.setStart(prev.firstChild, prevText.length);
-        } else {
-          range.setStart(prev, 0);
-        }
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
-      }
-    }
-
-    // Arrow Down - move to next line, cursor at end
-    if (event.key === "ArrowDown") {
-      const next = active.nextElementSibling;
-      if (next?.classList?.contains("bd-md-line")) {
-        event.preventDefault();
-        const sel = window.getSelection();
-        setActiveLine(next);
-        const nextText = next.textContent || "";
-        const range = document.createRange();
-        if (next.firstChild) {
-          range.setStart(next.firstChild, nextText.length);
-        } else {
-          range.setStart(next, 0);
-        }
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
-      }
-    }
-  });
-
-  // Place caret at (x, y) within the now-active raw line, falling back to end.
-  const placeCaretAtPoint = (lineEl, x, y) => {
-    const sel = window.getSelection();
-    if (!sel) return;
-    let range = null;
-    if (document.caretRangeFromPoint) {
-      range = document.caretRangeFromPoint(x, y);
-    } else if (document.caretPositionFromPoint) {
-      const pos = document.caretPositionFromPoint(x, y);
-      if (pos) {
-        range = document.createRange();
-        range.setStart(pos.offsetNode, pos.offset);
-      }
-    }
-    if (!range || !lineEl.contains(range.startContainer)) {
-      // Fallback: caret at end of the line text
-      range = document.createRange();
-      const text = lineEl.textContent || "";
-      if (lineEl.firstChild) {
-        range.setStart(lineEl.firstChild, text.length);
-      } else {
-        range.setStart(lineEl, 0);
-      }
-    }
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  };
-
-  // Click activation: when clicking on a rendered (inactive) line we must
-  // (a) switch it to raw mode, which destroys the rendered DOM children, and
-  // (b) re-place the caret at the original click coordinates, since the
-  // browser's default mousedown caret-placement targets nodes that no longer
-  // exist after the textContent reset.
-  body.addEventListener("mousedown", (e) => {
-    e.stopPropagation();
-    if (e.button !== 0) return; // only primary button
-
-    // Select the host canvas node — body's stopPropagation otherwise hides the
-    // click from the bd-item handler so the markdown window never visually
-    // selects when you click its text.
-    const itemEl = body.closest?.(".bd-item");
-    if (itemEl && !itemEl.classList.contains("selected") && !e.shiftKey) {
-      canvas.querySelectorAll(".bd-item.selected").forEach((n) => n.classList.remove("selected"));
-      itemEl.classList.add("selected");
-    } else if (itemEl && e.shiftKey) {
-      itemEl.classList.add("selected");
-    }
-
-    const lineEl = findLineFromNode(e.target);
-
-    // Click outside any line (or on already-active line): native behavior.
-    if (!lineEl || lineEl.classList.contains("bd-md-line--active")) {
-      if (!body.contains(document.activeElement)) {
-        // Defer focus so it doesn't disrupt the browser's caret placement
-        requestAnimationFrame(() => body.focus({ preventScroll: true }));
-      }
-      return;
-    }
-
-    // Inactive line: take over caret placement.
-    const x = e.clientX;
-    const y = e.clientY;
-    const detail = e.detail;
-    e.preventDefault();
-
-    _suppressSelectionChange = true;
-    setActiveLine(lineEl);
-    if (!body.contains(document.activeElement)) {
-      body.focus({ preventScroll: true });
-    }
-
-    requestAnimationFrame(() => {
-      const sel = window.getSelection();
-      if (sel) {
-        if (detail >= 3) {
-          // Triple-click: select whole line content
-          const range = document.createRange();
-          range.selectNodeContents(lineEl);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        } else {
-          placeCaretAtPoint(lineEl, x, y);
-        }
-      }
-      _suppressSelectionChange = false;
+// Auto-create a blank markdown file when placing a new markdown node
+async function autoCreateMarkdownFile(nodeObj) {
+  if (!nodeObj || nodeObj.file) return;
+  const draft = buildDefaultMarkdownDraft();
+  try {
+    const response = await fetch(buildMarkdownSaveUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: draft.filename,
+        path: "",
+        content: `# ${draft.title}\n\nStart writing here...\n`
+      })
     });
-  });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.url) return;
+    nodeObj.file = result.url;
+    nodeObj.href = result.url;
+    nodeObj._rawMarkdown = `# ${draft.title}\n\nStart writing here...\n`;
+    refreshMarkdownNode(nodeObj);
+    markBoardDirty();
+  } catch (e) {
+    // Silently fail — node still renders with "No file" message
+  }
+}
 
-  body.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+// --- Block-level Markdown Overhaul Helpers ---
 
-  // Handle clicks on links in rendered (non-active) lines
-  body.addEventListener("click", (e) => {
-    const target = e.target;
+function parseMarkdownToBlocks(md) {
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  let currentBlock = [];
+  let inCode = false;
+  let inTable = false;
 
-    if (target.tagName === "A" && target.href) {
-      const lineEl = findLineFromNode(target);
-      // Only follow link if the line is NOT active (in rendered mode)
-      if (lineEl && !lineEl.classList.contains("bd-md-line--active")) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(target.href, "_blank", "noopener,noreferrer");
+  const pushBlock = () => {
+    if (currentBlock.length > 0) {
+      blocks.push({
+        raw: currentBlock.join("\n")
+      });
+      currentBlock = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith("```")) {
+      if (inCode) {
+        currentBlock.push(line);
+        inCode = false;
+        pushBlock();
+      } else {
+        pushBlock();
+        currentBlock.push(line);
+        inCode = true;
+      }
+      continue;
+    }
+
+    if (inCode) {
+      currentBlock.push(line);
+      continue;
+    }
+
+    if (line.includes("|")) {
+      if (!inTable) {
+        pushBlock();
+        inTable = true;
+      }
+      currentBlock.push(line);
+      continue;
+    } else {
+      if (inTable) {
+        pushBlock();
+        inTable = false;
       }
     }
-  });
 
-  // Click-away: clicking outside this editor's body should fully exit edit
-  // mode. focusout alone misses the case where the click target (e.g. the
-  // canvas viewport) doesn't accept focus, leaving the body "active" forever.
-  const handleOutsidePointerDown = (e) => {
-    if (!body.isConnected) {
-      window.removeEventListener("pointerdown", handleOutsidePointerDown, true);
-      return;
+    if (line.trim() === "") {
+      pushBlock();
+      continue;
     }
-    if (!(e.target instanceof Node)) return;
-    if (body.contains(e.target)) return;
-    if (!body.querySelector(".bd-md-line--active") && document.activeElement !== body) return;
-    clearActiveLine();
-    if (document.activeElement && body.contains(document.activeElement)) {
-      document.activeElement.blur?.();
-    }
-  };
-  window.addEventListener("pointerdown", handleOutsidePointerDown, true);
 
-  // ESC mirrors click-away: exit edit mode.
-  const handleEscape = (e) => {
-    if (!body.isConnected) {
-      window.removeEventListener("keydown", handleEscape, true);
-      return;
+    const isList = /^([-*+]|\d+\.)\s+/.test(line);
+    if (isList) {
+      if (currentBlock.length > 0 && !/^([-*+]|\d+\.)\s+/.test(currentBlock[0])) {
+        pushBlock();
+      }
+      currentBlock.push(line);
+      continue;
     }
-    if (e.key !== "Escape") return;
-    if (!body.contains(document.activeElement) && !body.querySelector(".bd-md-line--active")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    clearActiveLine();
-    if (document.activeElement && body.contains(document.activeElement)) {
-      document.activeElement.blur?.();
-    }
-  };
-  window.addEventListener("keydown", handleEscape, true);
 
-  // Wheel routing:
-  //  - Active + focused: native scroll inside the body, don't bubble to canvas.
-  //  - Inactive: suppress native body scroll AND let wheel bubble so the
-  //    canvas zoom handler picks it up (cursor over inactive block still zooms).
-  body.addEventListener("wheel", (e) => {
-    const hasActiveLine = body.querySelector(".bd-md-line--active");
-    const isFocused = body.contains(document.activeElement) || document.activeElement === body;
-    if (hasActiveLine && isFocused) {
+    if (line.startsWith("#")) {
+      pushBlock();
+      currentBlock.push(line);
+      pushBlock();
+      continue;
+    }
+
+    currentBlock.push(line);
+  }
+
+  pushBlock();
+  return blocks;
+}
+
+function saveMarkdownBlock(inputEl) {
+  const blockEl = inputEl.closest(".bd-markdown-block");
+  if (!blockEl) return;
+  const previewEl = blockEl.querySelector(".bd-markdown-block-preview");
+  const newRaw = inputEl.value;
+
+  previewEl.innerHTML = parseMarkdownToHtml(newRaw);
+  previewEl.style.display = "";
+  inputEl.style.display = "none";
+}
+
+async function saveFullMarkdownFile(nodeObj) {
+  const el = document.getElementById(nodeObj.id);
+  const shell = el?.querySelector(".bd-markdown-shell");
+  if (!shell) return;
+
+  const inputs = shell.querySelectorAll(".bd-markdown-block-input");
+  const raws = [];
+  inputs.forEach(input => raws.push(input.value));
+  const fullMd = raws.join("\n\n").trim();
+  nodeObj._rawMarkdown = fullMd;
+
+  const filePath = getMarkdownSourceCandidates(nodeObj)[0] || "";
+  if (filePath) {
+    try {
+      const filename = filePath.split("/").pop() || "note.md";
+      const sourcePath = toRootRelativeLocalPath(filePath);
+      await fetch(buildMarkdownSaveUrl(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename,
+          path: sourcePath,
+          content: fullMd
+        })
+      });
+    } catch (e) {
+      if (typeof showToolbarToast === "function") {
+        showToolbarToast("Could not save markdown file.", "error");
+      }
+    }
+  }
+  if (typeof markBoardDirty === "function") markBoardDirty();
+}
+
+function renderMarkdownBlocks(nodeObj, body) {
+  const md = nodeObj._rawMarkdown || "";
+  const blocks = parseMarkdownToBlocks(md);
+  body.innerHTML = "";
+
+  if (blocks.length === 0) {
+    blocks.push({ raw: "Click here to start writing..." });
+  }
+
+  blocks.forEach((block, idx) => {
+    const blockEl = document.createElement("div");
+    blockEl.className = "bd-markdown-block";
+    blockEl.dataset.blockIndex = idx;
+
+    const previewEl = document.createElement("div");
+    previewEl.className = "bd-markdown-block-preview";
+    previewEl.innerHTML = parseMarkdownToHtml(block.raw);
+    blockEl.appendChild(previewEl);
+
+    const inputEl = document.createElement("textarea");
+    inputEl.className = "bd-markdown-block-input";
+    inputEl.value = block.raw;
+    inputEl.style.display = "none";
+    inputEl.spellcheck = false;
+    blockEl.appendChild(inputEl);
+
+    const adjustHeight = () => {
+      inputEl.style.height = "auto";
+      inputEl.style.height = (inputEl.scrollHeight + 4) + "px";
+    };
+
+    blockEl.addEventListener("click", (e) => {
+      const shell = body.closest(".bd-markdown-shell");
+      if (!shell || !shell.classList.contains("bd-markdown-editing")) return;
+      if (inputEl.style.display === "block") return;
+
+      const activeInput = shell.querySelector(".bd-markdown-block-input[style*='display: block']");
+      if (activeInput && activeInput !== inputEl) {
+         saveMarkdownBlock(activeInput);
+      }
+
+      previewEl.style.display = "none";
+      inputEl.style.display = "block";
+      adjustHeight();
+      inputEl.focus();
       e.stopPropagation();
-      return;
-    }
-    e.preventDefault();
-  }, { passive: false });
+    });
 
-  // Update overflow indicator when scrolling or content changes
-  const updateOverflowIndicator = () => {
-    const hasOverflow = body.scrollHeight > body.clientHeight + 2;
-    const atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
-    body.classList.toggle("bd-markdown-body--has-overflow", hasOverflow && !atBottom);
-  };
-  body.addEventListener("scroll", updateOverflowIndicator);
+    inputEl.addEventListener("input", adjustHeight);
+    inputEl.addEventListener("mousedown", (e) => e.stopPropagation());
+    inputEl.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
 
-  // Watch for content changes to update overflow indicator
-  const resizeObserver = new ResizeObserver(() => {
-    requestAnimationFrame(updateOverflowIndicator);
+    inputEl.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveMarkdownBlock(inputEl);
+        saveFullMarkdownFile(nodeObj);
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        saveMarkdownBlock(inputEl);
+        const shell = body.closest(".bd-markdown-shell");
+        if (shell) shell.classList.remove("bd-markdown-editing");
+      }
+      e.stopPropagation();
+    });
+
+    body.appendChild(blockEl);
   });
-  resizeObserver.observe(body);
-
-  // Also update on input to catch content changes
-  body.addEventListener("input", () => {
-    requestAnimationFrame(updateOverflowIndicator);
-  });
-
-  // Initial check after content loads
-  requestAnimationFrame(updateOverflowIndicator);
-  // Additional delayed check for async content
-  setTimeout(updateOverflowIndicator, 100);
 }
 
 function renderMarkdownNode(nodeObj, el) {
@@ -4452,445 +4654,53 @@ function renderMarkdownNode(nodeObj, el) {
   shell.className = "bd-markdown-shell";
   el.insertBefore(shell, el.firstChild);
 
-  const filePath = String(nodeObj.file || "");
+  const sourceCandidates = getMarkdownSourceCandidates(nodeObj);
+  const filePath = String(sourceCandidates[0] || "");
   const title = String(nodeObj.title || (filePath.split("/").pop()?.replace(/\.md$/i, "") || "Note"));
-  const href = String(nodeObj.href || "");
+  const href = String(nodeObj.href || filePath);
 
   const header = document.createElement("div");
   header.className = "bd-markdown-header";
   header.innerHTML = `
     <svg class="bd-markdown-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-    <span class="bd-markdown-title">${escapeHtml(title)}</span>
-    <button type="button" class="bd-markdown-fullscreen-btn" aria-label="Open fullscreen" title="Open fullscreen">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-    </button>
+    <span class="bd-markdown-title">${String(title).replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"})[c])}</span>
+    ${href ? `<a class="bd-markdown-view-link" href="${href}" target="_blank" rel="noreferrer" aria-label="View source file" title="View source">↗</a>` : ""}
   `;
   shell.appendChild(header);
-
-  // Fullscreen button handler
-  const fullscreenBtn = header.querySelector(".bd-markdown-fullscreen-btn");
-  fullscreenBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openMarkdownFullscreen(nodeObj, title, filePath);
-  });
-  fullscreenBtn?.addEventListener("mousedown", (e) => e.stopPropagation());
 
   const body = document.createElement("div");
   body.className = "bd-markdown-body";
   shell.appendChild(body);
 
-  const renderEditorBody = (text) => {
-    nodeObj._rawMarkdown = text;
-    body.textContent = "";
-    const lines = text.split("\n");
-    if (lines.length === 0) lines.push("");
-    lines.forEach((line) => body.appendChild(buildMarkdownLineEl(line)));
-    if (!isPreviewMode && filePath) attachMarkdownEditor(nodeObj, body);
-  };
+  shell.addEventListener("dblclick", (event) => {
+    if (event.target.closest(".bd-markdown-view-link")) return;
+    if (event.target.closest(".bd-markdown-block-input")) return;
+    if (!isPreviewMode) {
+      shell.classList.add("bd-markdown-editing");
+    }
+  });
 
   if (!filePath) {
-    body.innerHTML = `<p class="bd-markdown-empty">No file path set.</p>`;
+    body.innerHTML = `<p class="bd-markdown-empty">Double-click to start writing.</p>`;
+    nodeObj._rawMarkdown = nodeObj._rawMarkdown || "";
     return;
   }
 
   body.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
 
-  fetch(filePath)
-    .then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.text();
-    })
-    .then((text) => {
-      renderEditorBody(text.replace(/\r\n?/g, "\n"));
+  fetchTextFromCandidates(sourceCandidates)
+    .then(({ text }) => {
+      nodeObj._rawMarkdown = text.replace(/\r\n?/g, "\n");
+      renderMarkdownBlocks(nodeObj, body);
     })
     .catch((err) => {
-      body.innerHTML = `<p class="bd-markdown-error">Could not load <code>${escapeHtml(filePath)}</code> (${escapeHtml(err.message)}).</p>`;
+      body.innerHTML = `<p class="bd-markdown-error">Could not load <code>${filePath}</code> (${err.message}).</p>`;
     });
-}
-
-// ---------------------------------------------------------------------------
-// Fullscreen markdown viewer
-// ---------------------------------------------------------------------------
-
-let _markdownFullscreenEl = null;
-
-function openMarkdownFullscreen(nodeObj, title, filePath) {
-  // Create fullscreen overlay if it doesn't exist
-  if (!_markdownFullscreenEl) {
-    _markdownFullscreenEl = document.createElement("div");
-    _markdownFullscreenEl.className = "bd-markdown-fullscreen";
-    _markdownFullscreenEl.innerHTML = `
-      <div class="bd-markdown-fullscreen-backdrop"></div>
-      <div class="bd-markdown-fullscreen-container">
-        <div class="bd-markdown-fullscreen-header">
-          <h2 class="bd-markdown-fullscreen-title"></h2>
-          <button type="button" class="bd-markdown-fullscreen-close" aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="bd-markdown-fullscreen-body bd-markdown-body"></div>
-      </div>
-    `;
-    document.body.appendChild(_markdownFullscreenEl);
-
-    // Close handlers
-    const closeBtn = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-close");
-    const backdrop = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-backdrop");
-    closeBtn?.addEventListener("click", closeMarkdownFullscreen);
-    backdrop?.addEventListener("click", closeMarkdownFullscreen);
-    _markdownFullscreenEl.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeMarkdownFullscreen();
-    });
-  }
-
-  // Update content
-  const titleEl = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-title");
-  const bodyEl = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-body");
-
-  titleEl.textContent = title;
-  bodyEl.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
-
-  // Show fullscreen
-  _markdownFullscreenEl.classList.add("is-open");
-  _markdownFullscreenEl.hidden = false;
-  document.body.style.overflow = "hidden";
-
-  // Load and render markdown content
-  if (nodeObj._rawMarkdown) {
-    renderFullscreenMarkdown(bodyEl, nodeObj._rawMarkdown);
-  } else if (filePath) {
-    fetch(filePath)
-      .then((r) => {
-        if (!r.ok) throw new Error(`${r.status}`);
-        return r.text();
-      })
-      .then((text) => {
-        renderFullscreenMarkdown(bodyEl, text.replace(/\r\n?/g, "\n"));
-      })
-      .catch((err) => {
-        bodyEl.innerHTML = `<p class="bd-markdown-error">Could not load file: ${escapeHtml(err.message)}</p>`;
-      });
-  } else {
-    bodyEl.innerHTML = `<p class="bd-markdown-empty">No content available.</p>`;
-  }
-}
-
-function renderFullscreenMarkdown(container, text) {
-  container.textContent = "";
-  const lines = text.split("\n");
-  lines.forEach((line) => {
-    const lineEl = buildMarkdownLineEl(line);
-    // In fullscreen, always show rendered view (not editable)
-    container.appendChild(lineEl);
-  });
-}
-
-function closeMarkdownFullscreen() {
-  if (!_markdownFullscreenEl) return;
-  _markdownFullscreenEl.classList.remove("is-open");
-  _markdownFullscreenEl.hidden = true;
-  document.body.style.overflow = "";
-}
-
-// ---------------------------------------------------------------------------
-// Markdown index (markdown-db) node renderer
-// ---------------------------------------------------------------------------
-
-function renderMarkdownDbNode(nodeObj, el) {
-  let shell = el.querySelector(".bd-markdown-db-shell");
-  if (shell) return;
-
-  shell = document.createElement("div");
-  shell.className = "bd-markdown-db-shell";
-  el.insertBefore(shell, el.firstChild);
-
-  const title = String(nodeObj.title || "Markdown index");
-  const header = document.createElement("div");
-  header.className = "bd-markdown-db-header";
-  header.innerHTML = `
-    <svg class="bd-markdown-db-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-    <span class="bd-markdown-db-title">${escapeHtml(title)}</span>
-    <span class="bd-markdown-db-count"></span>
-    <input type="search" class="bd-markdown-db-search" placeholder="Search…" aria-label="Search markdown files">
-  `;
-  shell.appendChild(header);
-
-  const body = document.createElement("div");
-  body.className = "bd-markdown-db-body";
-  shell.appendChild(body);
-  body.innerHTML = `<p class="bd-markdown-db-loading">Loading files…</p>`;
-
-  let allFiles = [];
-
-  const renderTable = (files) => {
-    const countEl = header.querySelector(".bd-markdown-db-count");
-    if (countEl) countEl.textContent = `${files.length}`;
-
-    if (files.length === 0) {
-      body.innerHTML = `<p class="bd-markdown-db-empty-msg">No markdown files in this board folder.</p>`;
-      return;
-    }
-
-    const rows = files
-      .map((file) => {
-        const formatted = file.mtime
-          ? new Date(file.mtime).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-          : "—";
-        return `
-          <tr class="bd-markdown-db-row" data-url="${escapeHtml(file.url || "")}" data-title="${escapeHtml(file.title || "")}">
-            <td class="bd-markdown-db-col-title">${escapeHtml(file.title || file.filename || "")}</td>
-            <td class="bd-markdown-db-col-date">${escapeHtml(formatted)}</td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    body.innerHTML = `
-      <table class="bd-markdown-db-table">
-        <thead><tr><th>Name</th><th>Modified</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
-
-    body.querySelectorAll(".bd-markdown-db-row").forEach((tr) => {
-      tr.addEventListener("click", (event) => {
-        event.stopPropagation();
-        const url = tr.dataset.url || "";
-        const fileTitle = tr.dataset.title || "";
-        if (!url) return;
-        const dimensions = { width: 380, height: 420 };
-        const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-        createNode("markdown", position.x + 30, position.y + 30, {
-          file: url,
-          href: url,
-          title: fileTitle,
-          ...dimensions
-        });
-        showToolbarToast(`Opened ${fileTitle}`, "success");
-      });
-    });
-  };
-
-  fetch(`/api/list-markdown?slug=${encodeURIComponent(boardConfig.slug)}`)
-    .then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.json();
-    })
-    .then((data) => {
-      allFiles = Array.isArray(data?.files) ? data.files : [];
-      renderTable(allFiles);
-    })
-    .catch(() => {
-      body.innerHTML = `<p class="bd-markdown-db-error">Failed to load markdown files.</p>`;
-    });
-
-  const searchInput = header.querySelector(".bd-markdown-db-search");
-  searchInput?.addEventListener("input", (e) => {
-    const query = String(e.target.value || "").toLowerCase().trim();
-    if (!query) return renderTable(allFiles);
-    const filtered = allFiles.filter((f) =>
-      String(f.title || "").toLowerCase().includes(query) ||
-      String(f.filename || "").toLowerCase().includes(query)
-    );
-    renderTable(filtered);
-  });
-  searchInput?.addEventListener("mousedown", (e) => e.stopPropagation());
-  searchInput?.addEventListener("keydown", (e) => e.stopPropagation());
-}
-
-// ---------------------------------------------------------------------------
-// New-markdown create flow + drag-drop upload
-// ---------------------------------------------------------------------------
-
-function sanitizeMarkdownFilename(value) {
-  let name = String(value || "").trim().toLowerCase();
-  name = name.replace(/\.md$/i, "").replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  if (!name) name = `note-${Date.now()}`;
-  return `${name}.md`;
-}
-
-let _markdownPanelEl = null;
-let _markdownPanelTitle = null;
-let _markdownPanelFilename = null;
-let _markdownPanelBody = null;
-let _markdownPanelSave = null;
-let _markdownPanelCancel = null;
-
-function ensureMarkdownPanel() {
-  if (_markdownPanelEl) return _markdownPanelEl;
-  const panel = document.createElement("div");
-  panel.className = "braindump-markdown-panel";
-  panel.id = "braindump-markdown-panel";
-  panel.hidden = true;
-  panel.innerHTML = `
-    <div class="braindump-markdown-panel-inner">
-      <h3 class="braindump-markdown-panel-title">New markdown note</h3>
-      <label class="braindump-markdown-panel-label" for="braindump-markdown-title">Title</label>
-      <input id="braindump-markdown-title" type="text" placeholder="Note title" maxlength="120">
-      <label class="braindump-markdown-panel-label" for="braindump-markdown-filename">Filename</label>
-      <input id="braindump-markdown-filename" type="text" placeholder="note-name.md" maxlength="80">
-      <label class="braindump-markdown-panel-label" for="braindump-markdown-body">Initial content</label>
-      <textarea id="braindump-markdown-body" rows="6" placeholder="# My note\n\nWrite here..."></textarea>
-      <div class="braindump-markdown-panel-actions">
-        <button type="button" id="braindump-markdown-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
-        <button type="button" id="braindump-markdown-save" class="braindump-modal-button braindump-modal-button-primary">Save</button>
-      </div>
-    </div>
-  `;
-  toolbarShell?.appendChild(panel);
-  _markdownPanelEl = panel;
-  _markdownPanelTitle = panel.querySelector("#braindump-markdown-title");
-  _markdownPanelFilename = panel.querySelector("#braindump-markdown-filename");
-  _markdownPanelBody = panel.querySelector("#braindump-markdown-body");
-  _markdownPanelSave = panel.querySelector("#braindump-markdown-save");
-  _markdownPanelCancel = panel.querySelector("#braindump-markdown-cancel");
-
-  _markdownPanelTitle?.addEventListener("input", () => {
-    if (!_markdownPanelFilename.value || _markdownPanelFilename.dataset.autofilled === "true") {
-      _markdownPanelFilename.value = sanitizeMarkdownFilename(_markdownPanelTitle.value);
-      _markdownPanelFilename.dataset.autofilled = "true";
-    }
-  });
-  _markdownPanelFilename?.addEventListener("input", () => {
-    _markdownPanelFilename.dataset.autofilled = "false";
-  });
-  _markdownPanelCancel?.addEventListener("click", closeMarkdownPanel);
-  _markdownPanelSave?.addEventListener("click", () => void saveMarkdownFromPanel());
-  panel.addEventListener("keydown", (e) => {
-    e.stopPropagation();
-    if (e.key === "Escape") closeMarkdownPanel();
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
-      e.preventDefault();
-      void saveMarkdownFromPanel();
-    }
-  });
-  return panel;
-}
-
-function openMarkdownPanel() {
-  const panel = ensureMarkdownPanel();
-  panel.hidden = false;
-  panel.classList.add("is-open");
-  _markdownPanelTitle.value = "";
-  _markdownPanelFilename.value = "";
-  _markdownPanelFilename.dataset.autofilled = "true";
-  _markdownPanelBody.value = "";
-  setTimeout(() => _markdownPanelTitle?.focus(), 0);
-}
-
-function closeMarkdownPanel() {
-  if (!_markdownPanelEl) return;
-  _markdownPanelEl.hidden = true;
-  _markdownPanelEl.classList.remove("is-open");
-}
-
-async function saveMarkdownFromPanel() {
-  if (!_markdownPanelTitle || !_markdownPanelFilename || !_markdownPanelBody) return;
-  const title = String(_markdownPanelTitle.value || "").trim();
-  const filename = sanitizeMarkdownFilename(_markdownPanelFilename.value || title);
-  const initialBody = _markdownPanelBody.value;
-  const content = initialBody.trim().length === 0 && title
-    ? `# ${title}\n\n`
-    : initialBody;
-
-  _markdownPanelSave.disabled = true;
-  try {
-    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, path: "", content })
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
-
-    const dimensions = { width: 380, height: 420 };
-    const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-    createNode("markdown", position.x, position.y, {
-      file: result.url,
-      href: result.url,
-      title: title || filename.replace(/\.md$/i, ""),
-      ...dimensions
-    });
-    // Immediately save to localStorage to prevent loss on quick refresh
-    flushLocalStateSave();
-    closeMarkdownPanel();
-    showToolbarToast(`Saved ${result.path}`, "success");
-  } catch (error) {
-    showToolbarToast(`Save failed: ${error.message}`, "error");
-  } finally {
-    _markdownPanelSave.disabled = false;
-  }
-}
-
-function attachMarkdownDropHandler() {
-  if (!viewport || isPreviewMode) return;
-  let dragDepth = 0;
-
-  viewport.addEventListener("dragenter", (e) => {
-    if (!e.dataTransfer?.types?.includes("Files")) return;
-    e.preventDefault();
-    dragDepth += 1;
-    viewport.classList.add("bd-md-drop-target");
-  });
-
-  viewport.addEventListener("dragover", (e) => {
-    if (!e.dataTransfer?.types?.includes("Files")) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  });
-
-  viewport.addEventListener("dragleave", () => {
-    dragDepth = Math.max(0, dragDepth - 1);
-    if (dragDepth === 0) viewport.classList.remove("bd-md-drop-target");
-  });
-
-  viewport.addEventListener("drop", async (e) => {
-    const files = e.dataTransfer?.files;
-    if (!files || files.length === 0) return;
-    const mdFiles = Array.from(files).filter((f) => f.name.toLowerCase().endsWith(".md"));
-    if (mdFiles.length === 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    dragDepth = 0;
-    viewport.classList.remove("bd-md-drop-target");
-
-    const dropPos = screenToCanvas(e.clientX, e.clientY);
-    for (let i = 0; i < mdFiles.length; i++) {
-      const file = mdFiles[i];
-      try {
-        const text = await file.text();
-        const filename = sanitizeMarkdownFilename(file.name);
-        const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename, path: "", content: text })
-        });
-        const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
-        createNode("markdown", dropPos.x + i * 24, dropPos.y + i * 24, {
-          file: result.url,
-          href: result.url,
-          title: filename.replace(/\.md$/i, ""),
-          width: 380,
-          height: 420
-        });
-      } catch (error) {
-        showToolbarToast(`Failed to import ${file.name}: ${error.message}`, "error");
-      }
-    }
-    showToolbarToast(`Imported ${mdFiles.length} markdown file${mdFiles.length === 1 ? "" : "s"}`, "success");
-  });
-}
-
-attachMarkdownDropHandler();
-
-
-// ---------------------------------------------------------------------------
-// Base / database node renderer
 // ---------------------------------------------------------------------------
 
 const BASE_COLUMN_LABELS = {
   title: "Title",
+  entityTitle: "Entity",
   publishingStatus: "Status",
   year: "Year",
   effort: "Effort",
@@ -4916,6 +4726,198 @@ function formatBaseCell(value, column) {
   }
   const safe = String(value).replace(/[<>&]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;"})[c]);
   return `<span>${safe}</span>`;
+}
+
+function formatEntitySurface(value) {
+  const text = String(value || "reference")
+    .replace(/[-_]+/g, " ")
+    .trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "Reference";
+}
+
+function renderEntityNode(nodeObj, el) {
+  let shell = el.querySelector(".bd-entity-shell");
+  if (shell) return;
+
+  shell = document.createElement("div");
+  shell.className = "bd-entity-shell";
+  el.insertBefore(shell, el.firstChild);
+
+  const source = String(nodeObj.source || "content/entities/index.json");
+  const entityRef = String(nodeObj.entityRef || nodeObj.slug || "");
+
+  if (!entityRef) {
+    shell.innerHTML = `<p class="bd-entity-empty">No entity reference set.</p>`;
+    return;
+  }
+
+  shell.innerHTML = `<p class="bd-entity-loading">Loading entity...</p>`;
+
+  fetch(source)
+    .then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json();
+    })
+    .then((data) => {
+      const entities = Array.isArray(data?.entities) ? data.entities : Array.isArray(data) ? data : [];
+      const entity = entities.find((entry) => entry.slug === entityRef);
+
+      if (!entity) {
+        shell.innerHTML = `<p class="bd-entity-error">Entity <code>${escapeHtml(entityRef)}</code> was not found.</p>`;
+        return;
+      }
+
+      const references = Array.isArray(entity.references) ? entity.references : [];
+      const tags = Array.isArray(entity.tags) ? entity.tags : [];
+
+      shell.innerHTML = `
+        <div class="bd-entity-header">
+          <span class="bd-entity-badge">${escapeHtml(entity.type || "entity")}</span>
+          <span class="bd-entity-refcode">${escapeHtml(entity.slug || entityRef)}</span>
+        </div>
+        <div class="bd-entity-body">
+          <h3 class="bd-entity-title">${escapeHtml(entity.title || nodeObj.title || entityRef)}</h3>
+          ${entity.summary ? `<p class="bd-entity-summary">${escapeHtml(entity.summary)}</p>` : ""}
+          ${
+            references.length
+              ? `<div class="bd-entity-refs">${references
+                  .slice(0, 5)
+                  .map((reference) => {
+                    const label = formatEntitySurface(reference.surface);
+                    const text = reference.slug || reference.path || "reference";
+                    return `<span class="bd-entity-ref">${escapeHtml(label)}: ${escapeHtml(text)}</span>`;
+                  })
+                  .join("")}</div>`
+              : ""
+          }
+          ${
+            tags.length
+              ? `<div class="bd-entity-tags">${tags
+                  .slice(0, 5)
+                  .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+                  .join("")}</div>`
+              : ""
+          }
+        </div>
+      `;
+    })
+    .catch((err) => {
+      shell.innerHTML = `<p class="bd-entity-error">Could not load entity data (${escapeHtml(err.message)}).</p>`;
+    });
+}
+
+function renderMarkdownDbNode(nodeObj, el) {
+  let shell = el.querySelector(".bd-markdown-db-shell");
+  if (shell) return;
+
+  shell = document.createElement("div");
+  shell.className = "bd-markdown-db-shell";
+  el.insertBefore(shell, el.firstChild);
+
+  const title = String(nodeObj.title || "Markdown Database");
+
+  const header = document.createElement("div");
+  header.className = "bd-markdown-db-header";
+  header.innerHTML = `
+    <svg class="bd-markdown-db-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    <span class="bd-markdown-db-title">${title}</span>
+    <span class="bd-markdown-db-count"></span>
+    <div class="bd-markdown-db-search-container">
+      <input type="search" class="bd-markdown-db-search" placeholder="Search..." aria-label="Search markdown files">
+    </div>
+  `;
+  shell.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "bd-markdown-db-body";
+  shell.appendChild(body);
+
+  body.innerHTML = `<p class="bd-markdown-db-loading">Loading files…</p>`;
+
+  let allFiles = [];
+
+  const renderTable = (files) => {
+    const countEl = header.querySelector(".bd-markdown-db-count");
+    if (countEl) countEl.textContent = `${files.length}`;
+
+    if (files.length === 0) {
+      body.innerHTML = `<p class="bd-markdown-db-empty-msg">No files found.</p>`;
+      return;
+    }
+
+    const tbodyRows = files
+      .map((file) => {
+        const formattedDate = file.mtime ? new Date(file.mtime).toLocaleDateString() : "-";
+        return `
+          <tr class="bd-markdown-db-row" data-url="${file.url}" data-title="${file.title}">
+            <td class="bd-markdown-db-col-title">${file.title}</td>
+            <td class="bd-markdown-db-col-date">${formattedDate}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    body.innerHTML = `
+      <table class="bd-markdown-db-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Modified</th>
+          </tr>
+        </thead>
+        <tbody>${tbodyRows}</tbody>
+      </table>
+    `;
+
+    body.querySelectorAll(".bd-markdown-db-row").forEach((tr) => {
+      tr.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const url = tr.dataset.url;
+        const fileTitle = tr.dataset.title;
+
+        const dimensions = { width: 380, height: 420 };
+        const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
+        
+        createNode("markdown", position.x + 30, position.y + 30, {
+          file: url,
+          href: url,
+          title: fileTitle,
+          ...dimensions
+        });
+
+        if (typeof showToolbarToast === "function") {
+          showToolbarToast(`Opened ${fileTitle}`, "success");
+        }
+      });
+    });
+  };
+
+  const currentSlug = boardConfig.slug || "";
+  fetch(`/api/list-markdown?slug=${encodeURIComponent(currentSlug)}`)
+    .then((r) => {
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json();
+    })
+    .then((data) => {
+      allFiles = Array.isArray(data.files) ? data.files : [];
+      renderTable(allFiles);
+    })
+    .catch((error) => {
+      body.innerHTML = `<p class="bd-markdown-db-error">Failed to load markdown files.</p>`;
+    });
+
+  const searchInput = header.querySelector(".bd-markdown-db-search");
+  searchInput?.addEventListener("input", (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    const filtered = allFiles.filter((file) => 
+      file.title.toLowerCase().includes(query) || 
+      file.filename.toLowerCase().includes(query)
+    );
+    renderTable(filtered);
+  });
+  
+  searchInput?.addEventListener("mousedown", (e) => e.stopPropagation());
+  searchInput?.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
 }
 
 function renderBaseNode(nodeObj, el) {
@@ -5282,6 +5284,14 @@ function renderNode(nodeObj) {
         let newWidth = Math.max(nodeObj.width + deltaX, 50);
         nodeObj.width = newWidth;
         nodeObj.height = newWidth / ratio;
+      } else if (nodeObj.type === "link" && nodeObj.embedMode === "live" && getYouTubeVideoId(nodeObj.url)) {
+        let ratio = nodeObj.embedRatio;
+        if (!ratio) {
+          ratio = nodeObj.url.includes("/shorts/") ? (9 / 16) : (16 / 9);
+        }
+        let newWidth = Math.max(nodeObj.width + deltaX, 100);
+        nodeObj.width = newWidth;
+        nodeObj.height = newWidth / ratio;
       } else if (nodeObj.type === "board-preview") {
         nodeObj.width = Math.max(nodeObj.width + deltaX, BOARD_PREVIEW_MIN_NODE_WIDTH);
         el.style.width = `${nodeObj.width}px`;
@@ -5337,6 +5347,12 @@ function renderNode(nodeObj) {
     window.addEventListener("touchend", finishNodeResize);
     window.addEventListener("touchcancel", finishNodeResize);
   }
+
+  Array.from(el.classList)
+    .filter((className) => className.startsWith("bd-layer-"))
+    .forEach((className) => el.classList.remove(className));
+  el.classList.add(`bd-layer-${nodeObj.type}`);
+  el.classList.toggle("bd-auto-size-content", nodeObj.type === "link");
 
   el.style.left = `${nodeObj.x}px`;
   el.style.top = `${nodeObj.y}px`;
@@ -5402,7 +5418,7 @@ function renderNode(nodeObj) {
   } else if (nodeObj.type === "link") {
     renderLinkNode(nodeObj, el);
 
-    if (nodeObj.url && (!nodeObj.title || (getYouTubeVideoId(nodeObj.url) && !nodeObj.image))) {
+    if (nodeObj.url && (!nodeObj.title || (getYouTubeVideoId(nodeObj.url) && (!nodeObj.image || !nodeObj.embedRatio)))) {
       fetchBookmarkPreview(nodeObj, el);
     }
   } else if (nodeObj.type === "board-preview") {
@@ -5413,6 +5429,8 @@ function renderNode(nodeObj) {
     renderMarkdownDbNode(nodeObj, el);
   } else if (nodeObj.type === "base") {
     renderBaseNode(nodeObj, el);
+  } else if (nodeObj.type === "entity") {
+    renderEntityNode(nodeObj, el);
   } else if (nodeObj.type === "app") {
     renderAppNode(nodeObj, el);
   }
@@ -5466,7 +5484,12 @@ document.addEventListener("paste", (e) => {
     const urlRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/i;
     if (textMatch.match(urlRegex) && !textMatch.includes(" ")) {
       if (!textMatch.startsWith("http")) textMatch = "https://" + textMatch;
-      createNode("bookmark", pos.x, pos.y, { url: textMatch, width: 300, height: 120 });
+      const boardReference = resolveBoardReferenceFromUrl(textMatch);
+      if (boardReference) {
+        createNode("board-preview", pos.x, pos.y, boardReference);
+      } else {
+        createNode("bookmark", pos.x, pos.y, { url: textMatch, width: 300, height: 120 });
+      }
     } else {
       createNode("text", pos.x, pos.y, { text: textMatch, width: 300, height: 200 });
     }
@@ -5526,12 +5549,10 @@ async function loadBoard() {
 
       loadState(data);
       const state = serializeState();
-      if (!isPreviewMode) {
-        flushLocalStateSave(state);
-        setComparisonBaseline(state);
-        hasPendingRepositorySave = false;
-        autosaveRepositorySupported = true;
-      }
+      flushLocalStateSave(state);
+      setComparisonBaseline(state);
+      hasPendingRepositorySave = false;
+      autosaveRepositorySupported = true;
       updateTransform();
       return true;
     }
@@ -5591,17 +5612,15 @@ async function saveBoard(options = {}) {
 // Init
 setActiveTool(isPreviewMode ? "pan" : "select");
 applyBoardSettings({ persist: false });
-let saved = isPreviewMode ? getCanvasDraftStateForPreview() : getSavedState();
+let saved = getSavedState();
 if (saved) {
   try {
     loadState(JSON.parse(saved));
-    if (!isPreviewMode) {
-      const state = serializeState();
-      flushLocalStateSave(state);
-      setComparisonBaseline(state);
-      hasPendingRepositorySave = true;
-      autosaveRepositorySupported = true;
-    }
+    const state = serializeState();
+    flushLocalStateSave(state);
+    setComparisonBaseline(state);
+    hasPendingRepositorySave = true;
+    autosaveRepositorySupported = true;
   } catch(e) {
     loadBoard();
   }
@@ -5615,31 +5634,9 @@ if (pendingStartupToast && !isPreviewMode) {
   }, 180);
 }
 
-if (!isPreviewMode) {
-  window.addEventListener("beforeunload", () => {
-    flushLocalStateSave();
-  });
-}
-
-if (isPreviewMode) {
-  // The project page has no beforeunload listener, so back-button navigation
-  // can restore it from bfcache without re-running scripts. Refresh from the
-  // canvas's current draft (or file) when that happens.
-  window.addEventListener("pageshow", (event) => {
-    if (!event.persisted) return;
-    const fresh = getCanvasDraftStateForPreview();
-    if (fresh) {
-      try {
-        loadState(JSON.parse(fresh));
-        updateTransform();
-        return;
-      } catch (error) {
-        // fall through to a fresh file fetch
-      }
-    }
-    loadBoard();
-  });
-}
+window.addEventListener("beforeunload", () => {
+  flushLocalStateSave();
+});
 
 return viewport;
 } // end mountCosmoboard

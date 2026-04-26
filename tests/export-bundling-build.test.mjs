@@ -21,7 +21,8 @@ for (const relativeFile of fullBoardFiles) {
   const html = await readFile(path.join(rootDir, relativeFile), "utf8");
 
   assert.match(html, /id="braindump-export-modal"/, `${relativeFile} renders the bundle export modal`);
-  assert.match(html, /Export Project Bundle/, `${relativeFile} labels the modal as a project bundle export`);
+  assert.match(html, /Export Board/, `${relativeFile} labels the modal as a board export flow`);
+  assert.match(html, /id="braindump-export-canvas"/, `${relativeFile} offers a single canvas export action`);
   assert.match(html, /JavaScript\/vendor\/fflate\.min\.js/, `${relativeFile} loads the local fflate bundler`);
   assert.match(
     html,

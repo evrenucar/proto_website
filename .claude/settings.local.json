@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run preview:*)",
+      "Bash(claude mcp *)",
+      "Bash(npm run build:*)",
+      "Bash(node scripts/build-site.mjs:*)",
+      "Bash(npx playwright test tests/markdown-authoring-e2e.test.mjs --reporter=line)",
+      "Bash(npx playwright test tests/markdown-authoring-e2e.test.mjs)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(PORT=4178 node scripts/preview-server.mjs)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_close",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"preview-server.mjs\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(git stash *)",
+      "Bash(tasklist //FI \"PID eq 23740\")",
+      "PowerShell(Get-NetTCPConnection *)",
+      "mcp__playwright__browser_console_messages"
+    ]
+  },
+  "effortLevel": "xhigh"
+}

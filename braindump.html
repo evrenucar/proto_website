@@ -95,7 +95,7 @@
       </button>
       <main id="content" class="page-content">
 
-    <link rel="stylesheet" href="CSS/braindump.css?v=26">
+    <link rel="stylesheet" href="CSS/braindump.css?v=30">
     <div
       class="braindump-viewport"
       id="braindump-viewport"
@@ -103,9 +103,10 @@
       data-board-slug="braindump"
       data-board-title="Braindump"
       data-board-source="content/boards/braindump/current.canvas"
-      data-board-source-version="44941955bcd3"
+      data-board-source-version="a96850b4b13d"
       data-board-legacy-source="content/braindump-state.json"
       data-board-repo-path="content/boards/braindump/current.canvas"
+      data-board-index="[{&quot;slug&quot;:&quot;braindump&quot;,&quot;title&quot;:&quot;Braindump&quot;,&quot;file&quot;:&quot;braindump.html&quot;,&quot;source&quot;:&quot;content/boards/braindump/current.canvas&quot;,&quot;description&quot;:&quot;&quot;},{&quot;slug&quot;:&quot;cosmoboard&quot;,&quot;title&quot;:&quot;Cosmoboard&quot;,&quot;file&quot;:&quot;cosmoboard.html&quot;,&quot;source&quot;:&quot;content/boards/cosmoboard/current.canvas&quot;,&quot;description&quot;:&quot;&quot;},{&quot;slug&quot;:&quot;eurocrate-storage&quot;,&quot;title&quot;:&quot;Eurocrate storage&quot;,&quot;file&quot;:&quot;content/boards/eurocrate-storage.html&quot;,&quot;source&quot;:&quot;content/boards/projects/eurocrate-storage/current.canvas&quot;,&quot;description&quot;:&quot;&quot;}]"
       data-board-storage-key="board:braindump"
       data-board-legacy-storage-key="braindump-canvas"
       data-board-save-endpoint="/api/save-board"
@@ -196,6 +197,10 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 .99-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .99 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51.99H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.99Z"></path></svg>
               <span class="braindump-toolbar-action-label">Settings</span>
             </button>
+            <button type="button" class="braindump-toolbar-action" data-tool="new-markdown" aria-label="New markdown (X)" title="New markdown (X)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <span class="braindump-toolbar-action-label">Markdown</span>
+            </button>
             <button type="button" class="braindump-toolbar-action" data-tool="feature-request" aria-label="Send feature request" title="Send feature request">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a6 6 0 0 0-3.6 10.8c.5.4.8 1 .8 1.7V16h5.6v-1.5c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2Z"/></svg>
               <span class="braindump-toolbar-action-label">Feature request</span>
@@ -284,9 +289,9 @@
         hidden
       >
         <div class="braindump-modal-panel">
-          <h2 id="braindump-modal-title" class="braindump-modal-title">Before you open GitHub</h2>
+          <h2 id="braindump-modal-title" class="braindump-modal-title">Before GitHub review</h2>
           <p id="braindump-modal-description" class="braindump-modal-description">
-            Follow these steps so the recommendation is submitted correctly.
+            This opens a GitHub review request. It does not publish or overwrite the live board.
           </p>
           <p class="braindump-modal-file-note">
             Downloaded file:
@@ -294,9 +299,9 @@
           </p>
           <ol class="braindump-modal-steps">
             <li>A <strong class="braindump-file-emphasis">.canvas.json file</strong> has been downloaded automatically.</li>
-            <li>Log in to GitHub so you can send the recommendation.</li>
-            <li>Fill out the information on the GitHub form and modify it if necessary.</li>
-            <li>Do not forget to attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>.</li>
+            <li>GitHub opens with the board slug, repo path, and current source version already filled in.</li>
+            <li>Attach the downloaded <strong class="braindump-file-emphasis">.canvas.json file</strong>. Recommendations are reviewed before they appear on the live board.</li>
+            <li>If you already opened a recommendation for this board, update that existing issue instead of creating a new one.</li>
           </ol>
           <label class="braindump-modal-checkbox" for="braindump-modal-dismiss">
             <input type="checkbox" id="braindump-modal-dismiss">
@@ -318,9 +323,9 @@
         hidden
       >
         <div class="braindump-modal-panel">
-          <h2 id="braindump-export-modal-title" class="braindump-modal-title">Export Project Bundle</h2>
+          <h2 id="braindump-export-modal-title" class="braindump-modal-title">Export Board</h2>
           <p class="braindump-modal-description">
-            This will download a <code>.zip</code> file containing your board and all of its local assets.
+            Export either the current board as one <code>.canvas</code> file or a portable <code>.zip</code> bundle with local assets.
           </p>
           <label class="braindump-modal-checkbox" for="braindump-export-subpages">
             <input type="checkbox" id="braindump-export-subpages" checked>
@@ -331,6 +336,7 @@
           </p>
           <div class="braindump-modal-actions">
             <button type="button" id="braindump-export-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+            <button type="button" id="braindump-export-canvas" class="braindump-modal-button braindump-modal-button-secondary">Export .canvas</button>
             <button type="button" id="braindump-export-confirm" class="braindump-modal-button braindump-modal-button-primary">Export .zip</button>
           </div>
         </div>
@@ -338,7 +344,7 @@
     </div>
 
     <script src="JavaScript/vendor/fflate.min.js" defer></script>
-    <script src="JavaScript/braindump.js?v=48" defer></script>
+    <script src="JavaScript/braindump.js?v=58" defer></script>
 
       </main>
 

@@ -1,0 +1,485 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - complementary "Primary" [ref=e3]:
+    - generic [ref=e4]:
+      - link "About Me" [ref=e5] [cursor=pointer]:
+        - /url: ../../index.html
+      - link "Projects" [ref=e6] [cursor=pointer]:
+        - /url: ../../projects.html
+      - link "Things i do" [ref=e7] [cursor=pointer]:
+        - /url: ../../things_i_do.html
+      - link "Photography" [ref=e8] [cursor=pointer]:
+        - /url: ../../photography.html
+      - link "Open-Quests" [ref=e9] [cursor=pointer]:
+        - /url: ../../open-quests.html
+      - link "Cool bookmarks" [ref=e10] [cursor=pointer]:
+        - /url: ../../cool-bookmarks.html
+      - link "Braindump" [ref=e11] [cursor=pointer]:
+        - /url: ../../braindump.html
+      - link "Cosmoboard" [ref=e12] [cursor=pointer]:
+        - /url: ../../cosmoboard.html
+    - generic [ref=e13]:
+      - button "Copy Evren Ucar email address" [ref=e14] [cursor=pointer]:
+        - img "Email icon" [ref=e15]
+      - link "LinkedIn" [ref=e16] [cursor=pointer]:
+        - /url: https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/
+        - img "LinkedIn icon" [ref=e17]
+      - link "YouTube" [ref=e18] [cursor=pointer]:
+        - /url: https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw
+        - img "YouTube icon" [ref=e19]
+  - generic [ref=e20]:
+    - button "Toggle navigation" [ref=e21] [cursor=pointer]:
+      - generic [ref=e25]: Toggle navigation
+    - main [ref=e26]:
+      - article [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - paragraph [ref=e30]: Projects
+            - heading "Eurocrate storage universal solution" [level=2] [ref=e31]
+            - paragraph [ref=e32]: 600x400
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]: Type
+              - strong [ref=e36]: Projects
+            - generic [ref=e37]:
+              - generic [ref=e38]: Status
+              - strong [ref=e39]: Greenlit
+            - generic [ref=e40]:
+              - generic [ref=e41]: Added
+              - strong [ref=e42]: 23 Feb 2026, 22:27
+            - generic [ref=e43]:
+              - generic [ref=e44]: Last updated
+              - strong [ref=e45]: 20 Apr 2026, 19:50
+            - link "Open in Notion" [ref=e47] [cursor=pointer]:
+              - /url: https://evrenucar.notion.site/Eurocrate-storage-universal-solution-310312b0d17d807db8f0dd315797b930?source=copy_link
+        - figure [ref=e48]:
+          - img "Eurocrate storage universal solution" [ref=e49]
+        - generic [ref=e50]:
+          - list [ref=e51]:
+            - listitem [ref=e52]:
+              - text: 600x400
+              - list [ref=e53]:
+                - listitem [ref=e54]:
+                  - strong [ref=e55]: 600x400x75mm (
+                  - strong [ref=e56]:
+                    - link "emtrade link" [ref=e57] [cursor=pointer]:
+                      - /url: https://www.emtrade.nl/60x40x75-kunststof-bak-grijs-pp-gesloten-gebruikt.html?id=266599261
+                  - strong [ref=e58]: )
+                - listitem [ref=e59]:
+                  - strong [ref=e60]: 600x400x170 (
+                  - strong [ref=e61]:
+                    - link "emtrade link" [ref=e62] [cursor=pointer]:
+                      - /url: https://www.emtrade.nl/stapelbak-600x400x170-donkergrijs-gesloten-gebruik.html?id=270597353
+                  - strong [ref=e63]: )
+                - listitem [ref=e64]:
+                  - strong [ref=e65]: 600x400x270mm
+                  - text: (
+                  - link "emtrade link" [ref=e66] [cursor=pointer]:
+                    - /url: https://www.emtrade.nl/stapelbak-600x400x270mm-pp-grijs-gebruikt.html
+                  - text: )
+            - listitem [ref=e67]:
+              - strong [ref=e68]: 400 x 300
+              - list [ref=e69]:
+                - listitem [ref=e70]:
+                  - strong [ref=e71]: 400 x 300 x 120 mm (
+                  - strong [ref=e72]:
+                    - link "link" [ref=e73] [cursor=pointer]:
+                      - /url: https://123magazijninrichting.nl/magazijnbak-400-x-300-x-120-mm-lxbxh-groen-gebruikt/?utm_source=google&utm_medium=cpc&utm_campaign=20149041287&utm_content&utm_term
+                  - strong [ref=e74]: ) (
+                  - strong [ref=e75]:
+                    - link "emtrade link" [ref=e76] [cursor=pointer]:
+                      - /url: https://www.emtrade.nl/stapelbak-40x30x12-cm-gebruikt.html?id=309630939
+                  - strong [ref=e77]: )
+                - listitem [ref=e78]
+            - listitem [ref=e79]:
+              - text: could you get them on other second hand sale websites
+              - list [ref=e80]:
+                - listitem [ref=e81]: marktplaats or other liqudation websites
+            - listitem [ref=e82]:
+              - text: Storage ideas
+              - list [ref=e83]:
+                - listitem [ref=e84]: Why not just boxes?
+                - listitem [ref=e85]: make a moving drawer with weight on its bottom
+                - listitem [ref=e86]: "Small item containers: EuroPlus flex organizer"
+                - listitem [ref=e87]: HDPE strips ontop of the sliding surfaces?
+            - listitem [ref=e88]: Steel welded frame with eurocrates
+            - listitem [ref=e89]:
+              - text: thin material that seals the top surface so dust does’t get in
+              - list [ref=e90]:
+                - listitem [ref=e91]: on friction surfaces teflon could be added
+            - listitem [ref=e92]:
+              - text: Weight on the bottom (sand or klinker blocks)
+              - list [ref=e93]:
+                - listitem [ref=e94]:
+                  - text: Per crate max mass
+                  - list [ref=e95]:
+                    - listitem [ref=e96]: 6 crates 20 max each
+                - listitem [ref=e97]:
+                  - strong [ref=e98]: anti-tip interlock system???
+                  - list [ref=e99]:
+                    - listitem [ref=e100]:
+                      - text: If its fully removed it shouldn’t matter
+                      - list [ref=e101]:
+                        - listitem [ref=e102]: it activates lock if moved a tiny biy
+                        - listitem [ref=e103]: it disables if box removed completely
+                - listitem [ref=e104]: How to make it so only one can be full open at a time
+                - listitem [ref=e105]: Make sure bottom weight more than total
+                - listitem [ref=e106]: heavy duty wheels that lock
+          - figure "image.png" [ref=e107]:
+            - img "image.png" [ref=e108]
+            - generic [ref=e109]: image.png
+          - figure "image.png" [ref=e110]:
+            - img "image.png" [ref=e111]
+            - generic [ref=e112]: image.png
+          - iframe [ref=e114]:
+            - generic [active] [ref=f21e1]:
+              - generic "YouTube Video Player" [ref=f21e3]
+              - generic [ref=f21e5]:
+                - generic:
+                  - generic:
+                    - button "Play video" [ref=f21e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f21e12] [cursor=pointer]
+                    - generic [ref=f21e14]:
+                      - generic [ref=f21e19]:
+                        - generic [ref=f21e20]:
+                          - link "Steel Workshop Storage Rack" [ref=f21e21] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=1CLEPpCOnoI
+                          - link "Phil Vandelay" [ref=f21e22] [cursor=pointer]:
+                            - /url: /channel/UCchU2gYo5UunA6uh6JVOd9A
+                            - generic [ref=f21e23]: Phil Vandelay
+                        - generic [ref=f21e24]:
+                          - button [ref=f21e25] [cursor=pointer]
+                          - generic [ref=f21e27]:
+                            - generic: Phil Vandelay
+                            - generic: 252K subscribers
+                      - generic [ref=f21e28]:
+                        - button "Copy link" [ref=f21e31] [cursor=pointer]:
+                          - generic [ref=f21e35]:
+                            - img
+                        - link "Watch on YouTube" [ref=f21e42] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=1CLEPpCOnoI
+                          - generic [ref=f21e45]:
+                            - text: Watch on
+                            - img [ref=f21e47]:
+                              - generic [ref=f21e49]:
+                                - img
+          - iframe [ref=e116]:
+            - generic [active] [ref=f22e1]:
+              - generic "YouTube Video Player" [ref=f22e3]
+              - generic [ref=f22e5]:
+                - generic:
+                  - generic:
+                    - button "Play video" [ref=f22e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f22e12] [cursor=pointer]
+                    - generic [ref=f22e14]:
+                      - generic [ref=f22e19]:
+                        - generic [ref=f22e20]:
+                          - link "Best workshop storage solution - 5 min job" [ref=f22e21] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=M8zCT6Xjl9M
+                          - link "RotarySMP" [ref=f22e22] [cursor=pointer]:
+                            - /url: /channel/UCkmwgo38DWUFGMgu4jT68YQ
+                            - generic [ref=f22e23]: RotarySMP
+                        - generic [ref=f22e24]:
+                          - button [ref=f22e25] [cursor=pointer]
+                          - generic [ref=f22e27]:
+                            - generic: RotarySMP
+                            - generic: 37K subscribers
+                      - generic [ref=f22e28]:
+                        - button "Copy link" [ref=f22e31] [cursor=pointer]:
+                          - generic [ref=f22e35]:
+                            - img
+                        - link "Watch on YouTube" [ref=f22e42] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=M8zCT6Xjl9M
+                          - generic [ref=f22e45]:
+                            - text: Watch on
+                            - img [ref=f22e47]:
+                              - generic [ref=f22e49]:
+                                - img
+          - iframe [ref=e118]:
+            - generic [active] [ref=f23e1]:
+              - generic "YouTube Video Player" [ref=f23e3]
+              - generic [ref=f23e5]:
+                - generic:
+                  - generic:
+                    - button "Play video" [ref=f23e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f23e12] [cursor=pointer]
+                    - generic [ref=f23e14]:
+                      - generic [ref=f23e19]:
+                        - generic [ref=f23e20]:
+                          - link "Making a wall of storage with a bunch of euro boxes" [ref=f23e21] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=xt_zGkH-uOI
+                          - link "Flokroll Projects" [ref=f23e22] [cursor=pointer]:
+                            - /url: /channel/UCC65fJ26C0dlblMXfRyG_cg
+                            - generic [ref=f23e23]: Flokroll Projects
+                        - generic [ref=f23e24]:
+                          - button [ref=f23e25] [cursor=pointer]
+                          - generic [ref=f23e27]:
+                            - generic: Flokroll Projects
+                            - generic: 12.7K subscribers
+                      - generic [ref=f23e28]:
+                        - button "Copy link" [ref=f23e31] [cursor=pointer]:
+                          - generic [ref=f23e35]:
+                            - img
+                        - link "Watch on YouTube" [ref=f23e42] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=xt_zGkH-uOI
+                          - generic [ref=f23e45]:
+                            - text: Watch on
+                            - img [ref=f23e47]:
+                              - generic [ref=f23e49]:
+                                - img
+          - iframe [ref=e120]:
+            - generic [active] [ref=f24e1]:
+              - generic "YouTube Video Player" [ref=f24e3]
+              - generic [ref=f24e5]:
+                - generic:
+                  - generic:
+                    - button "Play video" [ref=f24e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f24e12] [cursor=pointer]
+                    - generic [ref=f24e14]:
+                      - generic [ref=f24e19]:
+                        - generic [ref=f24e20]:
+                          - link "Simple DIY Workbench Practical with storage" [ref=f24e21] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=mk6ch1pNIfY
+                          - link "The Metalist" [ref=f24e22] [cursor=pointer]:
+                            - /url: /channel/UCIFCEAE5DGIKFzMYcCa4BRQ
+                            - generic [ref=f24e23]: The Metalist
+                        - generic [ref=f24e24]:
+                          - button [ref=f24e25] [cursor=pointer]
+                          - generic [ref=f24e27]:
+                            - generic: The Metalist
+                            - generic: 247K subscribers
+                      - generic [ref=f24e28]:
+                        - button "Copy link" [ref=f24e31] [cursor=pointer]:
+                          - generic [ref=f24e35]:
+                            - img
+                        - link "Watch on YouTube" [ref=f24e42] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=mk6ch1pNIfY
+                          - generic [ref=f24e45]:
+                            - text: Watch on
+                            - img [ref=f24e47]:
+                              - generic [ref=f24e49]:
+                                - img
+          - iframe [ref=e122]:
+            - generic [active] [ref=f25e1]:
+              - generic "YouTube Video Player" [ref=f25e3]
+              - generic [ref=f25e5]:
+                - generic:
+                  - generic:
+                    - button "Play video" [ref=f25e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f25e12] [cursor=pointer]
+                    - generic [ref=f25e14]:
+                      - generic [ref=f25e19]:
+                        - generic [ref=f25e20]:
+                          - link "Why don't more people build storage like this?" [ref=f25e21] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=f-ANS-kmusE
+                          - link "MWA Woodworks" [ref=f25e22] [cursor=pointer]:
+                            - /url: /channel/UCn2qOBTeRCHjqr-Mo-j0CBw
+                            - generic [ref=f25e23]: MWA Woodworks
+                        - generic [ref=f25e24]:
+                          - button [ref=f25e25] [cursor=pointer]
+                          - generic [ref=f25e27]:
+                            - generic: MWA Woodworks
+                            - generic: 436K subscribers
+                      - generic [ref=f25e28]:
+                        - button "Copy link" [ref=f25e31] [cursor=pointer]:
+                          - generic [ref=f25e35]:
+                            - img
+                        - link "Watch on YouTube" [ref=f25e42] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=f-ANS-kmusE
+                          - generic [ref=f25e45]:
+                            - text: Watch on
+                            - img [ref=f25e47]:
+                              - generic [ref=f25e49]:
+                                - img
+          - iframe [ref=e124]:
+            - generic [active] [ref=f26e1]:
+              - generic "YouTube Video Player" [ref=f26e3]
+              - generic [ref=f26e5]:
+                - generic:
+                  - generic:
+                    - button "Play video" [ref=f26e10] [cursor=pointer]
+                    - button "Hide player controls" [ref=f26e12] [cursor=pointer]
+                    - generic [ref=f26e14]:
+                      - generic [ref=f26e19]:
+                        - generic [ref=f26e20]:
+                          - 'link "Organize Small Parts: DIY Eurobox drawers for ALLit EuroPlus Flex Boxes" [ref=f26e21] [cursor=pointer]':
+                            - /url: https://www.youtube.com/watch?v=2nk-bT3rlmE
+                          - link "Org like a Pro!" [ref=f26e22] [cursor=pointer]:
+                            - /url: /channel/UCDYpahF06FrE52FzhZcncHA
+                            - generic [ref=f26e23]: Org like a Pro!
+                        - generic [ref=f26e24]:
+                          - button [ref=f26e25] [cursor=pointer]
+                          - generic [ref=f26e27]:
+                            - generic: Org like a Pro!
+                            - generic: 116 subscribers
+                      - generic [ref=f26e28]:
+                        - button "Copy link" [ref=f26e31] [cursor=pointer]:
+                          - generic [ref=f26e35]:
+                            - img
+                        - link "Watch on YouTube" [ref=f26e42] [cursor=pointer]:
+                          - /url: https://www.youtube.com/watch?v=2nk-bT3rlmE
+                          - generic [ref=f26e45]:
+                            - text: Watch on
+                            - img [ref=f26e47]:
+                              - generic [ref=f26e49]:
+                                - img
+        - generic [ref=e125]:
+          - generic [ref=e126]:
+            - heading "Board" [level=2] [ref=e127]
+            - paragraph [ref=e128]: The working board for this project. Pan to explore — open the full board for the editing surface.
+          - generic [ref=e129]:
+            - generic:
+              - img
+              - img [ref=e130]
+              - generic [ref=e132]:
+                - text: Eurocrate storage system
+                - text: A universal 600×400 modular storage solution built around standard eurocontainers.
+              - generic [ref=e134]:
+                - text: Constraints
+                - text: 600×400×75mm (shallow)
+                - text: 600×400×170mm (mid)
+                - text: 600×400×270mm (deep)
+                - text: All sizes interlock on the same 600×400 footprint.
+              - generic [ref=e136]:
+                - text: Frame structure
+                - text: Steel welded frame with crate runners.
+                - text: HDPE or teflon strips on sliding surfaces.
+                - text: Heavy-duty locking casters at base.
+                - text: Weight ballast at bottom tier.
+              - generic [ref=e138]:
+                - text: Safety
+                - text: "Anti-tip interlock: activates if crate partially withdrawn, releases when fully removed."
+                - text: Only one crate full-open at a time.
+                - text: Bottom crate always heavier than top load.
+              - generic [ref=e140]:
+                - text: Sub-containers
+                - text: A4/A5/A6 cardboard for small parts.
+                - text: EuroPlus flex organizer dividers.
+                - text: Fitting both 400×300 and 600×400 crate sizes.
+              - generic [ref=e142]:
+                - button "View live embed" [ref=e143] [cursor=pointer]:
+                  - img [ref=e144]
+                - generic [ref=e146]:
+                  - heading "EMtrade (second-hand crates)" [level=3] [ref=e147]
+                  - paragraph [ref=e148]: Primary sourcing for used eurocontainers at low cost.
+                  - link "https://www.emtrade.nl" [ref=e149] [cursor=pointer]:
+                    - /url: https://www.emtrade.nl
+              - generic [ref=e151]:
+                - text: Open questions
+                - text: "Dust sealing: thin lid material on friction surface?"
+                - text: "Sliding surface coating: HDPE or teflon tape?"
+                - text: Frame material gauge for the target load?
+                - text: Marktplaats as alternative crate source?
+              - img [ref=e153]
+              - generic [ref=e156]: good website
+              - generic [ref=e158]:
+                - generic [ref=e159]: braindump / Missing source
+                - heading "Braindump" [level=3] [ref=e161]
+                - generic:
+                  - generic: Board not available
+                - link "Open Braindump" [ref=e163] [cursor=pointer]:
+                  - /url: ../../braindump.html
+                  - text: Open board
+              - generic [ref=e165]: LIVE EDIT MARKER - inserted at 2026-04-26T21:29:44.944Z
+            - link "Open Eurocrate storage board" [ref=e166] [cursor=pointer]:
+              - /url: ../boards/eurocrate-storage.html
+              - img [ref=e167]
+              - text: Open board
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - heading "Other projects" [level=2] [ref=e173]
+            - generic [ref=e174]:
+              - article [ref=e175]:
+                - link "Status Just Idea Category none diy flightcases DIY flightcase content Last updated 19 Apr 2026, 22:44" [ref=e176] [cursor=pointer]:
+                  - /url: diy-flightcases.html
+                  - generic [ref=e178]: Projects
+                  - generic [ref=e180]:
+                    - generic [ref=e181]:
+                      - generic [ref=e182]:
+                        - strong [ref=e183]: Status
+                        - generic [ref=e184]: Just Idea
+                      - generic [ref=e185]:
+                        - strong [ref=e186]: Category
+                        - generic [ref=e187]: none
+                    - heading "diy flightcases" [level=3] [ref=e188]
+                    - paragraph [ref=e189]: DIY flightcase content
+                    - paragraph [ref=e191]:
+                      - strong [ref=e192]: Last updated
+                      - generic [ref=e193]: 19 Apr 2026, 22:44
+              - article [ref=e194]:
+                - link "📦Project Box system Status Greenlit Category none 📦Project Box system need standard sizs of boxes that I can store and pack together for projects and storage needs. Last updated 19 Apr 2026, 18:31" [ref=e195] [cursor=pointer]:
+                  - /url: project-box-system.html
+                  - img "📦Project Box system" [ref=e197]
+                  - generic [ref=e199]:
+                    - generic [ref=e200]:
+                      - generic [ref=e201]:
+                        - strong [ref=e202]: Status
+                        - generic [ref=e203]: Greenlit
+                      - generic [ref=e204]:
+                        - strong [ref=e205]: Category
+                        - generic [ref=e206]: none
+                    - heading "📦Project Box system" [level=3] [ref=e207]
+                    - paragraph [ref=e208]: need standard sizs of boxes that I can store and pack together for projects and storage needs.
+                    - paragraph [ref=e210]:
+                      - strong [ref=e211]: Last updated
+                      - generic [ref=e212]: 19 Apr 2026, 18:31
+              - article [ref=e213]:
+                - link "💻Cyberdeck small modular pc Status Greenlit Category none 💻Cyberdeck small modular pc There are notes on the mini projects page on miro (link) Last updated 30 Mar 2026, 11:17" [ref=e214] [cursor=pointer]:
+                  - /url: cyberdeck-small-modular-pc.html
+                  - img "💻Cyberdeck small modular pc" [ref=e216]
+                  - generic [ref=e218]:
+                    - generic [ref=e219]:
+                      - generic [ref=e220]:
+                        - strong [ref=e221]: Status
+                        - generic [ref=e222]: Greenlit
+                      - generic [ref=e223]:
+                        - strong [ref=e224]: Category
+                        - generic [ref=e225]: none
+                    - heading "💻Cyberdeck small modular pc" [level=3] [ref=e226]
+                    - paragraph [ref=e227]: There are notes on the mini projects page on miro (link)
+                    - paragraph [ref=e229]:
+                      - strong [ref=e230]: Last updated
+                      - generic [ref=e231]: 30 Mar 2026, 11:17
+          - generic [ref=e232]:
+            - link "Back to the top" [ref=e233] [cursor=pointer]:
+              - /url: "#content"
+              - img [ref=e235]
+              - generic [ref=e238]: Back to the top
+            - link "Go back" [ref=e239] [cursor=pointer]:
+              - /url: ../../projects.html
+              - img [ref=e241]
+              - generic [ref=e243]: Go back
+    - contentinfo [ref=e244]:
+      - generic [ref=e245]:
+        - link "Evren Ucar home" [ref=e246] [cursor=pointer]:
+          - /url: ../../index.html
+          - img "Evren Ucar logo" [ref=e247]
+        - button "Copy Evren Ucar email address" [ref=e248] [cursor=pointer]: Copy email
+      - navigation "Footer navigation" [ref=e249]:
+        - link "About Me" [ref=e250] [cursor=pointer]:
+          - /url: ../../index.html
+        - link "Projects" [ref=e251] [cursor=pointer]:
+          - /url: ../../projects.html
+        - link "Things i do" [ref=e252] [cursor=pointer]:
+          - /url: ../../things_i_do.html
+        - link "Photography" [ref=e253] [cursor=pointer]:
+          - /url: ../../photography.html
+        - link "Open-Quests" [ref=e254] [cursor=pointer]:
+          - /url: ../../open-quests.html
+        - link "Cool bookmarks" [ref=e255] [cursor=pointer]:
+          - /url: ../../cool-bookmarks.html
+        - link "Braindump" [ref=e256] [cursor=pointer]:
+          - /url: ../../braindump.html
+        - link "Cosmoboard" [ref=e257] [cursor=pointer]:
+          - /url: ../../cosmoboard.html
+      - generic [ref=e258]:
+        - link "LinkedIn" [ref=e259] [cursor=pointer]:
+          - /url: https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/
+        - link "YouTube" [ref=e260] [cursor=pointer]:
+          - /url: https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw
+    - generic "Scrolling site banner" [ref=e261]:
+      - generic [ref=e262]:
+        - generic [ref=e263]: If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. |
+        - generic [ref=e264]: If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. |
+        - generic [ref=e265]: If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. |

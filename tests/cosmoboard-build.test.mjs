@@ -61,8 +61,8 @@ assert.equal(boardPreviewNodes.some((node) => node.boardHref === "braindump.html
 assert.equal(linkTargets.includes("content/boards/cosmoboard/current.canvas"), true);
 assert.equal(linkTargets.includes("https://github.com/evrenucar/proto_website"), true);
 assert.equal(homeHtml.match(/data-board-mode="preview"/g)?.length, 2);
-assert.equal(homeHtml.match(/CSS\/braindump\.css\?v=26/g)?.length, 1);
-assert.equal(homeHtml.match(/JavaScript\/braindump\.js\?v=48/g)?.length, 1);
+assert.equal(homeHtml.match(/CSS\/braindump\.css\?v=29/g)?.length, 1);
+assert.equal(homeHtml.match(/JavaScript\/braindump\.js\?v=56/g)?.length, 1);
 assert.equal(homeHtml.match(/data-board-source-version="[a-f0-9]{12}"/g)?.length >= 2, true);
 assert.match(homeHtml, /data-board-slug="braindump"/);
 assert.match(homeHtml, /data-board-full-href="braindump\.html"/);

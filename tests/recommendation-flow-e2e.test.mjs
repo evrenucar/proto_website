@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 
 import { chromium } from "playwright";
 
 const port = 4183;
 const baseUrl = `http://127.0.0.1:${port}`;
+const outDir = path.join(process.cwd(), ".tmp", "recommendation-flow-e2e");
 
 function waitForServer(child) {
   return new Promise((resolve, reject) => {
@@ -33,6 +36,7 @@ const child = spawn(process.execPath, ["scripts/preview-server.mjs"], {
 let browser;
 
 try {
+  await mkdir(outDir, { recursive: true });
   await waitForServer(child);
 
   browser = await chromium.launch();
@@ -54,8 +58,10 @@ try {
   await page.evaluate(() => {
     localStorage.removeItem("braindump:cosmoboard:recommendation-modal-dismissed");
   });
+  const sourceVersion = await page.locator("#braindump-viewport").getAttribute("data-board-source-version");
 
   await page.locator(".braindump-toolbar-action-desktop-only[data-tool='recommend']").click();
+  await page.screenshot({ path: path.join(outDir, "recommendation-entry.png"), fullPage: true });
   await page.locator("#braindump-recommend-summary").fill("Add source metadata");
 
   const downloadPromise = page.waitForEvent("download");
@@ -66,6 +72,13 @@ try {
   assert.match(filename, /^cosmoboard_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.canvas\.json$/);
 
   await page.locator("#braindump-modal:not([hidden])").waitFor();
+  const modalText = await page.locator("#braindump-modal").innerText();
+  assert.match(modalText, /review request/i);
+  assert.match(modalText, /does not publish or overwrite/i);
+  assert.match(modalText, /reviewed before/i);
+  assert.match(modalText, /update that existing issue/i);
+  await page.screenshot({ path: path.join(outDir, "github-handoff-modal.png"), fullPage: true });
+
   await page.locator("#braindump-modal-confirm").click();
   await page.waitForFunction(() => window.__openedRecommendationUrls.length === 1);
 
@@ -80,8 +93,12 @@ try {
   assert.equal(issueUrl.searchParams.get("title"), "Recommendation: Cosmoboard (Add source metadata)");
   assert.match(body, /## Board slug\ncosmoboard/);
   assert.match(body, /## Board repo path\ncontent\/boards\/cosmoboard\/current\.canvas/);
+  assert.match(sourceVersion || "", /^[a-f0-9]{12}$/);
+  assert.match(body, new RegExp(`## Board source version\\n${sourceVersion}`));
   assert.match(body, new RegExp(`## Board file\\n${filename.replaceAll(".", "\\.")}`));
   assert.match(body, /## Short summary\nAdd source metadata/);
+  assert.match(body, /This issue is a review request, not a direct publish or overwrite action\./);
+  assert.match(body, /The exported file can be compared against the board source version above before any accepted change is merged\./);
 } finally {
   if (browser) {
     await browser.close();
