@@ -25,7 +25,10 @@
       "Bash(git stash *)",
       "Bash(tasklist //FI \"PID eq 23740\")",
       "PowerShell(Get-NetTCPConnection *)",
-      "mcp__playwright__browser_console_messages"
+      "mcp__playwright__browser_console_messages",
+      "Bash(git config:*)",
+      "Bash(xargs -I {} bash -c 'echo \"\"{}\"\" | sed \"\"s/.*\\\\.//\"\" ')",
+      "Bash(git *)"
     ]
   },
   "effortLevel": "xhigh"
