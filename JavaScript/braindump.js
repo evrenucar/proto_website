@@ -4021,27 +4021,28 @@ function attachMarkdownEditor(nodeObj, body) {
       active.textContent = before + lines[0];
       active.dataset.raw = active.textContent;
 
-      // Insert middle lines
+      // Insert middle + last pasted lines (all rendered)
       let lastInserted = active;
-      for (let i = 1; i < lines.length - 1; i++) {
+      for (let i = 1; i < lines.length; i++) {
         const newLine = buildMarkdownLineEl(lines[i]);
         lastInserted.after(newLine);
         lastInserted = newLine;
       }
 
-      // Insert last line with remaining text
-      const lastLine = buildMarkdownLineEl(lines[lines.length - 1] + after);
-      lastInserted.after(lastLine);
+      // If the original line had trailing text after the caret, append a new
+      // line carrying that trailing text. Otherwise append a fresh empty line.
+      const trailingLine = buildMarkdownLineEl(after);
+      lastInserted.after(trailingLine);
 
-      // Set active to last line and position cursor
+      // Render all pasted lines (formatting visible immediately) and place
+      // caret on the trailing line in raw mode so the user can keep typing.
       setMarkdownLineRendered(active);
-      setMarkdownLineRaw(lastLine);
+      setMarkdownLineRaw(trailingLine);
       const range = document.createRange();
-      const cursorPos = lines[lines.length - 1].length;
-      if (lastLine.firstChild) {
-        range.setStart(lastLine.firstChild, cursorPos);
+      if (trailingLine.firstChild) {
+        range.setStart(trailingLine.firstChild, 0);
       } else {
-        range.setStart(lastLine, 0);
+        range.setStart(trailingLine, 0);
       }
       range.collapse(true);
       sel.removeAllRanges();
@@ -4154,8 +4155,48 @@ function attachMarkdownEditor(nodeObj, body) {
       return;
     }
 
+    // Whole-line removal helper: delete the active line entirely (not merge it
+    // into the previous), placing caret at end of previous line or start of next.
+    const removeActiveLineEntirely = (sel) => {
+      const prev = active.previousElementSibling;
+      const next = active.nextElementSibling;
+      active.remove();
+      scheduleMarkdownSave(nodeObj, body);
+      if (prev?.classList?.contains("bd-md-line")) {
+        const prevText = prev.dataset.raw ?? prev.textContent ?? "";
+        setMarkdownLineRaw(prev);
+        const newRange = document.createRange();
+        if (prev.firstChild) newRange.setStart(prev.firstChild, prevText.length);
+        else newRange.setStart(prev, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      } else if (next?.classList?.contains("bd-md-line")) {
+        setMarkdownLineRaw(next);
+        const newRange = document.createRange();
+        newRange.setStart(next, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      }
+    };
+
+    const fullLineSelected = (sel) => {
+      if (!sel || sel.rangeCount === 0) return false;
+      const text = active.textContent || "";
+      if (text.length === 0) return false;
+      const selectedText = sel.getRangeAt(0).toString();
+      return selectedText === text;
+    };
+
     if (event.key === "Backspace") {
       const sel = window.getSelection();
+      // Whole line selected: drop the line entirely (don't merge upward).
+      if (fullLineSelected(sel)) {
+        event.preventDefault();
+        removeActiveLineEntirely(sel);
+        return;
+      }
       const offset = sel?.anchorOffset ?? 0;
       if (offset === 0 && active.previousElementSibling?.classList?.contains("bd-md-line")) {
         event.preventDefault();
@@ -4180,44 +4221,13 @@ function attachMarkdownEditor(nodeObj, body) {
       }
     }
 
-    // Delete key - handle whole line deletion when whole line is selected
+    // Delete key - whole-line removal (same semantics as full-line Backspace).
     if (event.key === "Delete") {
       const sel = window.getSelection();
-      const text = active.textContent || "";
-      // Check if whole line is selected (selection spans entire content)
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        const selectedText = range.toString();
-        // If whole line selected or at end of line with next sibling
-        if (selectedText === text && text.length > 0) {
-          event.preventDefault();
-          const prev = active.previousElementSibling;
-          const next = active.nextElementSibling;
-          active.remove();
-          scheduleMarkdownSave(nodeObj, body);
-          // Move cursor to end of previous line if exists, else start of next
-          if (prev?.classList?.contains("bd-md-line")) {
-            const prevText = prev.dataset.raw ?? prev.textContent ?? "";
-            setMarkdownLineRaw(prev);
-            const newRange = document.createRange();
-            if (prev.firstChild) {
-              newRange.setStart(prev.firstChild, prevText.length);
-            } else {
-              newRange.setStart(prev, 0);
-            }
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-          } else if (next?.classList?.contains("bd-md-line")) {
-            setMarkdownLineRaw(next);
-            const newRange = document.createRange();
-            newRange.setStart(next, 0);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-          }
-          return;
-        }
+      if (fullLineSelected(sel)) {
+        event.preventDefault();
+        removeActiveLineEntirely(sel);
+        return;
       }
     }
 
@@ -4373,6 +4383,20 @@ function attachMarkdownEditor(nodeObj, body) {
   // Click-away: clicking outside this editor's body should fully exit edit
   // mode. focusout alone misses the case where the click target (e.g. the
   // canvas viewport) doesn't accept focus, leaving the body "active" forever.
+  // Fully exit editing: clear active line, blur body, AND drop any selection
+  // still pointing inside the editor — otherwise contenteditable keeps showing
+  // a caret at the start of body even after blur (cursor "stuck at start").
+  const exitEditing = () => {
+    clearActiveLine();
+    if (document.activeElement && body.contains(document.activeElement)) {
+      document.activeElement.blur?.();
+    }
+    const sel = window.getSelection();
+    if (sel && sel.anchorNode && body.contains(sel.anchorNode)) {
+      sel.removeAllRanges();
+    }
+  };
+
   const handleOutsidePointerDown = (e) => {
     if (!body.isConnected) {
       window.removeEventListener("pointerdown", handleOutsidePointerDown, true);
@@ -4381,10 +4405,7 @@ function attachMarkdownEditor(nodeObj, body) {
     if (!(e.target instanceof Node)) return;
     if (body.contains(e.target)) return;
     if (!body.querySelector(".bd-md-line--active") && document.activeElement !== body) return;
-    clearActiveLine();
-    if (document.activeElement && body.contains(document.activeElement)) {
-      document.activeElement.blur?.();
-    }
+    exitEditing();
   };
   window.addEventListener("pointerdown", handleOutsidePointerDown, true);
 
@@ -4398,10 +4419,7 @@ function attachMarkdownEditor(nodeObj, body) {
     if (!body.contains(document.activeElement) && !body.querySelector(".bd-md-line--active")) return;
     e.preventDefault();
     e.stopPropagation();
-    clearActiveLine();
-    if (document.activeElement && body.contains(document.activeElement)) {
-      document.activeElement.blur?.();
-    }
+    exitEditing();
   };
   window.addEventListener("keydown", handleEscape, true);
 
@@ -4427,11 +4445,16 @@ function attachMarkdownEditor(nodeObj, body) {
   };
   body.addEventListener("scroll", updateOverflowIndicator);
 
-  // Watch for content changes to update overflow indicator
+  // Watch for content changes to update overflow indicator. Observe the parent
+  // bd-item too — resizing the canvas node sometimes adjusts container layout
+  // without resizing the body's content box directly, leaving the gradient
+  // stale (visible when no overflow / hidden when overflow exists).
   const resizeObserver = new ResizeObserver(() => {
     requestAnimationFrame(updateOverflowIndicator);
   });
   resizeObserver.observe(body);
+  const itemEl = body.closest?.(".bd-item");
+  if (itemEl) resizeObserver.observe(itemEl);
 
   // Also update on input to catch content changes
   body.addEventListener("input", () => {
@@ -4442,6 +4465,48 @@ function attachMarkdownEditor(nodeObj, body) {
   requestAnimationFrame(updateOverflowIndicator);
   // Additional delayed check for async content
   setTimeout(updateOverflowIndicator, 100);
+}
+
+function bindMarkdownTitleRename(titleEl, nodeObj) {
+  titleEl.style.cursor = "text";
+  titleEl.title = "Double-click to rename";
+  const stopMd = (e) => e.stopPropagation();
+  titleEl.addEventListener("mousedown", stopMd);
+  titleEl.addEventListener("dblclick", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const current = nodeObj.title || titleEl.textContent || "";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = current;
+    input.className = "bd-markdown-title bd-markdown-title-input";
+    input.style.cssText = "background:transparent;color:inherit;font:inherit;border:1px solid rgba(63,218,202,0.4);border-radius:3px;padding:1px 4px;min-width:0;flex:1;";
+    input.addEventListener("mousedown", stopMd);
+    input.addEventListener("click", stopMd);
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+    let committed = false;
+    const commit = () => {
+      if (committed) return;
+      committed = true;
+      const next = (input.value || "").trim() || current;
+      const span = document.createElement("span");
+      span.className = "bd-markdown-title";
+      span.textContent = next;
+      input.replaceWith(span);
+      if (next !== nodeObj.title) {
+        nodeObj.title = next;
+        if (typeof markBoardDirty === "function") markBoardDirty();
+      }
+      bindMarkdownTitleRename(span, nodeObj);
+    };
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+      if (ev.key === "Escape") { ev.preventDefault(); input.value = current; input.blur(); }
+    });
+  });
 }
 
 function renderMarkdownNode(nodeObj, el) {
@@ -4461,7 +4526,7 @@ function renderMarkdownNode(nodeObj, el) {
   header.innerHTML = `
     <svg class="bd-markdown-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     <span class="bd-markdown-title">${escapeHtml(title)}</span>
-    <button type="button" class="bd-markdown-fullscreen-btn" aria-label="Open fullscreen" title="Open fullscreen">
+    <button type="button" class="bd-markdown-fullscreen-btn" aria-label="Open markdown" title="Open markdown">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
     </button>
   `;
@@ -4471,9 +4536,15 @@ function renderMarkdownNode(nodeObj, el) {
   const fullscreenBtn = header.querySelector(".bd-markdown-fullscreen-btn");
   fullscreenBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    openMarkdownFullscreen(nodeObj, title, filePath);
+    openMarkdownFullscreen(nodeObj, nodeObj.title || title, filePath);
   });
   fullscreenBtn?.addEventListener("mousedown", (e) => e.stopPropagation());
+
+  // Double-click the title to rename in place.
+  const titleEl = header.querySelector(".bd-markdown-title");
+  if (titleEl && !isPreviewMode) {
+    bindMarkdownTitleRename(titleEl, nodeObj);
+  }
 
   const body = document.createElement("div");
   body.className = "bd-markdown-body";
@@ -4557,7 +4628,7 @@ function openMarkdownFullscreen(nodeObj, title, filePath) {
 
   // Load and render markdown content
   if (nodeObj._rawMarkdown) {
-    renderFullscreenMarkdown(bodyEl, nodeObj._rawMarkdown);
+    renderFullscreenMarkdown(bodyEl, nodeObj._rawMarkdown, nodeObj);
   } else if (filePath) {
     fetch(filePath)
       .then((r) => {
@@ -4565,7 +4636,7 @@ function openMarkdownFullscreen(nodeObj, title, filePath) {
         return r.text();
       })
       .then((text) => {
-        renderFullscreenMarkdown(bodyEl, text.replace(/\r\n?/g, "\n"));
+        renderFullscreenMarkdown(bodyEl, text.replace(/\r\n?/g, "\n"), nodeObj);
       })
       .catch((err) => {
         bodyEl.innerHTML = `<p class="bd-markdown-error">Could not load file: ${escapeHtml(err.message)}</p>`;
@@ -4575,18 +4646,44 @@ function openMarkdownFullscreen(nodeObj, title, filePath) {
   }
 }
 
-function renderFullscreenMarkdown(container, text) {
+// Track the nodeObj currently shown in fullscreen so we can sync content back
+// to the canvas body when the fullscreen closes.
+let _fullscreenNodeObj = null;
+
+function renderFullscreenMarkdown(container, text, nodeObj) {
   container.textContent = "";
   const lines = text.split("\n");
-  lines.forEach((line) => {
-    const lineEl = buildMarkdownLineEl(line);
-    // In fullscreen, always show rendered view (not editable)
-    container.appendChild(lineEl);
-  });
+  if (lines.length === 0) lines.push("");
+  lines.forEach((line) => container.appendChild(buildMarkdownLineEl(line)));
+  // Make fullscreen view a full editor (editable + scrollable + save-wired).
+  if (nodeObj && !isPreviewMode && nodeObj.file) {
+    attachMarkdownEditor(nodeObj, container);
+    _fullscreenNodeObj = nodeObj;
+  }
 }
 
 function closeMarkdownFullscreen() {
   if (!_markdownFullscreenEl) return;
+  // Sync fullscreen edits back to the inline canvas body so the user sees the
+  // updated content without waiting for a refresh.
+  if (_fullscreenNodeObj) {
+    const fsBody = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-body");
+    if (fsBody) {
+      const content = readMarkdownEditorContent(fsBody);
+      _fullscreenNodeObj._rawMarkdown = content;
+      const itemEl = typeof getBoardElementById === "function"
+        ? getBoardElementById(_fullscreenNodeObj.id)
+        : document.querySelector(`[data-id="${_fullscreenNodeObj.id}"]`);
+      const canvasBody = itemEl?.querySelector(".bd-markdown-body:not(.bd-markdown-fullscreen-body)");
+      if (canvasBody) {
+        canvasBody.textContent = "";
+        const lines = content.split("\n");
+        if (lines.length === 0) lines.push("");
+        lines.forEach((line) => canvasBody.appendChild(buildMarkdownLineEl(line)));
+      }
+    }
+    _fullscreenNodeObj = null;
+  }
   _markdownFullscreenEl.classList.remove("is-open");
   _markdownFullscreenEl.hidden = true;
   document.body.style.overflow = "";
@@ -4767,15 +4864,46 @@ function ensureMarkdownPanel() {
   return panel;
 }
 
+function defaultMarkdownTimestampName() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `note-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+async function createNewMarkdownNote() {
+  if (isPreviewMode) return;
+  const title = defaultMarkdownTimestampName();
+  const filename = sanitizeMarkdownFilename(`${title}.md`);
+  try {
+    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, path: "", content: "" })
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+
+    const dimensions = { width: 380, height: 420 };
+    const center = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
+    // Lift the spawn point above the toolbar so the block lands fully visible.
+    const node = createNode("markdown", center.x, center.y - 80, {
+      file: result.url,
+      href: result.url,
+      title,
+      ...dimensions
+    });
+    flushLocalStateSave();
+    showToolbarToast(`Created ${title}`, "success");
+    return node;
+  } catch (error) {
+    showToolbarToast(`Create failed: ${error.message}`, "error");
+  }
+}
+
 function openMarkdownPanel() {
-  const panel = ensureMarkdownPanel();
-  panel.hidden = false;
-  panel.classList.add("is-open");
-  _markdownPanelTitle.value = "";
-  _markdownPanelFilename.value = "";
-  _markdownPanelFilename.dataset.autofilled = "true";
-  _markdownPanelBody.value = "";
-  setTimeout(() => _markdownPanelTitle?.focus(), 0);
+  // Quick path: skip the panel and spawn a fresh timestamped note in one click.
+  // Falls back to the panel if anything looks wrong.
+  void createNewMarkdownNote();
 }
 
 function closeMarkdownPanel() {

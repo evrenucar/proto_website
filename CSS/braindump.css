@@ -1547,20 +1547,6 @@ html:has(body.page-board) {
   text-transform: uppercase;
 }
 
-.bd-markdown-view-link {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: #3fdaca;
-  font-size: 13px;
-  text-decoration: none;
-  opacity: 0.7;
-  transition: opacity 0.12s;
-}
-
-.bd-markdown-view-link:hover {
-  opacity: 1;
-}
-
 .bd-markdown-fullscreen-btn {
   flex-shrink: 0;
   margin-left: auto;
@@ -1692,11 +1678,10 @@ html:has(body.page-board) {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 40px;
+  height: 44px;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent 0%, rgba(63, 218, 202, 0.15) 50%, rgba(63, 218, 202, 0.35) 100%);
+  background: linear-gradient(to bottom, transparent 0%, rgba(63, 218, 202, 0.35) 55%, rgba(63, 218, 202, 0.85) 100%);
   z-index: 2;
-  border-radius: 0 0 7px 7px;
 }
 
 .bd-markdown-body p { margin: 0 0 10px; }
@@ -1763,12 +1748,12 @@ html:has(body.page-board) {
   outline: none;
   caret-color: #3fdaca;
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 100, 100, 0.4) transparent;
+  scrollbar-color: rgba(130, 130, 130, 0.55) transparent;
 }
 .bd-markdown-editor:focus,
 .bd-markdown-editor:focus-within,
 .bd-markdown-editor:has(.bd-md-line--active) {
-  scrollbar-color: rgba(130, 130, 130, 0.6) transparent;
+  scrollbar-color: rgba(160, 160, 160, 0.8) transparent;
 }
 .bd-markdown-editor::-webkit-scrollbar {
   width: 6px;
@@ -1777,13 +1762,13 @@ html:has(body.page-board) {
   background: transparent;
 }
 .bd-markdown-editor::-webkit-scrollbar-thumb {
-  background: rgba(100, 100, 100, 0.4);
+  background: rgba(130, 130, 130, 0.55);
   border-radius: 3px;
 }
 .bd-markdown-editor:focus::-webkit-scrollbar-thumb,
 .bd-markdown-editor:focus-within::-webkit-scrollbar-thumb,
 .bd-markdown-editor:has(.bd-md-line--active)::-webkit-scrollbar-thumb {
-  background: rgba(130, 130, 130, 0.6);
+  background: rgba(160, 160, 160, 0.8);
 }
 .bd-md-line {
   min-height: 1.5em;
@@ -2154,13 +2139,8 @@ html:has(body.page-board) {
 
 /* Markdown Overhaul Styles */
 
-/* Scroll only when selected */
-.bd-markdown-body {
-  overflow-y: hidden !important;
-}
-.bd-item.selected .bd-markdown-body {
-  overflow-y: auto !important;
-}
+/* Scroll is always permitted; the body's wheel handler routes scroll-vs-zoom
+   based on whether a line is being edited (see attachMarkdownEditor). */
 
 /* Markdown tables */
 .bd-markdown-body table {

@@ -28,7 +28,14 @@
       "mcp__playwright__browser_console_messages",
       "Bash(git config:*)",
       "Bash(xargs -I {} bash -c 'echo \"\"{}\"\" | sed \"\"s/.*\\\\.//\"\" ')",
-      "Bash(git *)"
+      "Bash(git *)",
+      "mcp__playwright__browser_press_key",
+      "Bash(git check-attr:*)",
+      "Bash(git reset:*)",
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(git cat-file:*)",
+      "Bash(xargs -I {} git check-attr -a {})",
+      "Bash(git checkout:*)"
     ]
   },
   "effortLevel": "xhigh"

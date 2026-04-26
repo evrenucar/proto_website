@@ -1,20 +1,28 @@
- This is a test markdown file. (Updatesed)
       - test
+        - 
       - 
 - another test
 - test- test
+  - test
+  - test
+  - 
   - rwar
   - 
-test
+t**bold-line**
+*italic-line*
+`code-line`
+est
 *meow*
 ## good
 
 
-meow
+meowa
 
 Here is the compressible **Navier-Stokes equation** for a viscous fluid. It is a fundamental partial differential equation in fluid mechanics that describes the motion of viscous fluid substances, from ocean currents and weather patterns to blood flow and aerodynamics.
 
 $$\rho \left( \frac{\partial \mathbf{u}}{\partial t} + \mathbf{u} \cdot \nabla \mathbf{u} \right) = -\nabla p + \nabla \cdot \left[ \mu \left( \nabla \mathbf{u} + (\nabla \mathbf{u})^T - \frac{2}{3}(\nabla \cdot \mathbf{u})\mathbf{I} \right) \right] + \rho \mathbf{g}$$
+
+
 
 ### Breakdown of the Variables:
 
