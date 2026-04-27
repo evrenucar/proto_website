@@ -77,7 +77,7 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 260,
+      "height": 330,
       "type": "board-preview",
       "boardSlug": "braindump",
       "boardSource": "content/boards/braindump/current.canvas",
@@ -195,7 +195,7 @@
       "x": 193.5657972437076,
       "y": 1750.7135190336849,
       "width": 322.26248388682944,
-      "height": 260,
+      "height": 278,
       "boardSlug": "braindump",
       "boardSource": "content/boards/braindump/current.canvas",
       "boardHref": "braindump.html",
@@ -260,7 +260,7 @@
       "x": -417.20785687252715,
       "y": 1917.708895805312,
       "width": 320,
-      "height": 260,
+      "height": 277,
       "boardSlug": "braindump",
       "boardSource": "content/boards/braindump/current.canvas",
       "boardHref": "braindump.html",
@@ -497,10 +497,10 @@
     },
     {
       "id": "o1aynqy6f0n",
-      "x": 338.10283821069027,
-      "y": 1484.821494008972,
-      "width": 380,
-      "height": 420,
+      "x": -394.44950394644854,
+      "y": 2378.6940270382584,
+      "width": 343.9468273698608,
+      "height": 417.1157461895889,
       "file": "/content/boards/cosmoboard/note-20260427-102751.md",
       "href": "/content/boards/cosmoboard/note-20260427-102751.md",
       "title": "note-20260427-102751",
@@ -509,20 +509,20 @@
     },
     {
       "id": "xpkb4qwtgvr",
-      "x": 459.693741891454,
-      "y": 1974.0987952567034,
+      "x": -17.384050495488975,
+      "y": 2385.5254022682398,
       "width": 380,
       "height": 420,
       "file": "/content/boards/cosmoboard/note-20260427-102800.md",
       "href": "/content/boards/cosmoboard/note-20260427-102800.md",
       "title": "note-20260427-102800",
       "type": "markdown",
-      "_rawMarkdown": "\n"
+      "_rawMarkdown": "\nasdsad\n"
     },
     {
       "id": "1vvai8hw0i",
-      "x": 1106.9047621132388,
-      "y": 1795.2795635676393,
+      "x": 453.6986904356821,
+      "y": 2392.9631191526037,
       "width": 380,
       "height": 420,
       "file": "/content/boards/cosmoboard/note-20260427-102802.md",
@@ -530,12 +530,36 @@
       "title": "note-20260427-102802",
       "type": "markdown",
       "_rawMarkdown": "\n"
+    },
+    {
+      "id": "buc6e7pym26",
+      "x": 2245.8056102279093,
+      "y": -737.6144918141531,
+      "width": 268.05594542077637,
+      "height": 703.1128771709923,
+      "type": "markdown",
+      "file": "content/boards/cosmoboard/direction.md",
+      "title": "Cosmoboard direction",
+      "href": "content/boards/cosmoboard/direction.md",
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
+    },
+    {
+      "id": "n3q3idrj4kk",
+      "x": -1234.9520069980517,
+      "y": 1527.9617315657151,
+      "width": 380,
+      "height": 420,
+      "file": "/content/boards/cosmoboard/note-2026-04-27-10-50-25.md",
+      "href": "/content/boards/cosmoboard/note-2026-04-27-10-50-25.md",
+      "title": "note-2026-04-27_10-50-25",
+      "type": "markdown",
+      "_rawMarkdown": "\n"
     }
   ],
   "edges": [],
   "viewport": {
-    "x": 669.8909331210941,
-    "y": 57.23391213533144,
-    "z": 0.20441675797914755
+    "x": 1579.5040089529182,
+    "y": -1015.3274274218741,
+    "z": 0.8225296503540958
   }
 }

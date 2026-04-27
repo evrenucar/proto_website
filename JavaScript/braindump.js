@@ -2079,27 +2079,34 @@ function placeToolNodeAt(clientX, clientY, tool = activeTool) {
   return null;
 }
 
-// Handle Mouse & Touch Pan/Zoom
-viewport.addEventListener("wheel", (e) => {
-  e.preventDefault(); // Default to zoom for all scroll actions
+// Apply a wheel zoom anchored at a screen-space point. Reused by the viewport
+// wheel handler and by overlay shields (e.g. YouTube embeds) that need to
+// route wheel events to canvas zoom instead of the underlying iframe.
+function applyWheelZoom(deltaY, clientX, clientY, ctrlKey) {
   // Trackpad pinch-to-zoom sends ctrlKey with small deltaY — use a larger multiplier
-  const sensitivity = e.ctrlKey ? -0.016 : -0.002;
-  const zoomAmount = e.deltaY * sensitivity;
+  const sensitivity = ctrlKey ? -0.016 : -0.002;
+  const zoomAmount = deltaY * sensitivity;
   const newZ = Math.min(Math.max(camera.z + zoomAmount * camera.z, 0.1), 3);
-  
+
   const rect = viewport.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-  
+  const mouseX = clientX - rect.left;
+  const mouseY = clientY - rect.top;
+
   const dx = (mouseX - camera.x) * (newZ / camera.z - 1);
   const dy = (mouseY - camera.y) * (newZ / camera.z - 1);
-  
+
   camera.x -= dx;
   camera.y -= dy;
   camera.z = newZ;
   updateTransform();
   if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
   markBoardDirty();
+}
+
+// Handle Mouse & Touch Pan/Zoom
+viewport.addEventListener("wheel", (e) => {
+  e.preventDefault(); // Default to zoom for all scroll actions
+  applyWheelZoom(e.deltaY, e.clientX, e.clientY, e.ctrlKey);
 }, { passive: false });
 
 let initialPinchDistance = null;
@@ -2386,6 +2393,13 @@ viewport.addEventListener("click", (e) => {
 // Mouse position tracking for exact paste locations
 let lastMousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
+// Hover tracking: update lastMousePos whenever the pointer is over THIS viewport,
+// even when no drag/pan is active. Bound to viewport so cross-board hover stays scoped.
+viewport.addEventListener("pointermove", (e) => {
+  lastMousePos.x = e.clientX;
+  lastMousePos.y = e.clientY;
+});
+
 window.addEventListener("pointermove", (e) => {
   if (_activeBoardViewport !== viewport) return;
   lastMousePos.x = e.clientX;
@@ -2453,7 +2467,10 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "t" || e.key === "T") setActiveTool("text");
   if (e.key === "v" || e.key === "V") setActiveTool("select");
   if (e.key === "l" || e.key === "L") setActiveTool("bookmark");
-  if (e.key === "x" || e.key === "X") { e.preventDefault(); openMarkdownPanel(); }
+  if (e.key === "x" || e.key === "X") {
+    e.preventDefault();
+    openMarkdownPanel(screenToCanvas(lastMousePos.x, lastMousePos.y));
+  }
   if (e.code === "Space") {
     e.preventDefault();
     if (activeTool !== "pan") {
@@ -2887,6 +2904,15 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && recommendationModal && !recommendationModal.hidden) {
     event.preventDefault();
     closeRecommendationModal();
+    return;
+  }
+
+  // ESC closes "Open markdown" fullscreen view. The element-level handler on
+  // _markdownFullscreenEl only fires when focus is inside the fullscreen tree;
+  // this window-level fallback covers cases where focus has drifted elsewhere.
+  if (event.key === "Escape" && _markdownFullscreenEl && !_markdownFullscreenEl.hidden) {
+    event.preventDefault();
+    closeMarkdownFullscreen();
     return;
   }
 
@@ -3459,6 +3485,7 @@ function renderLinkNode(nodeObj, el) {
     }
 
     const embedUrl = getYouTubeEmbedUrl(nodeObj.url) || nodeObj.url;
+    const isYouTube = !!getYouTubeVideoId(nodeObj.url);
 
     shell.innerHTML = `
       <div class="bd-embed-header">
@@ -3473,6 +3500,7 @@ function renderLinkNode(nodeObj, el) {
         </a>
       </div>
       <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+      ${isYouTube ? `<div class="bd-yt-wheel-shield" aria-hidden="true"></div>` : ""}
     `;
 
     const toggleBtn = shell.querySelector(".bd-embed-toggle-btn");
@@ -3483,6 +3511,35 @@ function renderLinkNode(nodeObj, el) {
       markBoardDirty();
       renderNode(nodeObj);
     });
+
+    if (isYouTube) {
+      // Wheel-shield over YouTube iframe: YouTube has no scrollable content, so
+      // hovering over it should keep canvas zoom working instead of being
+      // swallowed by the iframe. The shield catches wheel and forwards it to
+      // applyWheelZoom. On pointerdown the shield disables itself so the click
+      // reaches the iframe (play/pause/seek); it re-enables once the user
+      // clicks anywhere outside this embed, restoring zoom-on-hover.
+      const shield = shell.querySelector(".bd-yt-wheel-shield");
+      if (shield) {
+        shield.addEventListener("wheel", (e) => {
+          e.preventDefault();
+          applyWheelZoom(e.deltaY, e.clientX, e.clientY, e.ctrlKey);
+        }, { passive: false });
+
+        shield.addEventListener("pointerdown", (e) => {
+          // Don't let this initiate an item drag.
+          e.stopPropagation();
+          shield.classList.add("is-passthrough");
+          const reactivate = (ev) => {
+            if (!el.contains(ev.target)) {
+              shield.classList.remove("is-passthrough");
+              window.removeEventListener("pointerdown", reactivate, true);
+            }
+          };
+          window.addEventListener("pointerdown", reactivate, true);
+        });
+      }
+    }
 
   } else {
     // Preview mode
@@ -4409,19 +4466,21 @@ function attachMarkdownEditor(nodeObj, body) {
   // browser's default mousedown caret-placement targets nodes that no longer
   // exist after the textContent reset.
   body.addEventListener("mousedown", (e) => {
-    e.stopPropagation();
     if (e.button !== 0) return; // only primary button
 
-    // Select the host canvas node — body's stopPropagation otherwise hides the
-    // click from the bd-item handler so the markdown window never visually
-    // selects when you click its text.
     const itemEl = body.closest?.(".bd-item");
-    if (itemEl && !itemEl.classList.contains("selected") && !e.shiftKey) {
-      canvas.querySelectorAll(".bd-item.selected").forEach((n) => n.classList.remove("selected"));
-      itemEl.classList.add("selected");
-    } else if (itemEl && e.shiftKey) {
-      itemEl.classList.add("selected");
+    const wasSelected = itemEl?.classList.contains("selected");
+
+    // First-click on an unselected markdown window: don't activate any line
+    // and don't intercept the event. Let the bd-item drag handler claim this
+    // mousedown so click-and-drag moves the window. A subsequent click on
+    // the now-selected item activates the line for editing.
+    if (itemEl && !wasSelected) {
+      e.preventDefault(); // suppress contenteditable's default caret placement
+      return;
     }
+
+    e.stopPropagation();
 
     const lineEl = findLineFromNode(e.target);
 
@@ -4615,10 +4674,11 @@ function attachMarkdownEditor(nodeObj, body) {
 }
 
 function bindMarkdownTitleRename(titleEl, nodeObj) {
-  titleEl.style.cursor = "text";
   titleEl.title = "Double-click to rename";
   const stopMd = (e) => e.stopPropagation();
-  titleEl.addEventListener("mousedown", stopMd);
+  // The span itself does NOT stopPropagation on mousedown — single-click on
+  // the title should be claimed by the bd-item drag handler so click-and-drag
+  // moves the window. Editing is gated to dblclick only.
   titleEl.addEventListener("dblclick", (e) => {
     e.stopPropagation();
     e.preventDefault();
@@ -4627,7 +4687,7 @@ function bindMarkdownTitleRename(titleEl, nodeObj) {
     input.type = "text";
     input.value = current;
     input.className = "bd-markdown-title bd-markdown-title-input";
-    input.style.cssText = "background:transparent;color:inherit;font:inherit;border:1px solid rgba(63,218,202,0.4);border-radius:3px;padding:1px 4px;min-width:0;flex:1;";
+    input.style.cssText = "background:transparent;color:inherit;font:inherit;border:1px solid rgba(63,218,202,0.4);border-radius:3px;padding:1px 4px;min-width:0;";
     input.addEventListener("mousedown", stopMd);
     input.addEventListener("click", stopMd);
     titleEl.replaceWith(input);
@@ -4950,7 +5010,7 @@ function renderMarkdownDbNode(nodeObj, el) {
 
 function sanitizeMarkdownFilename(value) {
   let name = String(value || "").trim().toLowerCase();
-  name = name.replace(/\.md$/i, "").replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  name = name.replace(/\.md$/i, "").replace(/[^a-z0-9._\-]+/g, "-").replace(/^-+|-+$/g, "");
   if (!name) name = `note-${Date.now()}`;
   return `${name}.md`;
 }
@@ -5014,12 +5074,10 @@ function ensureMarkdownPanel() {
 }
 
 function defaultMarkdownTimestampName() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  return `note-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  return `note-${formatTimestamp()}`;
 }
 
-async function createNewMarkdownNote() {
+async function createNewMarkdownNote(spawnAt = null) {
   if (isPreviewMode) return;
   const title = defaultMarkdownTimestampName();
   const filename = sanitizeMarkdownFilename(`${title}.md`);
@@ -5033,9 +5091,18 @@ async function createNewMarkdownNote() {
     if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
 
     const dimensions = { width: 380, height: 420 };
-    const center = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-    // Lift the spawn point above the toolbar so the block lands fully visible.
-    const node = createNode("markdown", center.x, center.y - 80, {
+    let spawnX, spawnY;
+    if (spawnAt) {
+      // Spawn at given canvas coords (e.g. cursor for keyboard shortcut), centered on the point.
+      spawnX = spawnAt.x - dimensions.width / 2;
+      spawnY = spawnAt.y - dimensions.height / 2;
+    } else {
+      // Lift the spawn point above the toolbar so the block lands fully visible.
+      const center = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
+      spawnX = center.x;
+      spawnY = center.y - 80;
+    }
+    const node = createNode("markdown", spawnX, spawnY, {
       file: result.url,
       href: result.url,
       title,
@@ -5049,10 +5116,10 @@ async function createNewMarkdownNote() {
   }
 }
 
-function openMarkdownPanel() {
+function openMarkdownPanel(spawnAt = null) {
   // Quick path: skip the panel and spawn a fresh timestamped note in one click.
   // Falls back to the panel if anything looks wrong.
-  void createNewMarkdownNote();
+  void createNewMarkdownNote(spawnAt);
 }
 
 function closeMarkdownPanel() {

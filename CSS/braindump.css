@@ -362,6 +362,7 @@ html:has(body.page-board) {
   background: #111;
   border-radius: 8px;
   border: 1px solid #333;
+  position: relative;
 }
 
 .bd-auto-size-content {
@@ -539,6 +540,28 @@ html:has(body.page-board) {
   border: none;
   background: #fff;
   border-radius: 0 0 8px 8px;
+}
+
+/* Transparent shield over YouTube iframes only. Captures wheel so canvas zoom
+   keeps working while the cursor is over the video (YouTube has no scrollable
+   content, so we never need iframe scroll). On click the shield disables itself
+   (.is-passthrough) so play/pause/seek reach the iframe; it re-enables once the
+   user clicks anywhere outside this embed. See JavaScript/braindump.js. */
+.bd-yt-wheel-shield {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Sit below the .bd-embed-header (~32px). Cover only the iframe area so
+     header buttons (Preview / Open) stay clickable without indirection. */
+  top: 32px;
+  z-index: 2;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.bd-yt-wheel-shield.is-passthrough {
+  pointer-events: none;
 }
 
 /* App Node CSS */
@@ -1502,12 +1525,13 @@ html:has(body.page-board) {
   border-color: rgba(63, 218, 202, 0.5);
 }
 
-/* Markdown node */
+/* Markdown node — outer must NOT clip overflow, otherwise the corner resize
+   handle dot (which deliberately straddles the bd-item edge for grab area)
+   gets hidden. The inner shell still clips content with matching radius. */
 .bd-layer-markdown {
   background: #1e1e1e;
   border: 1px solid #333;
   border-radius: 8px;
-  overflow: hidden;
 }
 
 .bd-markdown-shell {
@@ -1516,6 +1540,7 @@ html:has(body.page-board) {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  border-radius: inherit;
 }
 
 .bd-markdown-header {
@@ -1535,7 +1560,11 @@ html:has(body.page-board) {
 }
 
 .bd-markdown-title {
-  flex: 1;
+  /* Width hugs the title text so the empty header space to its right stays
+     draggable (clicking it bubbles to the bd-item drag handler). The flex
+     shrink + min-width:0 still let long titles ellipsize when they would
+     overlap the fullscreen button. */
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1545,6 +1574,13 @@ html:has(body.page-board) {
   letter-spacing: 0.04em;
   color: rgba(250, 250, 250, 0.72);
   text-transform: uppercase;
+}
+
+.bd-markdown-title-input {
+  /* When editing, allow the input to grow up to the available header width
+     so longer names stay visible. flex-grow lets it expand toward the
+     fullscreen button without pushing it. */
+  flex: 1 1 auto;
 }
 
 .bd-markdown-fullscreen-btn {
@@ -1966,12 +2002,12 @@ html:has(body.page-board) {
   margin-top: 12px;
 }
 
-/* Base / database node */
+/* Base / database node — same pattern as markdown: outer keeps overflow
+   visible so the corner resize handle dot stays grabbable; inner shell clips. */
 .bd-layer-base {
   background: #1a1a1e;
   border: 1px solid #333;
   border-radius: 8px;
-  overflow: hidden;
 }
 
 .bd-base-shell {
@@ -1980,6 +2016,7 @@ html:has(body.page-board) {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  border-radius: inherit;
 }
 
 .bd-base-header {

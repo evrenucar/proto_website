@@ -60,6 +60,19 @@ Root cause: `setMarkdownLineRaw` did `lineEl.textContent = raw`, destroying rend
   - Sub-fix: `bindMarkdownTitleRename(titleEl, nodeObj)` swaps span ↔ input on dblclick, commits on Enter/blur, ESC cancels
   - Sub-fix: `committed` guard prevents double-commit when blur fires twice
 
+## [A] Timestamp format unified (post-session report)
+Reported: change timestamps to be human-readable (`20260427-102751` → `2026-04-27_10-27-51`).
+- [A] `defaultMarkdownTimestampName` now delegates to the existing `formatTimestamp()` helper (`YYYY-MM-DD_HH-MM-SS`). Auto-named notes appear as `note-2026-04-27_10-35-18.md`.
+- [A] `formatTimestamp` is already used by export filenames (`buildExportFilename`), so the format is unified across markdown notes + canvas exports.
+- Existing notes (e.g. `note-20260427-010149.md`) keep their on-disk names; only newly created notes use the new format.
+- The filename sanitizer already permits `_` (regex `[^a-z0-9._-]`), so the new format survives unchanged.
+
+## [A] Resize handle clipping fix (post-session report)
+Reported: corner scaling dots disappear behind the rounded contour of markdown + database (base) nodes, shrinking the grab area.
+- [A] `.bd-layer-markdown` and `.bd-layer-base` no longer set `overflow: hidden` on the outer bd-item — that's what was clipping the resize handle dot (which deliberately straddles the corner via `translate(50%, 50%)` to give a generous grab area).
+- [A] Inner shells (`.bd-markdown-shell`, `.bd-base-shell`) now use `border-radius: inherit` (in addition to their existing `overflow: hidden`) so content is still clipped to the rounded outer border. Visual is unchanged; the resize dot is just no longer hidden.
+- Test: `tests/resize-handle-clipping.test.mjs` asserts overflow visible on outer, overflow hidden + radius inherited on inner shell, and the handle box extends beyond the bd-item corner.
+
 ## [x] Closed without code change
 - [x] #14 "Reveal hidden overflow text when block area is too small" — user confirmed existing gradient + scroll affordances are sufficient
 

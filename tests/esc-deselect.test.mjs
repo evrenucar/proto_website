@@ -45,6 +45,10 @@ try {
     const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const editor = document.querySelector(".bd-markdown-editor");
     const item = editor.closest(".bd-item");
+    // Body's mousedown only activates a line when the host bd-item is already
+    // selected (first-click on unselected items defers to the drag handler so
+    // click-and-drag moves the window). Pre-select for the editing path.
+    item.classList.add("selected");
     const line = editor.querySelector(".bd-md-line");
     const r = line.getBoundingClientRect();
     line.dispatchEvent(new MouseEvent("mousedown", { bubbles:true, cancelable:true, clientX:r.x+10, clientY:r.y+r.height/2, button:0, detail:1 }));
