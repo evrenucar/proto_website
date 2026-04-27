@@ -77,10 +77,10 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 262,
+      "height": 260,
       "type": "board-preview",
       "boardSlug": "braindump",
-      "boardSource": "boards/cosmo-braindump_current.canvas",
+      "boardSource": "content/boards/braindump/current.canvas",
       "boardHref": "braindump.html",
       "title": "Braindump",
       "description": "A linked board preview. Open the broader freeform board when you want the wider working surface."
@@ -98,28 +98,16 @@
       "embedMode": "preview"
     },
     {
-      "id": "cosmo-github",
-      "x": 1885.956242842545,
-      "y": 331.24726191116366,
-      "width": 511.87126230058476,
-      "height": 690.7447150722369,
-      "type": "link",
-      "url": "https://github.com/evrenucar/proto_website",
-      "title": "View Repo",
-      "description": "Remote review and publish layer. Keep the working copy here on disk, then push the board file when it is ready.",
-      "embedMode": "live"
-    },
-    {
       "id": "cosmo-direction-md",
-      "x": 1409.5119486522115,
-      "y": 284.5855053582118,
-      "width": 452.583234423038,
-      "height": 640.0266245206457,
+      "x": 1382.6554681216505,
+      "y": -848.7787706493325,
+      "width": 301.17622806220805,
+      "height": 1143.139489407154,
       "type": "markdown",
-      "file": "markdown/cosmo-direction-md_direction.md",
+      "file": "content/boards/cosmoboard/direction.md",
       "title": "Cosmoboard direction",
       "href": "content/boards/cosmoboard/direction.md",
-      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer."
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
     },
     {
       "id": "cosmo-projects-base",
@@ -175,7 +163,7 @@
       "height": 481.03953187602457,
       "type": "app",
       "source": "content/apps/excalidraw-proto.json",
-      "embedMode": "live",
+      "embedMode": "preview",
       "appConfig": {
         "slug": "excalidraw-proto",
         "appName": "Excalidraw",
@@ -209,7 +197,7 @@
       "width": 322.26248388682944,
       "height": 260,
       "boardSlug": "braindump",
-      "boardSource": "boards/esoxvxlqul_current.canvas",
+      "boardSource": "content/boards/braindump/current.canvas",
       "boardHref": "braindump.html",
       "title": "Braindump",
       "description": "",
@@ -226,7 +214,7 @@
     },
     {
       "id": "1573bnxzgw1",
-      "x": 3639.238227617535,
+      "x": 3646.3730610918956,
       "y": 256.8395270814707,
       "width": 320,
       "height": 132,
@@ -241,8 +229,8 @@
     },
     {
       "id": "s3vo5dotyc",
-      "x": 2045.023599915704,
-      "y": 1897.1076514576353,
+      "x": 1900.637189894495,
+      "y": 1575.8478891604427,
       "width": 537.5151938756453,
       "height": 331.6293504360329,
       "type": "link",
@@ -274,7 +262,7 @@
       "width": 320,
       "height": 260,
       "boardSlug": "braindump",
-      "boardSource": "boards/1bg5w4p0aea_current.canvas",
+      "boardSource": "content/boards/braindump/current.canvas",
       "boardHref": "braindump.html",
       "title": "Braindump",
       "description": "",
@@ -479,15 +467,75 @@
       "height": 608.2665158161287,
       "title": "New note",
       "type": "markdown",
-      "file": "markdown/o93byqkbt7_note-20260426-214737.md",
+      "file": "content/boards/braindump/markdown/note-20260426-214737.md",
       "href": "/content/boards/braindump/markdown/note-20260426-214737.md",
-      "_rawMarkdown": "# New note\n\n- this is pretty cool\ntest[http://localhost:4173/braindump.html]\nhttps://www.google.com/search?client=firefox-b-d&hs=RTmp&sca_esv=9f8463f094060b86&sxsrf=ANbL-n7hzoqOz6NM3DWtmkYN1LEzKSOkqw:1777229070031&udm=2&fbs=ADc_l-aN0CWEZBOHjofHoaMMDiKpaEWjvZ2Py1XXV8d8KvlI3sbM0Xv-BZKE_VrZb6-djVg-3W0FTREgXoBewgW5Mu3-gk_OdrCa2mVc9z6SyIOYp4VyxESJckXibwrPAeyVZ4lZ4tXPePV6aJ3ScYAjF-Wr3L_8h_zlmlpwZmDMVJeQtQKMzxKDRacF85l3WCWc0lO3vpo3&q=WYSIWYG&sa=X&ved=2ahUKEwjch52bloyUAxUn3gIHHcZXO5MQtKgLegQIGBAB&biw=1760&bih=886&dpr=1.09#sv=CAMSVhoyKhBlLTRUVVRkRmRfWEFiNE9NMg40VFVUZEZkX1hBYjRPTToOa3diUUdaUUlEaExZQk0gBCocCgZtb3NhaWMSEGUtNFRVVGRGZF9YQWI0T00YADABGAcgv_fDww1KCBABGAEgASgB\n\nYes, you absolutely can! Apple offers special education pricing year-round on their computers and tablets. \n\nHere is everything you need to know about getting an education discount on a Mac:\naaa\nzaaa### 1. Who is Eligible?\nApple’s education pricing isn't just for college students. The discount applies to:\na* **Current and newly accepted university/college students.**\n* **Parents** buying for a university/college student.\naaaaaaaa* **Teachers, faculty, and staff** at all levels (from kindergarten to higher education).\n* **Homeschool teachers.**\n\n### 2. How Much Can You Save?\nThe discount varies depending on the device, but you can generally expect:\n* **Macs:** Roughly $100 to $200 (or €100 to €200) off the standard price for MacBooks (Air and Pro), iMacs, Mac minis, and desktop displays.\n* **AppleCare+:** You also get a discount—usually around 10%—on AppleCare+ for your Mac.\n* **Software:** Apple offers a \"Pro Apps Bundle for Education\" which includes Final Cut Pro, Logic Pro, Motion, Compressor, and MainStage for a steeply discounted flat price.\n\n*(Note: Apple rarely discounts iPhones or Apple Watches for education.)*\n\n### 3. How to Claim the Discount\n* **Online:** You can buy directly through the **Apple Education Store** website. Depending on your region (like in the UK or the Netherlands), Apple uses a service called **UNiDAYS** to verify your student or staff status before letting you enter the store. In other regions (like the US), it operates on a bit of an honor system online, but Apple can randomly audit your purchase and ask for a student ID.\n* **In-Store:** Simply walk into any physical Apple Store and show a valid student ID, college acceptance letter, or faculty/staff badge at checkout. \n\n### 4. Pro-Tip: Wait for \"Back to School\" Promos (if you can)\nWhile the education discount is available 365 days a year, Apple runs a special \"Back to School\" promotion every summer (usually mid-June to late September in the Northern Hemisphere, or January to March in the Southern Hemisphere). \n\nDuring this window, you get the standard education discount **plus** a free bonus—usually a gift card ranging from $100 to $150 (or a free pair of AirPods/Apple Pencil, depending on the year's promotion) with the purchase of a qualifying Mac or iPad.\n\nAre you looking at a specific Mac model, or do you need help figuring out which one makes the most sense for your workload?\n"
+      "_rawMarkdown": "# New note\n\n- this is pretty cool\ntest[http://localhost:4173/braindump.html]\n"
+    },
+    {
+      "id": "f3s70s3fpg",
+      "x": 1797.3189223848708,
+      "y": -843.5439067862884,
+      "width": 268.05594542077637,
+      "height": 703.1128771709923,
+      "type": "markdown",
+      "file": "content/boards/cosmoboard/direction.md",
+      "title": "Cosmoboard direction",
+      "href": "content/boards/cosmoboard/direction.md",
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
+    },
+    {
+      "id": "np268w13a1",
+      "x": 2210.4932043937106,
+      "y": -1443.7774030719231,
+      "width": 380,
+      "height": 420,
+      "file": "/content/boards/cosmoboard/direction.md",
+      "href": "/content/boards/cosmoboard/direction.md",
+      "title": "direction",
+      "type": "markdown",
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
+    },
+    {
+      "id": "o1aynqy6f0n",
+      "x": 338.10283821069027,
+      "y": 1484.821494008972,
+      "width": 380,
+      "height": 420,
+      "file": "/content/boards/cosmoboard/note-20260427-102751.md",
+      "href": "/content/boards/cosmoboard/note-20260427-102751.md",
+      "title": "note-20260427-102751",
+      "type": "markdown",
+      "_rawMarkdown": "\n"
+    },
+    {
+      "id": "xpkb4qwtgvr",
+      "x": 459.693741891454,
+      "y": 1974.0987952567034,
+      "width": 380,
+      "height": 420,
+      "file": "/content/boards/cosmoboard/note-20260427-102800.md",
+      "href": "/content/boards/cosmoboard/note-20260427-102800.md",
+      "title": "note-20260427-102800",
+      "type": "markdown",
+      "_rawMarkdown": "\n"
+    },
+    {
+      "id": "1vvai8hw0i",
+      "x": 1106.9047621132388,
+      "y": 1795.2795635676393,
+      "width": 380,
+      "height": 420,
+      "file": "/content/boards/cosmoboard/note-20260427-102802.md",
+      "href": "/content/boards/cosmoboard/note-20260427-102802.md",
+      "title": "note-20260427-102802",
+      "type": "markdown",
+      "_rawMarkdown": "\n"
     }
   ],
   "edges": [],
   "viewport": {
-    "x": 248.11843108465814,
-    "y": -32.11016613356355,
-    "z": 0.3986623452772629
+    "x": 669.8909331210941,
+    "y": 57.23391213533144,
+    "z": 0.20441675797914755
   }
 }

@@ -11,9 +11,16 @@
 t**bold-line**
 *italic-line*
 `code-line`
-est
+est              
 *meow*
 ## good
+
+- testing
+  - nice
+  - yeah
+- yeah
+- test
+- 
 
 
 meowa
@@ -33,7 +40,7 @@ $$\rho \left( \frac{\partial \mathbf{u}}{\partial t} + \mathbf{u} \cdot \nabla \
 * $\nabla p$ is the pressure gradient (fluid flows from high to low pressure).
 * $\mu$ is the dynamic viscosity of the fluid.
 * $\nabla \cdot [ \dots ]$ represents the divergence of the viscous stress tensor, which accounts for the internal friction forces between adjacent layers of fluid that are in relative motion.
-* $\mathbf{I}$ is the identity tensor.
+* $\mathbf{I}$ is the identity tensor. 
 * $\rho \mathbf{g}$ represents external body forces acting on the fluid, such as gravity ($\mathbf{g}$).
 
 This equation essentially applies Newton's Second Law of Motion ($F = ma$) to fluid dynamics, balancing the inertial forces on the left side with the pressure, viscous, and external forces on the right side. Because of its mathematical complexity (particularly the nonlinear convective term $\mathbf{u} \cdot \nabla \mathbf{u}$), proving whether smooth solutions always exist in three dimensions remains one of the unsolved Millennium Prize Problems in mathematics.

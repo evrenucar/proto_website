@@ -2887,6 +2887,22 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && recommendationModal && !recommendationModal.hidden) {
     event.preventDefault();
     closeRecommendationModal();
+    return;
+  }
+
+  // Canvas-wide ESC: blur any focused in-canvas editor (text/markdown), then
+  // deselect every `.bd-item.selected`. Mirrors click-away behavior.
+  if (event.key === "Escape") {
+    const active = document.activeElement;
+    if (active && (active.classList?.contains("bd-text-editor") ||
+                   active.classList?.contains("bd-markdown-editor")) &&
+        active.closest(".bd-item")) {
+      active.blur?.();
+    }
+    const selectedItems = canvas.querySelectorAll(".bd-item.selected");
+    if (selectedItems.length > 0) {
+      selectedItems.forEach((n) => n.classList.remove("selected"));
+    }
   }
 });
 
@@ -3086,7 +3102,7 @@ async function exportProjectBundle(includeSubpages) {
   showToolbarToast("Bundling project...", "info");
   closeExportModal();
 
-  const state = serializeState();
+  const state = cloneState(serializeState());
   const zipData = {};
 
   async function fetchAsUint8Array(url) {
@@ -3837,6 +3853,90 @@ function applyMarkdownLineIndent(lineEl, rawLine) {
   }
 }
 
+// Visible-text offset from the start of the rendered line up to (container, offset).
+// Skips text inside bullet/marker spans (those characters are synthetic and have
+// no counterpart in the raw markdown source).
+function computeVisibleOffsetInLine(lineEl, container, offset) {
+  // Click landed inside a synthetic bullet/marker span → caret at start of content.
+  let ancestor = container;
+  while (ancestor && ancestor !== lineEl) {
+    if (ancestor.classList?.contains("bd-md-line-bullet")) return 0;
+    ancestor = ancestor.parentNode;
+  }
+  let visible = 0;
+  const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) =>
+      n.parentNode?.classList?.contains("bd-md-line-bullet")
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT,
+  });
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node === container) return visible + offset;
+    visible += node.textContent.length;
+  }
+  return visible;
+}
+
+// Build a per-visible-char map back to raw-string offsets for a markdown line.
+// Mirrors what `renderMarkdownLineToHtml` strips: leading bullet/heading/quote
+// prefix and inline `**bold**`, `*em*`, `_em_`, `` `code` ``, `[text](url)`.
+function buildVisibleToRawMap(raw) {
+  let prefixRawLen = 0;
+  const bullet = raw.match(/^(\s*)([-*+])\s+/);
+  const ordered = raw.match(/^(\s*)(\d+)\.\s+/);
+  const heading = raw.match(/^(#{1,6})\s+/);
+  const quote = raw.match(/^>\s?/);
+  if (bullet) prefixRawLen = bullet[0].length;
+  else if (ordered) prefixRawLen = ordered[0].length;
+  else if (heading) prefixRawLen = heading[0].length;
+  else if (quote) prefixRawLen = quote[0].length;
+
+  const body = raw.slice(prefixRawLen);
+  const rawOffsets = [];
+  let visible = "";
+  let i = 0;
+  const pushSlice = (from, to) => {
+    for (let j = from; j < to; j++) {
+      visible += body[j];
+      rawOffsets.push(prefixRawLen + j);
+    }
+  };
+  while (i < body.length) {
+    const c = body[i];
+    if (c === "*" && body[i + 1] === "*") {
+      const close = body.indexOf("**", i + 2);
+      if (close !== -1) { pushSlice(i + 2, close); i = close + 2; continue; }
+    }
+    if (c === "*" || c === "_") {
+      const close = body.indexOf(c, i + 1);
+      if (close !== -1 && close !== i + 1) { pushSlice(i + 1, close); i = close + 1; continue; }
+    }
+    if (c === "`") {
+      const close = body.indexOf("`", i + 1);
+      if (close !== -1) { pushSlice(i + 1, close); i = close + 1; continue; }
+    }
+    if (c === "[") {
+      const closeBracket = body.indexOf("]", i + 1);
+      if (closeBracket !== -1 && body[closeBracket + 1] === "(") {
+        const closeParen = body.indexOf(")", closeBracket + 2);
+        if (closeParen !== -1) { pushSlice(i + 1, closeBracket); i = closeParen + 1; continue; }
+      }
+    }
+    visible += c;
+    rawOffsets.push(prefixRawLen + i);
+    i++;
+  }
+  return { prefixRawLen, visible, rawOffsets };
+}
+
+function visibleToRawOffset(raw, visibleOffset) {
+  const { prefixRawLen, rawOffsets } = buildVisibleToRawMap(raw);
+  if (visibleOffset <= 0) return prefixRawLen;
+  if (visibleOffset >= rawOffsets.length) return raw.length;
+  return rawOffsets[visibleOffset];
+}
+
 function buildMarkdownLineEl(rawLine) {
   const lineEl = document.createElement("div");
   lineEl.className = getMarkdownLineClass(rawLine);
@@ -4338,8 +4438,24 @@ function attachMarkdownEditor(nodeObj, body) {
     const x = e.clientX;
     const y = e.clientY;
     const detail = e.detail;
-    e.preventDefault();
 
+    // Compute the raw-text offset corresponding to the click BEFORE swapping
+    // the line into raw mode. The raw text contains markdown markers (e.g.
+    // `**` around bold) so the same pixel X maps to a different character once
+    // the layout reflows. caretRangeFromPoint after the swap lands on the
+    // wrong character for any line containing inline formatting.
+    let targetRawOffset = -1;
+    if (document.caretRangeFromPoint) {
+      const preRange = document.caretRangeFromPoint(x, y);
+      if (preRange && lineEl.contains(preRange.startContainer)) {
+        const visibleOffset = computeVisibleOffsetInLine(
+          lineEl, preRange.startContainer, preRange.startOffset
+        );
+        targetRawOffset = visibleToRawOffset(lineEl.dataset.raw || "", visibleOffset);
+      }
+    }
+
+    e.preventDefault();
     _suppressSelectionChange = true;
     setActiveLine(lineEl);
     if (!body.contains(document.activeElement)) {
@@ -4347,6 +4463,10 @@ function attachMarkdownEditor(nodeObj, body) {
     }
 
     requestAnimationFrame(() => {
+      // Re-assert focus inside rAF — without it, manually-set selections
+      // sometimes don't render a visible caret in contenteditable hosts even
+      // though the position is correct.
+      if (document.activeElement !== body) body.focus({ preventScroll: true });
       const sel = window.getSelection();
       if (sel) {
         if (detail >= 3) {
@@ -4355,7 +4475,16 @@ function attachMarkdownEditor(nodeObj, body) {
           range.selectNodeContents(lineEl);
           sel.removeAllRanges();
           sel.addRange(range);
+        } else if (targetRawOffset >= 0 && lineEl.firstChild) {
+          // Place caret at the raw offset we mapped from the rendered click.
+          const text = lineEl.textContent || "";
+          const offset = Math.max(0, Math.min(targetRawOffset, text.length));
+          // Use Selection.collapse() — more explicit caret-placement API than
+          // addRange of a collapsed range, and reliably renders the caret.
+          sel.removeAllRanges();
+          sel.collapse(lineEl.firstChild, offset);
         } else {
+          // Fallback if the mapping failed (e.g. lineEl had no caret-from-point hit).
           placeCaretAtPoint(lineEl, x, y);
         }
       }
@@ -4409,7 +4538,9 @@ function attachMarkdownEditor(nodeObj, body) {
   };
   window.addEventListener("pointerdown", handleOutsidePointerDown, true);
 
-  // ESC mirrors click-away: exit edit mode.
+  // ESC mirrors click-away: exit edit mode. Don't stopPropagation — the
+  // window-level ESC handler (below in the file) also runs and clears
+  // canvas-wide selection (`.bd-item.selected`), which is what the user wants.
   const handleEscape = (e) => {
     if (!body.isConnected) {
       window.removeEventListener("keydown", handleEscape, true);
@@ -4418,19 +4549,35 @@ function attachMarkdownEditor(nodeObj, body) {
     if (e.key !== "Escape") return;
     if (!body.contains(document.activeElement) && !body.querySelector(".bd-md-line--active")) return;
     e.preventDefault();
-    e.stopPropagation();
     exitEditing();
   };
   window.addEventListener("keydown", handleEscape, true);
 
   // Wheel routing:
-  //  - Active + focused: native scroll inside the body, don't bubble to canvas.
-  //  - Inactive: suppress native body scroll AND let wheel bubble so the
-  //    canvas zoom handler picks it up (cursor over inactive block still zooms).
+  //  - Detached editor (no .bd-item parent — e.g. fullscreen view): always
+  //    scroll the body. No canvas behind it to zoom, and we still want pinch
+  //    suppressed so the browser doesn't page-zoom.
+  //  - Pinch-zoom (ctrlKey on wheel — how trackpads signal pinch): route to
+  //    canvas zoom. Without preventDefault the browser page-zooms the tab.
+  //  - Plain wheel + editing (active line + focused) OR host bd-item is
+  //    .selected: native scroll inside the body, don't bubble to canvas zoom.
+  //  - Plain wheel + otherwise: suppress native body scroll AND let wheel
+  //    bubble so the canvas zoom handler picks it up.
   body.addEventListener("wheel", (e) => {
+    const itemEl = body.closest(".bd-item");
+    if (!itemEl) {
+      if (e.ctrlKey) e.preventDefault(); // suppress page-zoom; native body scroll handles deltaY
+      e.stopPropagation();
+      return;
+    }
+    if (e.ctrlKey) {
+      e.preventDefault();
+      return; // let bubble — viewport wheel handler does the canvas zoom
+    }
     const hasActiveLine = body.querySelector(".bd-md-line--active");
     const isFocused = body.contains(document.activeElement) || document.activeElement === body;
-    if (hasActiveLine && isFocused) {
+    const itemSelected = itemEl.classList.contains("selected");
+    if ((hasActiveLine && isFocused) || itemSelected) {
       e.stopPropagation();
       return;
     }
@@ -4659,6 +4806,8 @@ function renderFullscreenMarkdown(container, text, nodeObj) {
   if (nodeObj && !isPreviewMode && nodeObj.file) {
     attachMarkdownEditor(nodeObj, container);
     _fullscreenNodeObj = nodeObj;
+    // Focus the body so scroll + keyboard work without an extra click.
+    requestAnimationFrame(() => container.focus({ preventScroll: true }));
   }
 }
 

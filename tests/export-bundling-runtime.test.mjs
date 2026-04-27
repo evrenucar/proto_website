@@ -29,5 +29,10 @@ assert.match(
   /node\.type === "markdown" && node\.file && blobUrlMap\[node\.file\]/,
   "bundle import rewrites bundled markdown files to blob URLs"
 );
+assert.match(
+  runtimeSource,
+  /async function exportProjectBundle[\s\S]*?const state = cloneState\(serializeState\(\)\)/,
+  "exportProjectBundle clones state before rewriting bundle paths so live nodes are not mutated"
+);
 
 console.log("export bundling runtime check passed");

@@ -35,7 +35,9 @@
       "mcp__playwright__browser_take_screenshot",
       "Bash(git cat-file:*)",
       "Bash(xargs -I {} git check-attr -a {})",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git -C /c/Users/evren/Documents/GitHub/proto_website log --oneline -20)",
+      "Bash(npm.cmd run build:*)"
     ]
   },
   "effortLevel": "xhigh"
