@@ -1,29 +1,29 @@
-/* CSS exclusively for the Braindump Whiteboard page */
+/* Shared CSS for Braindump and other board-backed pages */
 
-.page-braindump {
+.page-board {
   overflow: hidden !important;
   scrollbar-width: none !important;
   scrollbar-gutter: auto !important;
 }
 
-.page-braindump::-webkit-scrollbar {
+.page-board::-webkit-scrollbar {
   display: none !important;
 }
 
-.page-braindump html,
-html.page-braindump,
-html:has(body.page-braindump) {
+.page-board html,
+html.page-board,
+html:has(body.page-board) {
   scrollbar-gutter: auto !important;
 }
 
-.page-braindump .main-shell {
+.page-board .main-shell {
   padding-left: 0 !important;
   padding-right: 0 !important;
   display: block;
   height: 100vh;
 }
 
-.page-braindump .page-content {
+.page-board .page-content {
   max-width: none;
   padding: 0;
   margin: 0;
@@ -31,8 +31,8 @@ html:has(body.page-braindump) {
   position: relative;
 }
 
-.page-braindump .page-footer,
-.page-braindump .page-bottom-ticker {
+.page-board .page-footer,
+.page-board .page-bottom-ticker {
   display: none !important;
 }
 
@@ -54,6 +54,93 @@ html:has(body.page-braindump) {
 
 .braindump-viewport:active {
   cursor: grabbing;
+}
+
+.board-page-panel {
+  position: fixed;
+  top: 82px;
+  left: calc(var(--desktop-nav-width) + 28px);
+  z-index: 8;
+  width: min(360px, calc(100vw - var(--desktop-nav-width) - 56px));
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(63, 218, 202, 0.2);
+  border-radius: 14px;
+  background: rgba(17, 17, 17, 0.9);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+}
+
+.board-page-panel-eyebrow {
+  margin: 0 0 10px;
+  color: #3fdaca;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.board-page-panel-title {
+  margin: 0 0 12px;
+  color: #fafafa;
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+  line-height: 1.15;
+}
+
+.board-page-panel-copy,
+.board-page-panel-note {
+  margin: 0;
+  color: rgba(250, 250, 250, 0.78);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.board-page-panel-copy + .board-page-panel-copy,
+.board-page-panel-list,
+.board-page-panel-actions,
+.board-page-panel-note {
+  margin-top: 12px;
+}
+
+.board-page-panel-list {
+  padding-left: 1.1rem;
+  color: rgba(250, 250, 250, 0.9);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.board-page-panel-list li + li {
+  margin-top: 6px;
+}
+
+.board-page-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.board-page-panel-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(63, 218, 202, 0.24);
+  border-radius: 999px;
+  background: rgba(63, 218, 202, 0.08);
+  color: #fafafa;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.board-page-panel-link:hover {
+  border-color: rgba(63, 218, 202, 0.44);
+  background: rgba(63, 218, 202, 0.16);
+  color: #3fdaca;
+}
+
+.board-page-panel-note {
+  color: rgba(250, 250, 250, 0.62);
+  font-size: 12px;
 }
 
 
@@ -123,8 +210,8 @@ html:has(body.page-braindump) {
 
 .bd-item .resize-handle {
   position: absolute;
-  right: -18px;
-  bottom: -18px;
+  right: 0;
+  bottom: 0;
   width: 40px;
   height: 40px;
   padding: 0;
@@ -135,6 +222,7 @@ html:has(body.page-braindump) {
   display: none;
   z-index: 20;
   touch-action: none;
+  transform: translate(50%, 50%);
 }
 
 .bd-item .resize-handle::after {
@@ -268,6 +356,15 @@ html:has(body.page-braindump) {
   min-width: 0;
 }
 
+.bd-link-shell.bd-link-live {
+  gap: 0;
+  height: 100%;
+  background: #111;
+  border-radius: 8px;
+  border: 1px solid #333;
+  position: relative;
+}
+
 .bd-auto-size-content {
   box-sizing: border-box;
   width: max-content;
@@ -362,6 +459,382 @@ html:has(body.page-braindump) {
 
 .bd-bookmark-link:hover {
   text-decoration: underline;
+}
+
+.bd-bookmark-live-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.bd-bookmark-live-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(63, 218, 202, 0.4);
+  color: #3fdaca;
+  transform: scale(1.05);
+}
+
+.bd-embed-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #111;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.bd-embed-toggle-btn,
+.bd-embed-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.bd-embed-toggle-btn:hover,
+.bd-embed-open-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.bd-embed-domain {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.bd-embed-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Transparent shield over YouTube iframes only. Captures wheel so canvas zoom
+   keeps working while the cursor is over the video (YouTube has no scrollable
+   content, so we never need iframe scroll). On click the shield disables itself
+   (.is-passthrough) so play/pause/seek reach the iframe; it re-enables once the
+   user clicks anywhere outside this embed. See JavaScript/braindump.js. */
+.bd-yt-wheel-shield {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Sit below the .bd-embed-header (~32px). Cover only the iframe area so
+     header buttons (Preview / Open) stay clickable without indirection. */
+  top: 32px;
+  z-index: 2;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.bd-yt-wheel-shield.is-passthrough {
+  pointer-events: none;
+}
+
+/* App Node CSS */
+.bd-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.bd-app-shell.bd-app-live {
+  background: #111;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.bd-app-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  text-align: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.bd-app-card-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.bd-app-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bd-app-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.bd-app-card-desc {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 280px;
+  line-height: 1.4;
+}
+
+.bd-app-launch-btn {
+  margin-top: 8px;
+  padding: 8px 24px;
+  background: #3fdaca;
+  color: #000;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bd-app-launch-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.bd-app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #111;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.bd-app-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.bd-app-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bd-app-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bd-app-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.bd-app-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+}
+
+.bd-layer-board-preview {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%),
+    rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(63, 218, 202, 0.24);
+  border-radius: 12px;
+  padding: 16px;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+.bd-board-preview-shell {
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: 12px;
+  min-width: 0;
+  align-content: start;
+}
+
+.bd-board-preview-meta {
+  color: rgba(63, 218, 202, 0.92);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bd-board-preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bd-board-preview-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.bd-board-preview-desc {
+  margin: 0;
+  color: rgba(250, 250, 250, 0.72);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.bd-board-preview-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(63, 218, 202, 0.16);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at top left, rgba(63, 218, 202, 0.12), transparent 50%),
+    linear-gradient(180deg, rgba(18, 30, 30, 0.98) 0%, rgba(12, 12, 12, 0.98) 100%);
+  width: 100%;
+  min-height: 118px;
+  aspect-ratio: 100 / 62;
+  align-self: start;
+}
+
+.bd-board-preview-stage,
+.bd-board-preview-stage * {
+  pointer-events: none;
+}
+
+.bd-board-preview-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bd-board-preview-shape {
+  fill: rgba(255, 255, 255, 0.12);
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1.1;
+}
+
+.bd-board-preview-shape.is-text {
+  fill: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.bd-board-preview-shape.is-link {
+  fill: rgba(63, 218, 202, 0.22);
+  stroke: rgba(63, 218, 202, 0.55);
+}
+
+.bd-board-preview-shape.is-file {
+  fill: rgba(240, 170, 76, 0.24);
+  stroke: rgba(240, 170, 76, 0.58);
+}
+
+.bd-board-preview-shape.is-board-preview {
+  fill: rgba(143, 181, 234, 0.18);
+  stroke: rgba(143, 181, 234, 0.5);
+  stroke-dasharray: 3 2;
+}
+
+.bd-board-preview-shape-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.bd-board-preview-shape-line.is-draw {
+  stroke: rgba(63, 218, 202, 0.86);
+}
+
+.bd-board-preview-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  color: rgba(250, 250, 250, 0.76);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.bd-board-preview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(63, 218, 202, 0.12);
+}
+
+.bd-board-preview-actions .board-preview-open-link,
+.bd-board-preview-link {
+  pointer-events: auto;
+}
+
+.bd-board-preview-action-disabled {
+  color: rgba(250, 250, 250, 0.52);
+  font-size: 12px;
 }
 
 /* Toolbar */
@@ -849,6 +1322,27 @@ html:has(body.page-braindump) {
     left: 0;
   }
 
+  .board-page-panel {
+    top: max(60px, calc(env(safe-area-inset-top) + 16px));
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    padding: 14px 14px 12px;
+  }
+
+  .board-page-panel-title {
+    font-size: 1.2rem;
+  }
+
+  .board-page-panel-copy {
+    font-size: 13px;
+  }
+
+  .board-page-panel-list {
+    font-size: 12px;
+  }
+
   .braindump-toolbar-shell {
     left: 12px;
     right: 12px;
@@ -961,3 +1455,931 @@ html:has(body.page-braindump) {
     height: 14px;
   }
 }
+
+/* Embedded preview mode */
+.braindump-viewport[data-board-mode="preview"] {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: 420px;
+  z-index: auto;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Hide the toolbar entirely in preview mode — pan is always active, the icon adds nothing. */
+.braindump-viewport[data-board-mode="preview"] .braindump-toolbar-shell {
+  display: none;
+}
+
+/* Corner "Open board" overlay button */
+.bd-preview-corner-link {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: rgba(10, 10, 10, 0.72);
+  border: 1px solid rgba(63, 218, 202, 0.32);
+  border-radius: 8px;
+  color: #3fdaca;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  pointer-events: auto;
+  backdrop-filter: blur(6px);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.bd-preview-corner-link:hover {
+  background: rgba(63, 218, 202, 0.18);
+  border-color: rgba(63, 218, 202, 0.6);
+  color: #fff;
+}
+
+.board-preview-open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(63, 218, 202, 0.12);
+  border: 1px solid rgba(63, 218, 202, 0.3);
+  border-radius: 8px;
+  color: #3fdaca;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.board-preview-open-link:hover {
+  background: rgba(63, 218, 202, 0.2);
+  border-color: rgba(63, 218, 202, 0.5);
+}
+
+/* Markdown node — outer must NOT clip overflow, otherwise the corner resize
+   handle dot (which deliberately straddles the bd-item edge for grab area)
+   gets hidden. The inner shell still clips content with matching radius. */
+.bd-layer-markdown {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+.bd-markdown-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.bd-markdown-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #2e2e2e;
+  flex-shrink: 0;
+}
+
+.bd-markdown-icon {
+  flex-shrink: 0;
+  color: #3fdaca;
+  opacity: 0.75;
+}
+
+.bd-markdown-title {
+  /* Width hugs the title text so the empty header space to its right stays
+     draggable (clicking it bubbles to the bd-item drag handler). The flex
+     shrink + min-width:0 still let long titles ellipsize when they would
+     overlap the fullscreen button. */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(250, 250, 250, 0.72);
+  text-transform: uppercase;
+}
+
+.bd-markdown-title-input {
+  /* When editing, allow the input to grow up to the available header width
+     so longer names stay visible. flex-grow lets it expand toward the
+     fullscreen button without pushing it. */
+  flex: 1 1 auto;
+}
+
+.bd-markdown-fullscreen-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: #3fdaca;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s, transform 0.12s;
+  border-radius: 4px;
+}
+
+.bd-markdown-fullscreen-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Fullscreen markdown viewer */
+.bd-markdown-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.bd-markdown-fullscreen.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.bd-markdown-fullscreen-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.bd-markdown-fullscreen-container {
+  position: relative;
+  width: 90vw;
+  max-width: 800px;
+  height: 85vh;
+  max-height: 900px;
+  background: #1a1a1e;
+  border: 1px solid rgba(63, 218, 202, 0.25);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.bd-markdown-fullscreen.is-open .bd-markdown-fullscreen-container {
+  transform: scale(1);
+}
+
+.bd-markdown-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(63, 218, 202, 0.15);
+  background: rgba(63, 218, 202, 0.03);
+}
+
+.bd-markdown-fullscreen-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.bd-markdown-fullscreen-close {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: rgba(250, 250, 250, 0.6);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.12s, background 0.12s;
+}
+
+.bd-markdown-fullscreen-close:hover {
+  color: #fafafa;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bd-markdown-fullscreen-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+.bd-markdown-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 14px 14px;
+  line-height: 1.7;
+  font-size: 13px;
+  color: #d0d0d0;
+  position: relative;
+}
+
+/* Overflow gradient indicator - positioned relative to the shell container */
+.bd-markdown-shell {
+  position: relative;
+}
+.bd-markdown-body--has-overflow ~ .bd-markdown-overflow-gradient,
+.bd-markdown-shell:has(.bd-markdown-body--has-overflow)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, rgba(63, 218, 202, 0.35) 55%, rgba(63, 218, 202, 0.85) 100%);
+  z-index: 2;
+}
+
+.bd-markdown-body p { margin: 0 0 10px; }
+.bd-markdown-body h1,
+.bd-markdown-body h2,
+.bd-markdown-body h3,
+.bd-markdown-body h4 {
+  margin: 16px 0 6px;
+  color: #fafafa;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.bd-markdown-body h1 { font-size: 18px; }
+.bd-markdown-body h2 { font-size: 15px; }
+.bd-markdown-body h3 { font-size: 13px; }
+.bd-markdown-body h4 { font-size: 12px; opacity: 0.9; }
+.bd-markdown-body ul { margin: 0 0 10px; padding-left: 18px; }
+.bd-markdown-body li { margin-bottom: 3px; }
+.bd-markdown-body a { color: #3fdaca; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(63, 218, 202, 0.4); }
+.bd-markdown-body a:hover { text-decoration-color: rgba(63, 218, 202, 0.8); }
+.bd-md-line--active a { cursor: text; text-decoration: none; }
+.bd-markdown-body code {
+  padding: 1px 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 3px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.bd-markdown-body pre {
+  overflow-x: auto;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 5px;
+}
+.bd-markdown-body pre code { background: none; padding: 0; font-size: 11px; }
+.bd-markdown-body blockquote {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-left: 3px solid #3fdaca;
+  background: rgba(63,218,202,0.05);
+}
+.bd-markdown-body blockquote p { margin: 0; }
+.bd-markdown-body hr {
+  border: 0;
+  border-top: 1px solid #2e2e2e;
+  margin: 12px 0;
+}
+.bd-markdown-body strong { color: #fafafa; font-weight: 600; }
+.bd-markdown-body em { font-style: italic; color: #e0e0e0; }
+
+.bd-markdown-loading,
+.bd-markdown-empty,
+.bd-markdown-error {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(250, 250, 250, 0.4);
+  font-style: italic;
+}
+.bd-markdown-error { color: #e8836a; }
+
+/* Inline line-active markdown editor (Obsidian-style live preview) */
+.bd-markdown-editor {
+  outline: none;
+  caret-color: #3fdaca;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 130, 130, 0.55) transparent;
+}
+.bd-markdown-editor:focus,
+.bd-markdown-editor:focus-within,
+.bd-markdown-editor:has(.bd-md-line--active) {
+  scrollbar-color: rgba(160, 160, 160, 0.8) transparent;
+}
+.bd-markdown-editor::-webkit-scrollbar {
+  width: 6px;
+}
+.bd-markdown-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bd-markdown-editor::-webkit-scrollbar-thumb {
+  background: rgba(130, 130, 130, 0.55);
+  border-radius: 3px;
+}
+.bd-markdown-editor:focus::-webkit-scrollbar-thumb,
+.bd-markdown-editor:focus-within::-webkit-scrollbar-thumb,
+.bd-markdown-editor:has(.bd-md-line--active)::-webkit-scrollbar-thumb {
+  background: rgba(160, 160, 160, 0.8);
+}
+.bd-md-line {
+  min-height: 1.5em;
+  padding: 1px 2px;
+  border-radius: 3px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+.bd-md-line:empty::before {
+  content: " ";
+  white-space: pre;
+}
+.bd-md-line--blank { min-height: 0.6em; }
+.bd-md-line--h1 { font-size: 18px; font-weight: 600; color: #fafafa; margin: 8px 0 2px; }
+.bd-md-line--h2 { font-size: 15px; font-weight: 600; color: #fafafa; margin: 6px 0 2px; }
+.bd-md-line--h3 { font-size: 13px; font-weight: 600; color: #fafafa; margin: 4px 0 2px; }
+.bd-md-line--h4 { font-size: 12px; font-weight: 600; color: rgba(250,250,250,0.9); }
+.bd-md-line--h5,
+.bd-md-line--h6 { font-size: 12px; font-weight: 600; opacity: 0.8; }
+.bd-md-line--li { padding-left: 18px; position: relative; }
+.bd-md-line-bullet {
+  position: absolute;
+  left: 4px;
+  color: rgba(250,250,250,0.45);
+  user-select: none;
+}
+.bd-md-line--quote {
+  padding-left: 12px;
+  border-left: 3px solid rgba(63,218,202,0.55);
+  background: rgba(63,218,202,0.04);
+  color: rgba(220,220,220,0.85);
+}
+.bd-md-line--hr { border-top: 1px solid #2e2e2e; height: 1px; margin: 8px 0; min-height: 0; }
+.bd-md-line--hr * { display: none; }
+.bd-md-line--active {
+  background: rgba(63, 218, 202, 0.06);
+  font-family: "Menlo", "Consolas", monospace;
+  font-size: 12px;
+  color: #d8d8d8;
+}
+
+/* Drop highlight when dragging .md files onto the viewport */
+.bd-md-drop-target {
+  outline: 2px dashed #3fdaca;
+  outline-offset: -8px;
+}
+
+/* Markdown index (markdown-db) node */
+.bd-layer-markdown-db {
+  background: #1a1a1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.bd-markdown-db-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.bd-markdown-db-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 7px;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid #2e2e2e;
+  flex-shrink: 0;
+}
+.bd-markdown-db-icon { color: #3fdaca; opacity: 0.75; flex-shrink: 0; }
+.bd-markdown-db-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(250,250,250,0.72);
+  text-transform: uppercase;
+}
+.bd-markdown-db-count {
+  font-size: 11px;
+  color: rgba(250,250,250,0.4);
+  font-variant-numeric: tabular-nums;
+}
+.bd-markdown-db-search {
+  margin-left: auto;
+  flex: 0 1 140px;
+  min-width: 80px;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: #e0e0e0;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid #333;
+  border-radius: 4px;
+  outline: none;
+}
+.bd-markdown-db-search:focus { border-color: #3fdaca; }
+.bd-markdown-db-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 12px;
+  color: #d0d0d0;
+}
+.bd-markdown-db-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.bd-markdown-db-table th,
+.bd-markdown-db-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid #262626;
+}
+.bd-markdown-db-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(250,250,250,0.4);
+  background: rgba(0,0,0,0.2);
+  position: sticky;
+  top: 0;
+}
+.bd-markdown-db-row { cursor: pointer; transition: background 0.1s; }
+.bd-markdown-db-row:hover { background: rgba(63,218,202,0.06); }
+.bd-markdown-db-col-date { color: rgba(250,250,250,0.45); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-markdown-db-loading,
+.bd-markdown-db-empty-msg,
+.bd-markdown-db-error {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: rgba(250,250,250,0.4);
+  font-style: italic;
+}
+.bd-markdown-db-error { color: #e8836a; }
+
+/* New-markdown create panel */
+.braindump-markdown-panel {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  z-index: 12;
+  padding: 14px 14px 12px;
+  background: #161616;
+  border: 1px solid #2c2c2c;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+.braindump-markdown-panel[hidden] { display: none; }
+.braindump-markdown-panel-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(250,250,250,0.78);
+}
+.braindump-markdown-panel-label {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(250,250,250,0.5);
+}
+.braindump-markdown-panel input,
+.braindump-markdown-panel textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #f0f0f0;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid #2e2e2e;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+}
+.braindump-markdown-panel textarea {
+  font-family: "Menlo", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 100px;
+}
+.braindump-markdown-panel input:focus,
+.braindump-markdown-panel textarea:focus { border-color: #3fdaca; }
+.braindump-markdown-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Base / database node — same pattern as markdown: outer keeps overflow
+   visible so the corner resize handle dot stays grabbable; inner shell clips. */
+.bd-layer-base {
+  background: #1a1a1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+.bd-base-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.bd-base-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #2e2e2e;
+  flex-shrink: 0;
+}
+
+.bd-base-icon {
+  flex-shrink: 0;
+  color: #a78bfa;
+  opacity: 0.85;
+}
+
+.bd-base-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(250, 250, 250, 0.72);
+  text-transform: uppercase;
+}
+
+.bd-base-count {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  background: rgba(167, 139, 250, 0.15);
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a78bfa;
+  line-height: 1;
+}
+
+.bd-base-count:empty { display: none; }
+
+.bd-base-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.bd-base-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: auto;
+}
+
+.bd-base-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.bd-base-table th {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #2e2e2e;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(250, 250, 250, 0.45);
+  white-space: nowrap;
+}
+
+.bd-base-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #d0d0d0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.bd-base-table td:first-child {
+  color: #fafafa;
+  font-weight: 500;
+  max-width: 260px;
+}
+
+.bd-base-row--linked {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.bd-base-row--linked:hover {
+  background: rgba(167, 139, 250, 0.08);
+}
+
+/* Status pills */
+.bd-base-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+}
+
+.bd-base-pill--greenlit {
+  background: rgba(52, 211, 153, 0.14);
+  color: #34d399;
+}
+
+.bd-base-pill--published {
+  background: rgba(96, 165, 250, 0.14);
+  color: #60a5fa;
+}
+
+.bd-base-pill--draft {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+}
+
+.bd-base-pill--just-idea,
+.bd-base-pill--just-an-idea {
+  background: rgba(250, 250, 250, 0.06);
+  color: rgba(250, 250, 250, 0.45);
+}
+
+.bd-base-pill--archived {
+  background: rgba(250, 250, 250, 0.04);
+  color: rgba(250, 250, 250, 0.3);
+}
+
+.bd-base-empty {
+  color: rgba(250, 250, 250, 0.2);
+}
+
+.bd-base-loading,
+.bd-base-empty-msg,
+.bd-base-error {
+  margin: 0;
+  padding: 14px;
+  font-size: 12px;
+  color: rgba(250, 250, 250, 0.4);
+  font-style: italic;
+}
+.bd-base-error { color: #e8836a; }
+
+/* Markdown Overhaul Styles */
+
+/* Scroll is always permitted; the body's wheel handler routes scroll-vs-zoom
+   based on whether a line is being edited (see attachMarkdownEditor). */
+
+/* Markdown tables */
+.bd-markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+.bd-markdown-body th,
+.bd-markdown-body td {
+  padding: 6px 10px;
+  border: 1px solid #333;
+  text-align: left;
+}
+.bd-markdown-body th {
+  background: rgba(255,255,255,0.05);
+  font-weight: 600;
+  color: #fafafa;
+}
+
+/* Markdown images */
+.bd-markdown-img {
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+/* Markdown checklists */
+.bd-markdown-checklist {
+  list-style: none;
+  padding-left: 4px !important;
+}
+.bd-markdown-checklist input[type="checkbox"] {
+  margin-right: 6px;
+  accent-color: #3fdaca;
+}
+
+/* Block-level inline edit */
+.bd-markdown-block {
+  margin-bottom: 8px;
+}
+
+.bd-markdown-editing .bd-markdown-block {
+  cursor: text;
+  border-radius: 4px;
+  transition: background-color 0.1s;
+}
+
+.bd-markdown-editing .bd-markdown-block:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.bd-markdown-block-input {
+  width: 100%;
+  padding: 8px 10px;
+  margin: 4px 0;
+  border: 1px solid #3fdaca66;
+  border-radius: 4px;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bd-markdown-block-input:focus {
+  border-color: #3fdaca;
+}
+
+.bd-markdown-editing {
+  border-color: #3fdaca66 !important;
+}
+
+.bd-markdown-editing .bd-markdown-header {
+  border-bottom-color: #3fdaca33;
+}
+
+/* Markdown Database Node */
+.bd-layer-markdown-db {
+  background: #111;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.bd-markdown-db-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.bd-markdown-db-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #2e2e2e;
+  flex-shrink: 0;
+}
+
+.bd-markdown-db-icon {
+  flex-shrink: 0;
+  color: #3fdaca;
+}
+
+.bd-markdown-db-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(250, 250, 250, 0.72);
+  text-transform: uppercase;
+}
+
+.bd-markdown-db-count {
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  background: rgba(63, 218, 202, 0.15);
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3fdaca;
+  line-height: 1;
+}
+
+.bd-markdown-db-search-container {
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.bd-markdown-db-search {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  padding: 2px 6px;
+  font-size: 11px;
+  width: 120px;
+  transition: all 0.2s ease-in-out;
+}
+
+.bd-markdown-db-search:focus {
+  border-color: #3fdaca;
+  width: 160px;
+  outline: none;
+}
+
+.bd-markdown-db-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.bd-markdown-db-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bd-markdown-db-table th {
+  text-align: left;
+  font-size: 11px;
+  color: rgba(250, 250, 250, 0.4);
+  font-weight: 500;
+  padding: 8px 10px;
+  border-bottom: 1px solid #2e2e2e;
+}
+
+.bd-markdown-db-table td {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: rgba(250, 250, 250, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bd-markdown-db-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.bd-markdown-db-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bd-markdown-db-col-date {
+  color: rgba(250, 250, 250, 0.4);
+  text-align: right;
+  width: 80px;
+}
+

@@ -1,0 +1,21 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Markdown should preserve trailing whitespace (used for line breaks)
+[*.md]
+trim_trailing_whitespace = false
+
+# Batch files require CRLF
+[*.{bat,cmd}]
+end_of_line = crlf
+
+# Python conventions
+[*.py]
+indent_size = 4

@@ -23,7 +23,8 @@ export const navigation = [
   { label: "Photography", href: "photography.html" },
   { label: "Open-Quests", href: "open-quests.html" },
   { label: "Cool bookmarks", href: "cool-bookmarks.html" },
-  { label: "Braindump", href: "braindump.html" }
+  { label: "Braindump", href: "braindump.html" },
+  { label: "Cosmoboard", href: "cosmoboard.html" }
 ];
 
 export const homePage = {
@@ -287,12 +288,12 @@ export const seo = {
 };
 
 export const braindumpPage = {
+  file: "braindump.html",
   title: "Braindump | Evren Ucar",
   description: "An infinite whiteboard for ideas, sketches, and references.",
   board: {
     slug: "braindump",
     title: "Braindump",
-    pagePath: "braindump.html",
     sourcePath: "content/boards/braindump/current.canvas",
     legacySourcePath: "content/braindump-state.json",
     storageKey: "board:braindump",
@@ -320,3 +321,58 @@ export const braindumpPage = {
     }
   }
 };
+
+export const cosmoboardPage = {
+  file: "cosmoboard.html",
+  title: "Cosmoboard | Evren Ucar",
+  description:
+    "The first onboarding board for the broader Cosmoboard direction inside evrenucar.com.",
+  board: {
+    slug: "cosmoboard",
+    title: "Cosmoboard",
+    sourcePath: "content/boards/cosmoboard/current.canvas",
+    legacySourcePath: "",
+    storageKey: "board:cosmoboard",
+    legacyStorageKey: "",
+    saveEndpoint: "/api/save-board",
+    autosaveSeconds: 20,
+    allowRecommendations: true,
+    recommendation: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["recommendation", "cosmoboard"]
+    },
+    featureRequest: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["enhancement", "cosmoboard"]
+    },
+    bugReport: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["bug", "cosmoboard"]
+    }
+  }
+};
+
+export const eurocrateBoardPage = {
+  file: "content/boards/eurocrate-storage.html",
+  title: "Eurocrate storage board | Evren Ucar",
+  description: "Working board for the Eurocrate universal storage system — a 600×400 modular drawer solution built around standard eurocontainers.",
+  board: {
+    slug: "eurocrate-storage",
+    title: "Eurocrate storage",
+    sourcePath: "content/boards/projects/eurocrate-storage/current.canvas",
+    legacySourcePath: "",
+    storageKey: "board:eurocrate-storage",
+    legacyStorageKey: "",
+    saveEndpoint: "/api/save-board",
+    autosaveSeconds: 20,
+    allowRecommendations: false
+  }
+};
+
+export const boardPages = [braindumpPage, cosmoboardPage, eurocrateBoardPage];

@@ -43,6 +43,15 @@
       "mediaStartLabel": "",
       "dateAdded": "2026-02-23T21:27:24.669Z",
       "dateModified": "2026-04-20T17:50:14.846Z"
+    },
+    "board": {
+      "slug": "eurocrate-storage",
+      "title": "Eurocrate storage",
+      "sourcePath": "content/boards/projects/eurocrate-storage/current.canvas",
+      "legacySourcePath": "",
+      "storageKey": "board:eurocrate-storage",
+      "legacyStorageKey": "",
+      "pageFile": "content/boards/eurocrate-storage.html"
     }
   },
   {

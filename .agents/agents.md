@@ -1,59 +1,42 @@
-# Agent Notes
+# Agent Router
 
-This repo is the personal website for Evren Ucar.
+`proto_website` is Evren Ucar's personal portfolio site and the active prototype host for Cosmoboard, a local-first spatial workspace for canvases, markdown, databases, files, and embeds.
 
-## What the user asked for
+## Routing Rules
 
-- Clean up the website and the project file structure.
-- Keep things lightweight so the pages are easier to manage.
-- Update the text and descriptions.
-- Improve SEO.
-- Prepare the project so Notion pages can later be linked to projects, with a GitHub Action pulling the latest state.
-- Use Playwright for visual cleanup and checking.
+| Task type | Read these docs |
+| --- | --- |
+| Whiteboard / Braindump / board bugfix | `project.md`, `.agents/whiteboard/` |
+| Board export, bundling, save flow | `project.md`, `.agents/handoffs/handoff_export_bundling.md` |
+| Product strategy or roadmap question | `project.md`, `holistic_planning/holistic_planning.md` |
+| Architecture or capability matrix | `project.md`, `holistic_planning/holistic_architecture.md` |
+| Technology research or references | `holistic_planning/holistic_research.md` |
+| Active implementation follow-up | `current_scratch_pad.md`, `holistic_planning/holistic_tasks.md` |
+| Page database or structured content | `.agents/page_database/` |
+| Cross-domain inbox or quick notes | `general_issues_and_tasks.md` |
+| Backlog or medium-term work | `holistic_planning/holistic_backlog.md` |
 
-## Important correction from the user
+## Key Stable Docs
 
-Do not redesign the website into a new visual system.
+- [project.md](./project.md) — durable product facts, visual constraints, writing style, technical direction
+- [holistic_planning/holistic_planning.md](./holistic_planning/holistic_planning.md) — north star, confirmed decisions, roadmap
+- [holistic_planning/holistic_tasks.md](./holistic_planning/holistic_tasks.md) — active work, review queue, next up
 
-Keep the site close to the original look and feel:
+## What Not To Read By Default
 
-- dark background
-- left sidebar navigation
-- simple sans-serif feel
-- teal accent color
-- photography page should stay close to the older denser gallery layout
+- `holistic_planning/archive/` — resolved history only
+- `holistic_planning/holistic_backlog.md` — medium/later work, not active
+- `holistic_planning/holistic_research.md` — references and candidates, not active task state
+- `.agents/handoffs/` — dense proof and handoff detail, read only when the task is in that area
+- `.agents/skills/` — skill instructions, read only when using a specific skill
 
-The user explicitly did not want a full visual rebrand.
+## Testing Rule
 
-## Writing style
+- Default to one minimal verification pass near the end of implementation.
+- For Braindump browser verification, use `.agents/skills/whiteboard-automated-testing-skill/skill.md`.
+- Only expand into broader Playwright coverage when the user asks or the change is high-risk.
 
-When updating text:
+## Local Server Rule
 
-- keep it simple and honest
-- write like normal direct communication
-- use proper punctuation
-- avoid em dashes
-
-## Content direction
-
-Use the user's updated background where relevant:
-
-- TU Delft graduate
-- freelance industrial design engineer
-- works in the space between an idea and a thing you can hold, test, break, and improve
-- works through mechanics, electronics, prototyping, and practical problem-solving
-- also works with analog photography, lino printing, metalworking, and other hands-on processes
-- currently helping build a darkroom and a small metal casting kiln at OMA Collective
-
-## Current implementation direction
-
-- Keep the site visually close to the original.
-- It is fine to improve structure behind the scenes.
-- Lightweight static generation is acceptable.
-- Future Notion sync support is acceptable as long as it does not change the visible design too much.
-- For general items, use `agents/general_issues_and_tasks.md`.
-- For page database and Notion-backed content system work, use `agents/page_database/page_database_tasks.md`.
-- Project-specific agent skills live under `.agents/skills/`.
-- For Braindump browser verification, use `.agents/skills/whiteboard-automated-testing-skill/skill.md` and `agents/whiteboard/whiteboard_automated_testing_skill.md`.
-- Always verify visual changes with Playwright before closing work.
-- CRITICAL RULE: Everytime you add a new feature, you MUST TEST it in the browser (using browser subagent if applicable) before proceeding!
+- Always start a local server before reporting progress on site work.
+- Share the active local preview address at session start and end.

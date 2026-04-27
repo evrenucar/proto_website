@@ -1,3 +1,19 @@
-- when I open an image. I cannot exit by clicking in the black area if I click on the left or the right of smaller images. I think the active zone is a bit larger than the image. Ideally if I click anywhere else than the image I should be able to exit the focus view.
+# Cross-Domain Inbox
 
-- page database and Notion content system planning now lives in `agents/page_database/page_database_plan.md` and `agents/page_database/page_database_tasks.md`.
+## Purpose
+Short shared notes and pointers that do not belong in a single domain doc.
+
+## Read when
+Looking for unresolved cross-cutting notes or quick pointers between domains.
+
+## Skip when
+Working on a specific domain (use the domain task file instead).
+
+## Canonical for
+Cross-domain notes, unresolved quick items, temporary pointers.
+
+---
+
+- Chrome can keep stale local board state or a cached board runtime. If Cosmoboard looks broken only in Chrome, clear site data for `127.0.0.1:4173` or hard reload.
+- Do not remove legacy field tolerance for `markdown.source` and `board-preview.file` yet. Imported bundles and old localStorage states may still contain them.
+- Generated pages are build outputs. After changing build scripts, board data, or route behavior, run `npm run build`.

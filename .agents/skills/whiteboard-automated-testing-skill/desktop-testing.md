@@ -2,7 +2,18 @@
 
 ## Scope
 
-Use this checklist when Braindump changes affect pointer, keyboard, layout, persistence, or browser-specific behavior on desktop and laptop environments.
+Use this checklist for the final desktop smoke pass when Braindump changes affect pointer, keyboard, layout, persistence, or browser-specific behavior on desktop and laptop environments.
+
+## Default Minimal Final Pass
+
+Run only the smallest subset that proves the implemented change works:
+
+- load the page and confirm the board mounts
+- check the changed interaction or visual behavior directly
+- scan for obvious console or layout regressions
+- take one screenshot only if the result is user-visible or disputed
+
+Only expand into the full checklist when the change is broad, risky, or explicitly requests deeper regression coverage.
 
 ## Environment
 
@@ -21,15 +32,15 @@ Use this checklist when Braindump changes affect pointer, keyboard, layout, pers
 - Reset state before the run
   - Replace both Braindump localStorage keys with a known empty board or small fixture.
 
-## Required Screenshot Set
+## Screenshot Guidance
 
-- Initial board with toolbar visible and no accidental page scrollbar
-- Text note created on an empty board
-- Drawing created on an empty board
-- Selection state around a text note and around a drawing node
-- Any regression-specific screenshot that proves a previously fixed issue still stays fixed
+- No screenshot is required for every run.
+- Prefer a single screenshot of the changed flow when it helps prove the result.
+- Add more screenshots only for visible failures, layout issues, or multi-step regressions.
 
 ## Interaction Checklist
+
+Use only the sections touched by the change. The rest are reference coverage, not default required steps.
 
 ### 1. Load, shell, and layout
 
@@ -137,4 +148,3 @@ Re-run these whenever related code changes:
 - `zoom blur on text and images`
 - `image drag hijacking node drag`
 - `pen pointer scaling`
-
