@@ -17,13 +17,13 @@ Root cause: `setMarkdownLineRaw` did `lineEl.textContent = raw`, destroying rend
   - [ ] **Code-only (browser session closed; needs user verify):** rendered→raw caret offset mapping for lines with inline markdown. Helpers `computeVisibleOffsetInLine` + `buildVisibleToRawMap` + `visibleToRawOffset` compute the visible text offset BEFORE the raw-swap, then map it through the markdown markers (`**`, `*`, `_`, `` ` ``, `[text](url)`, leading `# / - / > / 1.` prefix) to find the equivalent raw offset. Without this, clicking on a line with `**bold**` would land on the wrong character because raw is longer than visible.
 - [A] #4 Wheel over inactive markdown blocks routes through to canvas zoom
   - [A] Sub-fix: pinch-zoom (`ctrlKey` on wheel — how trackpads signal pinch) ALWAYS routes to canvas zoom, regardless of selected/editing state. Without this, pinch over a selected/editing block would page-zoom the whole tab.
-  - Test: `tests/markdown-wheel-routing.test.mjs` covers all 6 routing cases (pinch + plain wheel × selected/unselected/editing). Run with `node tests/markdown-wheel-routing.test.mjs`.
+  - Test: `tests/board/markdown-wheel-routing.test.mjs` covers all 6 routing cases (pinch + plain wheel × selected/unselected/editing). Run with `node tests/board/markdown-wheel-routing.test.mjs`.
 - [A] #8 Up/Down arrow between blocks lands caret at end-of-line
 - [A] #13 Click inside a note area activates the block + enables scroll in one step
 - [A] #17 ESC mirrors click-away (exits edit mode)
   - [A] Sub-fix: ESC also deselects ALL `.bd-item.selected` on the canvas (not just markdown — applies to text/bookmark/base/board-preview/etc). Window-level ESC handler appended after the modal/panel checks; per-markdown handleEscape no longer `stopPropagation`s so the window handler runs after.
   - [A] Sub-fix: ESC also blurs any focused `.bd-text-editor` (text node editor)
-  - Test: `tests/esc-deselect.test.mjs` covers 5 cases (editing markdown, selected-only, multi-select, focused text editor, no-op)
+  - Test: `tests/board/esc-deselect.test.mjs` covers 5 cases (editing markdown, selected-only, multi-select, focused text editor, no-op)
 - [A] #18 Clicking markdown text selects the host bd-item (`selected` class)
 - [A] #19 Click-away in one click — caret + selection + active line all cleared
   - Sub-fix landed after first regression report: also calls `removeAllRanges()` on selections inside the body (contenteditable shows a caret based on selection, not just focus)
@@ -50,7 +50,7 @@ Root cause: `setMarkdownLineRaw` did `lineEl.textContent = raw`, destroying rend
   - Sub-fix: `closeMarkdownFullscreen` syncs content back to canvas body via `readMarkdownEditorContent` + rebuild
   - Sub-fix: wheel handler short-circuits when there's no `.bd-item` parent (i.e. fullscreen) — always allows native body scroll, suppresses pinch page-zoom
   - Sub-fix: fullscreen body auto-focuses on open via rAF (scroll + typing work without an extra click)
-  - Test extension: `tests/markdown-wheel-routing.test.mjs` now also asserts fullscreen editable/scrollable/focused + plain & pinch wheel routing
+  - Test extension: `tests/board/markdown-wheel-routing.test.mjs` now also asserts fullscreen editable/scrollable/focused + plain & pinch wheel routing
 - [A] #7 "New markdown" toolbar button bypasses the modal panel
   - Sub-fix: spawns at canvas-center with -80px Y lift to clear toolbar
   - Sub-fix: auto-named `note-YYYYMMDD-HHMMSS`
@@ -71,7 +71,7 @@ Reported: change timestamps to be human-readable (`20260427-102751` → `2026-04
 Reported: corner scaling dots disappear behind the rounded contour of markdown + database (base) nodes, shrinking the grab area.
 - [A] `.bd-layer-markdown` and `.bd-layer-base` no longer set `overflow: hidden` on the outer bd-item — that's what was clipping the resize handle dot (which deliberately straddles the corner via `translate(50%, 50%)` to give a generous grab area).
 - [A] Inner shells (`.bd-markdown-shell`, `.bd-base-shell`) now use `border-radius: inherit` (in addition to their existing `overflow: hidden`) so content is still clipped to the rounded outer border. Visual is unchanged; the resize dot is just no longer hidden.
-- Test: `tests/resize-handle-clipping.test.mjs` asserts overflow visible on outer, overflow hidden + radius inherited on inner shell, and the handle box extends beyond the bd-item corner.
+- Test: `tests/board/resize-handle-clipping.test.mjs` asserts overflow visible on outer, overflow hidden + radius inherited on inner shell, and the handle box extends beyond the bd-item corner.
 
 ## [x] Closed without code change
 - [x] #14 "Reveal hidden overflow text when block area is too small" — user confirmed existing gradient + scroll affordances are sufficient

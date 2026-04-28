@@ -26,11 +26,11 @@ This handoff is the current state summary for the next agent. The broader roadma
 - Board save/reload reliability is implemented for local preview.
   - `scripts/preview-server.mjs` now implements `POST /api/save-board` and writes to the registered board `sourcePath`.
   - `Ctrl/Cmd+S` uses the same save path as the toolbar Save button instead of opening a `.canvas` download/save-as flow.
-  - Real browser regression: `tests/board-save-reload-e2e.test.mjs`.
+  - Real browser regression: `tests/board/board-save-reload-e2e.test.mjs`.
 - Board URL paste-to-preview is implemented.
   - Generated board pages include `data-board-index` metadata for known board pages and sources.
   - Pasting another board page URL creates a `board-preview` node with the SVG/minimap preview instead of a generic bookmark.
-  - Regression: `tests/board-url-paste-preview-e2e.test.mjs`.
+  - Regression: `tests/board/board-url-paste-preview-e2e.test.mjs`.
 - Server-side extraction exists in `scripts/extract-assets.mjs`.
   - Command: `npm run extract-assets -- <path-to-canvas-or-canvas-json>`
   - It extracts `data:image/...;base64,...` values into `content/assets/images/`.
@@ -41,22 +41,22 @@ This handoff is the current state summary for the next agent. The broader roadma
   - The issue body includes a review/versioning section that says the handoff is not a direct publish or overwrite action.
   - The modal now explains that the downloaded `.canvas.json` must be attached, recommendations are reviewed before appearing live, and existing board recommendation issues should be updated instead of duplicated.
   - Recommendation export still downloads a `.canvas.json` file for manual attachment.
-  - Regression coverage exists in `tests/recommendation-flow-e2e.test.mjs`.
+  - Regression coverage exists in `tests/features/recommendation-flow-e2e.test.mjs`.
 - Chrome stale-state compatibility is covered.
   - Runtime now tolerates legacy `markdown.source` and `board-preview.file` fields from old localStorage/import states.
   - `braindump.js` cache key is currently `v=52`.
   - `braindump.css` cache key is currently `v=27`.
-  - Regression: `tests/cosmoboard-legacy-render-fields.test.mjs`.
+  - Regression: `tests/board/cosmoboard-legacy-render-fields.test.mjs`.
 - YouTube live embed behavior is fixed.
   - Preview/open links keep the original YouTube watch URL.
   - Live iframe uses `youtube-nocookie.com/embed/...` and preserves start time as `?start=...`.
   - Canvas live iframes match project-page YouTube embeds with `referrerpolicy="strict-origin-when-cross-origin"` so videos render instead of showing a blank or unavailable player.
   - `/live/` YouTube URLs are supported in addition to watch, short, youtu.be, and embed URLs.
   - YouTube iframe permissions include autoplay, encrypted media, picture-in-picture, web-share, and fullscreen.
-  - Regression: `tests/youtube-live-embed.test.mjs`, with screenshot proof at `.tmp/youtube-live-embed/canvas-youtube-live.png`.
+  - Regression: `tests/features/youtube-live-embed.test.mjs`, with screenshot proof at `.tmp/youtube-live-embed/canvas-youtube-live.png`.
 - Local preview server route cleanup is implemented.
   - Extensionless routes like `/project`, `/projects`, `/braindump`, `/cosmoboard`, and project detail paths resolve to the correct HTML.
-  - Regression: `tests/preview-server-routes.test.mjs`.
+  - Regression: `tests/preview/preview-server-routes.test.mjs`.
 - Shared-entity V1 is implemented and awaiting review.
   - `src/entities/eurocrate-storage-system.json` is the first file-backed entity record.
   - `src/registry.json` has an `entities` collection.
@@ -64,8 +64,8 @@ This handoff is the current state summary for the next agent. The broader roadma
   - Cosmoboard includes an `entity` node referencing `eurocrate-storage-system`.
   - `JavaScript/braindump.js` and `CSS/braindump.css` render shared entity cards on the board.
   - Regression coverage:
-    - `tests/shared-entity-build.test.mjs`
-    - `tests/shared-entity-runtime-e2e.test.mjs`
+    - `tests/features/shared-entity-build.test.mjs`
+    - `tests/features/shared-entity-runtime-e2e.test.mjs`
   - Screenshot proof: `.tmp/shared-entity-e2e/cosmoboard-shared-entity.png`.
 
 ### Current proof commands
@@ -74,30 +74,30 @@ Run these sequentially when touching this area. Several commands run `build()` a
 
 ```powershell
 npm run build
-node tests\export-bundling-runtime.test.mjs
-node tests\export-bundling-build.test.mjs
-node tests\board-save-export-runtime.test.mjs
-node tests\preview-save-endpoint.test.mjs
-node tests\board-save-reload-e2e.test.mjs
-node tests\board-url-paste-preview-e2e.test.mjs
-node tests\export-size-subpages-e2e.test.mjs
-node tests\export-bundling-e2e.test.mjs
-node tests\extract-assets.test.mjs
-node tests\recommendation-flow-e2e.test.mjs
-node tests\cosmoboard-legacy-render-fields.test.mjs
-node tests\youtube-live-embed.test.mjs
-node tests\preview-server-routes.test.mjs
-node tests\cosmoboard-build.test.mjs
-node tests\shared-entity-build.test.mjs
-node tests\shared-entity-runtime-e2e.test.mjs
+node tests\export\export-bundling-runtime.test.mjs
+node tests\build\export-bundling-build.test.mjs
+node tests\board\board-save-export-runtime.test.mjs
+node tests\preview\preview-save-endpoint.test.mjs
+node tests\board\board-save-reload-e2e.test.mjs
+node tests\board\board-url-paste-preview-e2e.test.mjs
+node tests\export\export-size-subpages-e2e.test.mjs
+node tests\export\export-bundling-e2e.test.mjs
+node tests\build\extract-assets.test.mjs
+node tests\features\recommendation-flow-e2e.test.mjs
+node tests\board\cosmoboard-legacy-render-fields.test.mjs
+node tests\features\youtube-live-embed.test.mjs
+node tests\preview\preview-server-routes.test.mjs
+node tests\build\cosmoboard-build.test.mjs
+node tests\features\shared-entity-build.test.mjs
+node tests\features\shared-entity-runtime-e2e.test.mjs
 ```
 
-Browser bundle screenshots are written by `tests/export-bundling-e2e.test.mjs` to:
+Browser bundle screenshots are written by `tests/export/export-bundling-e2e.test.mjs` to:
 
 - `.tmp/export-bundling-e2e/export-modal.png`
 - `.tmp/export-bundling-e2e/imported-bundle.png`
 
-Recommendation flow screenshots are written by `tests/recommendation-flow-e2e.test.mjs` to:
+Recommendation flow screenshots are written by `tests/features/recommendation-flow-e2e.test.mjs` to:
 
 - `.tmp/recommendation-flow-e2e/recommendation-entry.png`
 - `.tmp/recommendation-flow-e2e/github-handoff-modal.png`

@@ -99,4 +99,4 @@ Code pointers:
 - [refactoring_plan.md](./refactoring_plan.md) — Stage 6 (lines 218–256) specifies the doc-first work of which this file is part
 - `src/entities/AGENTS.md` — entity contract doc (to be written in Stage 6; will live at `src/entities/AGENTS.md`)
 - `content/boards/CANVAS_FORMAT.md` — `.canvas` JSON format reference (to be written in Stage 6)
-- [cosmoboard_implementation_plan.md](../.agents/whiteboard/cosmoboard_implementation_plan.md) — broader implementation roadmap for turning Braindump into a reusable engine
+- [cosmoboard_implementation_plan.md](../whiteboard/cosmoboard_implementation_plan.md) — broader implementation roadmap for turning Braindump into a reusable engine

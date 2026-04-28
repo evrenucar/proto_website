@@ -9,7 +9,7 @@ const port = 4187;
 const baseUrl = `http://127.0.0.1:${port}`;
 const outDir = path.join(process.cwd(), ".tmp", "shared-entity-e2e");
 
-const { build } = await import(new URL(`../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
+const { build } = await import(new URL(`../../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
 await build();
 await mkdir(outDir, { recursive: true });
 

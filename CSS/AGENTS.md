@@ -21,15 +21,17 @@ Which stylesheet owns which page or feature; the role of `site.css` as the share
 - `site.css` — shared stylesheet included on every page; sets global resets, layout custom properties, body/html defaults, and box-sizing
 - `braindump.css` — Cosmoboard whiteboard (braindump) app styles; loaded only on the board page
 - `general_style.css` — common structural styles shared across portfolio pages (nav, layout, sidebar)
-- `general_style_old.css` — **deprecated**; superseded by `general_style.css`; slated for Stage 1 archive
 - `grid_style.css` — shared CSS grid helpers used by multi-column page layouts
 - `hamburger_button.css` — mobile nav hamburger button animation and state styles
 - `index_style.css` — homepage-specific styles
-- `index_style_old.css` — **deprecated**; superseded by `index_style.css`; slated for Stage 1 archive
 - `loader.css` — full-screen loading overlay shown while the board initializes
 - `photography.css` — photography page layout and lightbox styles
 - `projects_grid_style.css` — projects page grid and card styles
 - `things_i_do_grid_style.css` — "things I do" page grid layout styles
+
+## Archived (moved to `.archive/CSS/` in Stage 1)
+- `general_style_old.css` — superseded by `general_style.css`
+- `index_style_old.css` — superseded by `index_style.css`
 
 ## Conventions
 

@@ -103,7 +103,16 @@ The AGENTS.md template above already includes `## See also` — Stage 4 enforces
 
 Each stage is a single PR/commit. Test gate must pass before moving to the next stage.
 
-### Stage 1 — Dead-file archive
+| Stage | Status | Landed | Evidence |
+| --- | --- | --- | --- |
+| 1 — Dead-file archive | **landed (staged)** | 2026-04-28 | [refactor_achievements.md → Stage 1 round](holistic_reviews/refactor_achievements.md) |
+| 2 — Lowercase rename | pending | — | scheduled verification agent fires Mon 2026-05-04 |
+| 3 — Test reorganization | **landed (staged)** | 2026-04-28 | [refactor_achievements.md → Stage 3 round](holistic_reviews/refactor_achievements.md) |
+| 4 — Per-dir AGENTS.md + READMEs | **landed** | 2026-04-27 | [refactor_achievements.md sections 1–9](holistic_reviews/refactor_achievements.md) |
+| 5 — Cleanup pass | pending | — | runs after Stage 2 |
+| 6 — Extension-readiness | **landed** | 2026-04-27 | [refactor_achievements.md sections 1–9](holistic_reviews/refactor_achievements.md) |
+
+### Stage 1 — Dead-file archive ✅ landed 2026-04-28
 
 **Changes:**
 - Create `.archive/` at repo root (tracked in git, excluded from build via `scripts/build-site.mjs` ignore list).
@@ -118,7 +127,7 @@ Each stage is a single PR/commit. Test gate must pass before moving to the next 
 
 **Risk:** Low if reference search is clean. Reversible via git.
 
-### Stage 2 — Lowercase top-level dirs
+### Stage 2 — Lowercase top-level dirs ⏳ pending (verify agent: 2026-05-04)
 
 **Changes:**
 - `git mv JavaScript/ javascript-tmp/ && git mv javascript-tmp/ javascript/` (two-step to dodge Windows case-insensitivity).
@@ -126,11 +135,11 @@ Each stage is a single PR/commit. Test gate must pass before moving to the next 
 - Update every HTML, build script, and test that references the old paths.
 - **Cross-ref integrity:** also grep `.agents/**/*.md`, root `AGENTS.md`, root `README.md`, and any per-dir docs for `JavaScript/` and `CSS/`. Update them in the same commit. The grep `grep -rn "JavaScript/\|CSS/" --include="*.md" --include="*.html" --include="*.mjs" --include="*.js"` catches everything in one pass.
 
-**Test gate:** `npm run build` + `node --test tests/preview-server-routes.test.mjs tests/cosmoboard-build.test.mjs tests/extract-assets.test.mjs` (covers HTML/CSS/JS path resolution) + markdown link check.
+**Test gate:** `npm run build` + `node --test tests/preview/preview-server-routes.test.mjs tests/build/cosmoboard-build.test.mjs tests/build/extract-assets.test.mjs` (covers HTML/CSS/JS path resolution) + markdown link check.
 
 **Risk:** Medium. Many HTMLs reference these paths. A `grep -r "JavaScript/\|CSS/"` before the rename catches stragglers.
 
-### Stage 3 — Test reorganization
+### Stage 3 — Test reorganization ✅ landed 2026-04-28
 
 **Changes:**
 - Create `tests/board/`, `tests/preview/`, `tests/export/`, `tests/build/`.
@@ -151,7 +160,7 @@ Each stage is a single PR/commit. Test gate must pass before moving to the next 
 
 **Risk:** Medium. Path resolution inside test files is the main failure mode.
 
-### Stage 4 — Per-directory AGENTS.md + README.md + root README rewrite
+### Stage 4 — Per-directory AGENTS.md + README.md + root README rewrite ✅ landed 2026-04-27
 
 **Changes:**
 - Add `AGENTS.md` to each directory listed under "Per-Directory Doc Convention" using the template above. Every new file MUST have a non-empty `## See also` section (see Cross-Reference Integrity).
@@ -200,7 +209,7 @@ Keep the rewrite under ~150 lines. The README is for first-touch orientation; de
 
 **Risk:** Very low. Doc-only.
 
-### Stage 5 — Cleanup pass
+### Stage 5 — Cleanup pass ⏳ pending (runs after Stage 2)
 
 **Changes:**
 - Final repo grep for remaining `JavaScript/`, `CSS/`, archived filenames.
@@ -215,7 +224,7 @@ Keep the rewrite under ~150 lines. The README is for first-touch orientation; de
 
 **Risk:** Very low.
 
-### Stage 6 — Extension-readiness (additive, doc-first)
+### Stage 6 — Extension-readiness (additive, doc-first) ✅ landed 2026-04-27
 
 **Why:** Cosmoboard's natural extension surface already exists — `src/registry.json` + `src/entities/*.json` define what an entity is, and `.canvas` is the board format. Today there is one entity (`eurocrate-storage-system.json`). Locking the contract while it is small is the cheapest moment to do it. This stage is doc-only and can ship anytime; placed after Stage 5 because Stage 4's per-dir AGENTS.md convention is a prerequisite for `src/entities/AGENTS.md`.
 

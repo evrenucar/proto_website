@@ -77,7 +77,7 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 395,
+      "height": 260,
       "type": "board-preview",
       "boardSlug": "braindump",
       "boardSource": "boards/cosmo-braindump_current.canvas",
@@ -118,8 +118,7 @@
       "type": "markdown",
       "file": "markdown/cosmo-direction-md_direction.md",
       "title": "Cosmoboard direction",
-      "href": "content/boards/cosmoboard/direction.md",
-      "_rawMarkdown": ""
+      "href": "content/boards/cosmoboard/direction.md"
     },
     {
       "id": "cosmo-projects-base",
@@ -205,8 +204,8 @@
   ],
   "edges": [],
   "viewport": {
-    "x": 33.098705929119944,
-    "y": -266.80645996595007,
-    "z": 1.0029311532782677
+    "x": 584.6351275603744,
+    "y": 128.7513698107467,
+    "z": 0.4587085360404233
   }
 }

@@ -16,16 +16,18 @@ Entry points for all front-end JS. The source of truth for which scripts are liv
 - `braindump.js` — Cosmoboard editor (large monolith; see Modularization rule below)
 - `site.js` — shared site behavior: nav toggle, desktop nav, copy-email, lightbox, history-back
 - `image_lightbox.js` — standalone lightbox helper (used on photography pages)
-- `MobileMenu.js` — mobile nav behavior
-- `braindump_broken.js` — **deprecated**; slated for Stage 1 archive, do not edit
-- `Copy.js` — **deprecated**; slated for Stage 1 archive, do not edit
 - `vendor/` — third-party scripts, do not modify
+
+## Archived (moved to `.archive/JavaScript/`)
+- `braindump_broken.js` — last known snapshot of the editor before the modularization push; reference only (Stage 1)
+- `Copy.js` — superseded by `site.js` copy-email handler (Stage 1)
+- `MobileMenu.js` — defined a `MobileMenu(x)` helper but had zero inbound references in any HTML/JS across the live tree; superseded by `site.js` nav handling (Stage 1 follow-up, 2026-04-28)
 
 ## Conventions
 - New site-wide utilities go into `site.js` or a new focused file; do not grow `braindump.js` with non-editor code.
 - New Cosmoboard subsystem code goes into `src/apps/braindump/<subsystem>.mjs` (see Modularization rule).
 - Do not lowercase this directory name here — that rename is Stage 2 of the refactoring plan.
-- Deprecated files (`braindump_broken.js`, `Copy.js`) must not be imported or extended; archive them in Stage 1.
+- Files under `.archive/JavaScript/` are reference-only; do not import or extend them.
 
 ## Modularization rule
 

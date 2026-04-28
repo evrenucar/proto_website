@@ -4,12 +4,15 @@
 
 ## Results
 - braindump desktop: pass
-- cosmoboard desktop: pass
-- preview mode injection: pass
+- cosmoboard desktop: fail
+- preview mode injection: partial
 
 ## Notes
 - Braindump: draw tool interaction skipped - locator.boundingBox: Timeout 30000ms exceeded.
 Call log:
 [2m  - waiting for locator('canvas').first()[22m
 
-- Braindump console errors: Failed to load resource: the server responded with a status of 400 (); Failed to load resource: the server responded with a status of 400 (); Failed to load resource: the server responded with a status of 404 (Not Found)
+- Cosmoboard: board mounted without any rendered items
+- Cosmoboard: onboarding content was not found inside board items
+- Cosmoboard console errors: Failed to load resource: the server responded with a status of 404 (Not Found)
+- Preview mode console errors: Failed to load resource: the server responded with a status of 404 (Not Found)

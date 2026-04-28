@@ -8,29 +8,27 @@ Test suite for `proto_website`, using Node's built-in `node:test` runner. No tes
 
 | Task | Command |
 | --- | --- |
-| Run all tests | `node --test tests/` |
-| Run one test | `node --test tests/<file>.test.mjs` |
-| Run a group (future) | `node --test tests/<subdir>/` |
+| Run all tests in a domain | `node --test tests/board/*.test.mjs` (or `tests/preview/*.test.mjs`, `tests/export/*.test.mjs`, `tests/build/*.test.mjs`, `tests/features/*.test.mjs`) |
+| Run one test | `node --test tests/<subdir>/<file>.test.mjs` |
+| Run everything | `node --test tests/**/*.test.mjs` (shell glob expansion) |
+
+> Node's `--test` does not recursively discover files when passed a directory — pass an explicit glob or a file list.
 
 > **Note:** Some tests spawn a local preview server internally. Others use Playwright and require Chromium, which is installed via `npx playwright install chromium` (run once after `npm install`).
 
 ---
 
-## Current layout (flat, as of 2026-04-27)
+## Layout (Stage 3 landed 2026-04-28)
 
-All 23 `*.test.mjs` files live directly in `tests/`. Stage 3 of the refactoring plan (pending — separate PR) will reorganize them into domain subdirectories.
+| Subdir | Purpose | Files |
+| --- | --- | --- |
+| `tests/board/` | Whiteboard / Cosmoboard runtime: state, save/load, drag/drop, paste, ESC, wheel routing, resize, markdown editor | 9 |
+| `tests/preview/` | Preview server endpoints + smoke test | 4 |
+| `tests/export/` | Export bundling pipeline | 3 |
+| `tests/build/` | `scripts/build-site.mjs` / `scripts/extract-assets.mjs` correctness | 3 |
+| `tests/features/` | Cross-cutting feature E2Es: shared entities, markdown authoring, recommendation flow, YouTube embed | 5 |
 
-### Planned subdir grouping (Stage 3, not yet landed)
-
-| Subdir | Test files that will move there |
-| --- | --- |
-| `tests/board/` | `board-save-*`, `board-url-*`, `cosmoboard-*`, `esc-deselect`, `markdown-wheel-routing`, `resize-handle-clipping`, `markdown-drag-and-title` |
-| `tests/preview/` | `preview-*` |
-| `tests/export/` | `export-*` |
-| `tests/build/` | `*-build.test.mjs`, `extract-assets` |
-| `tests/` (root) | `markdown-authoring-e2e`, `recommendation-flow-e2e`, `shared-entity-*`, `youtube-live-embed` (or a `features/` subdir if 4+ accumulate) |
-
-Until Stage 3 lands, all tests remain at the flat root. **Do not pre-create these subdirs.**
+24 tests total. Diagnostic helpers (`_diag-*`, `screenshot-markdown-indent.mjs`) and the legacy `A_test_description.md` were archived to `.archive/diag/` in the same change.
 
 ---
 
@@ -38,37 +36,37 @@ Until Stage 3 lands, all tests remain at the flat root. **Do not pre-create thes
 
 These tests spawn their own server process via `node:child_process` — no manual startup needed:
 
-- `preview-server-routes.test.mjs`
-- `preview-markdown-endpoint.test.mjs`
-- `preview-save-endpoint.test.mjs`
-- `board-save-reload-e2e.test.mjs`
-- `board-url-paste-preview-e2e.test.mjs`
-- `board-save-export-runtime.test.mjs`
-- `export-bundling-e2e.test.mjs`
-- `export-bundling-runtime.test.mjs`
-- `export-size-subpages-e2e.test.mjs`
-- `shared-entity-runtime-e2e.test.mjs`
-- `markdown-authoring-e2e.test.mjs`
-- `recommendation-flow-e2e.test.mjs`
-- `youtube-live-embed.test.mjs`
+- `tests/preview/preview-server-routes.test.mjs`
+- `tests/preview/preview-markdown-endpoint.test.mjs`
+- `tests/preview/preview-save-endpoint.test.mjs`
+- `tests/preview/preview-mode-smoke.mjs` (Playwright smoke; needs preview server already on `:4173`)
+- `tests/board/board-save-reload-e2e.test.mjs`
+- `tests/board/board-url-paste-preview-e2e.test.mjs`
+- `tests/board/board-save-export-runtime.test.mjs`
+- `tests/export/export-bundling-e2e.test.mjs`
+- `tests/export/export-bundling-runtime.test.mjs`
+- `tests/export/export-size-subpages-e2e.test.mjs`
+- `tests/features/shared-entity-runtime-e2e.test.mjs`
+- `tests/features/markdown-authoring-e2e.test.mjs`
+- `tests/features/recommendation-flow-e2e.test.mjs`
+- `tests/features/youtube-live-embed.test.mjs`
 
 Playwright tests in this group import from `playwright` (a dev dependency). If Chromium is not installed, run `npx playwright install chromium` once.
 
 ---
 
-## `_diag-*` files and other non-test helpers
+## Path resolution conventions
 
-| File | What it is |
-| --- | --- |
-| `_diag-cosmoboard-canvas.mjs` | Scratch diagnostic — dumps canvas state via Playwright |
-| `_diag-real-mouse.mjs` | Scratch diagnostic — records real mouse events |
-| `_diag-stateful.mjs` | Scratch diagnostic — inspects stateful board behavior |
-| `_diag-zoom-followup.mjs` | Scratch diagnostic — zoom edge-case investigation |
-| `preview-mode-smoke.mjs` | Standalone Playwright smoke test; not a `node:test` file; requires a running preview server at `localhost:4173` |
-| `screenshot-markdown-indent.mjs` | One-off screenshot helper for markdown indent regression |
-| `A_test_description.md` | Informal notes — not authoritative documentation |
+Tests that need to resolve repo paths via `__dirname` use **two-level traversal** because of the subdir layout:
 
-`_diag-*` files are **not** picked up by `node --test tests/` (the leading underscore is intentional). They are scratch helpers used during debugging sessions. Stage 3 will decide whether to archive them or move them to `tests/_diag/`.
+```js
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "..", "..");
+const { build } = await import(new URL(`../../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
+```
+
+Tests that use `process.cwd()`-relative paths (e.g. `readFile("JavaScript/braindump.js")` or `spawn(node, ["scripts/preview-server.mjs"])`) work unchanged — they assume the runner is invoked from the repo root.
 
 ---
 
@@ -83,11 +81,15 @@ Playwright tests in this group import from `playwright` (a dev dependency). If C
 - `build` — exercises `scripts/build-site.mjs` or asset pipeline; no server needed.
 - No suffix — pure unit test or static assertion.
 
+Place the file in the subdir matching its domain. If a test cuts across domains (e.g. shared entity E2E), put it in `tests/features/`.
+
 ---
 
 ## See also
 
 - [AGENTS.md](AGENTS.md) — agent routing for this directory
 - [../AGENTS.md](../AGENTS.md) — root session workflow
-- [../.agents/holistic_planning/refactoring_plan.md](../.agents/holistic_planning/refactoring_plan.md) — Stage 3 (test reorg) and Stage 4 (per-dir docs) detail
+- [../.agents/holistic_planning/refactoring_plan.md](../.agents/holistic_planning/refactoring_plan.md) — Stage 3 (test reorg, **landed**) and Stage 4 (per-dir docs) detail
+- [../.agents/holistic_planning/holistic_reviews/refactor_achievements.md](../.agents/holistic_planning/holistic_reviews/refactor_achievements.md) — Round 5 documents the Stage 3 landing
+- [../.archive/AGENTS.md](../.archive/AGENTS.md) — `_diag-*` and one-off helpers were moved to `.archive/diag/`
 - [../scripts/README.md](../scripts/README.md) — scripts exercised by these tests

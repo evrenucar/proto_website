@@ -5,10 +5,10 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
+const rootDir = path.resolve(__dirname, "..", "..");
 
-const { build } = await import(new URL(`../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
-const { boardPages } = await import(new URL(`../src/site-data.mjs?test=${Date.now()}`, import.meta.url));
+const { build } = await import(new URL(`../../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
+const { boardPages } = await import(new URL(`../../src/site-data.mjs?test=${Date.now()}`, import.meta.url));
 
 assert.ok(Array.isArray(boardPages));
 assert.equal(boardPages.length >= 2, true);

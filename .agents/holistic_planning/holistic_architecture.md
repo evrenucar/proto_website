@@ -164,7 +164,7 @@ content/
 | Board rendering | `entity` nodes in `.canvas` files load `content/entities/index.json` and render explicit shared entity cards |
 | Structured view bridge | `content/base-data/items.json` rows can expose `entityRef` and `entityTitle` when an entity shares a `projectSlug` |
 | First reused entity | `eurocrate-storage-system` is referenced by the Cosmoboard entity node and the Projects base table |
-| Proof | `tests/shared-entity-build.test.mjs`, `tests/shared-entity-runtime-e2e.test.mjs`, screenshot `.tmp/shared-entity-e2e/cosmoboard-shared-entity.png` |
+| Proof | `tests/features/shared-entity-build.test.mjs`, `tests/features/shared-entity-runtime-e2e.test.mjs`, screenshot `.tmp/shared-entity-e2e/cosmoboard-shared-entity.png` |
 
 ## Implemented Board Save And Export Hardening
 
@@ -176,7 +176,7 @@ content/
 | Bundle export safety | Serialized state is cloned before bundle path rewriting, so export cannot mutate live board nodes |
 | Linked sub-page estimates | Export size estimation fetches linked board/markdown byte sizes when `HEAD` has no `content-length` |
 | Board URL paste | Generated board pages include `data-board-index`; pasted board URLs become preview cards with SVG/minimap previews |
-| Proof | `tests/board-save-export-runtime.test.mjs`, `tests/preview-save-endpoint.test.mjs`, `tests/board-save-reload-e2e.test.mjs`, `tests/board-url-paste-preview-e2e.test.mjs`, `tests/export-size-subpages-e2e.test.mjs` |
+| Proof | `tests/board/board-save-export-runtime.test.mjs`, `tests/preview/preview-save-endpoint.test.mjs`, `tests/board/board-save-reload-e2e.test.mjs`, `tests/board/board-url-paste-preview-e2e.test.mjs`, `tests/export/export-size-subpages-e2e.test.mjs` |
 
 ## Dual Export & Base64 Extraction Workflow
 

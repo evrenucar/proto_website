@@ -3,11 +3,11 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { extractCanvasAssets } from "../scripts/extract-assets.mjs";
+import { extractCanvasAssets } from "../../scripts/extract-assets.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
+const rootDir = path.resolve(__dirname, "..", "..");
 const testRoot = path.join(rootDir, ".tmp", "extract-assets-test");
 const canvasPath = path.join(testRoot, "sample.canvas.json");
 const assetsDir = path.join(testRoot, "content", "assets", "images");

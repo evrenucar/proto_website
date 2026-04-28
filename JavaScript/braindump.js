@@ -2824,6 +2824,34 @@ async function readProjectBundleFile(file) {
     }
   }
 
+  // Phase 2: persist markdown sidecars from the bundle to disk via the
+  // /api/save-markdown endpoint, so they survive page reloads regardless of
+  // whether the canvas has been saved yet. Map records bundle-key -> repo-
+  // absolute path so node `file` references can point at on-disk locations
+  // (instead of throwaway blob URLs) when persistence succeeded.
+  const canvasDir = (boardConfig.sourcePath || `content/boards/${boardConfig.slug}/current.canvas`)
+    .split("/").slice(0, -1).join("/");
+  const persistedSidecars = new Map();
+  for (const key in unzipped) {
+    if (key === boardFileKey || key.endsWith("/")) continue;
+    if (!key.toLowerCase().endsWith(".md")) continue;
+    const content = new TextDecoder().decode(unzipped[key]).replace(/\r\n?/g, "\n");
+    const targetRepoPath = `${canvasDir}/${key}`;
+    const filename = key.split("/").pop() || "note.md";
+    try {
+      const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename, path: targetRepoPath, content })
+      });
+      if (response.ok) {
+        persistedSidecars.set(key, `/${targetRepoPath}`);
+      }
+    } catch {
+      // Sidecar persist failed; _rawMarkdown inline below is the safety net.
+    }
+  }
+
   for (const node of importedState.nodes || []) {
     if (node.type === "file" && node.file && blobUrlMap[node.file]) {
       node.file = blobUrlMap[node.file];
@@ -2832,11 +2860,20 @@ async function readProjectBundleFile(file) {
     } else if (node.type === "markdown" && node.file && blobUrlMap[node.file]) {
       // Inline markdown content into _rawMarkdown so it survives page reloads.
       // Blob URLs evaporate on reload; the inline copy is the durable one.
-      const bundleEntry = unzipped[node.file];
+      const originalKey = node.file;
+      const bundleEntry = unzipped[originalKey];
       if (bundleEntry) {
         node._rawMarkdown = new TextDecoder().decode(bundleEntry).replace(/\r\n?/g, "\n");
       }
-      node.file = blobUrlMap[node.file];
+      // Prefer the on-disk repo-absolute path when the sidecar was persisted —
+      // matches the renderer's fetch model and survives reloads. Fall back to
+      // the in-memory blob URL when persistence didn't succeed (renderer's
+      // _rawMarkdown branch will still render either way).
+      if (persistedSidecars.has(originalKey)) {
+        node.file = persistedSidecars.get(originalKey);
+      } else {
+        node.file = blobUrlMap[originalKey];
+      }
     }
   }
 
