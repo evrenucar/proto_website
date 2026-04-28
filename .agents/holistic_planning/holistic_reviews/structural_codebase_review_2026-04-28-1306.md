@@ -3,7 +3,7 @@
 - **Created:** 2026-04-28 13:06 WEDT
 - **Reviewer:** Opus 4.7 (single-pass, agent-assisted exploration)
 - **Scope:** Repo structure, code organization, readability, expandability. Not feature correctness, not security.
-- **Companion docs:** [refactor_achievements.md](./refactor_achievements.md) — what Stages 4 + 6 of [`refactoring_plan.md`](../refactoring_plan.md) already shipped (doc-first hardening). Read that first. This review is a *fresh structural snapshot* taken AFTER those docs landed; some risks below (god-file, HTML duplication, dead files) are already mapped to plan stages.
+- **Companion docs:** [refactor_achievements_2026-04-28-1358.md](./refactor_achievements_2026-04-28-1358.md) — what Stages 4 + 6 of [`refactoring_plan.md`](../refactoring_plan.md) already shipped (doc-first hardening). Read that first. This review is a *fresh structural snapshot* taken AFTER those docs landed; some risks below (god-file, HTML duplication, dead files) are already mapped to plan stages.
 - **Verdict at a glance:** Folders and docs read well (Stages 4 + 6 already paid for that). Code does not. The whiteboard is a 6 kLOC god-file with no module boundaries, HTML pages duplicate ~840 lines of nav/meta boilerplate, and several legacy files (`braindump_broken.js`, `Copy.js`, `MobileMenu.js`, `*_old.css`, `nul`, `screenshot*.png`, `.tmp_*`) sit committed in the tree — all queued for Stage 1 of the refactor plan but not yet executed.
 
 ---

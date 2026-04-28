@@ -1,7 +1,7 @@
 import http from "node:http";
 import https from "node:https";
-import { createReadStream, existsSync, statSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createReadStream, createWriteStream, existsSync, statSync } from "node:fs";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,12 +15,16 @@ const mimeTypes = {
   ".canvas": "application/json; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".gif": "image/gif",
+  ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
+  ".pdf": "application/pdf",
   ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".webp": "image/webp",
   ".txt": "text/plain; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8",
   ".xml": "application/xml; charset=utf-8"
@@ -107,8 +111,29 @@ async function handleSaveBoard(request, response, parsedUrl) {
         }
       }
 
+      // Preserve canvasId/createdAt from existing file if the client omitted
+      // them. Protects against pre-migration clients and load-vs-autosave races
+      // that would otherwise wipe board identity.
+      let existingMeta = null;
+      try {
+        existingMeta = JSON.parse(await readFile(safePath, "utf8"));
+      } catch { /* no existing file */ }
+      if (existingMeta && typeof existingMeta === "object") {
+        if (!parsed.canvasId && typeof existingMeta.canvasId === "string") {
+          parsed.canvasId = existingMeta.canvasId;
+        }
+        if (!parsed.createdAt && typeof existingMeta.createdAt === "string") {
+          parsed.createdAt = existingMeta.createdAt;
+        }
+      }
+      if (!parsed.updatedAt) parsed.updatedAt = new Date().toISOString();
+
+      // Reorder so identity fields lead the serialized JSON.
+      const { canvasId, createdAt, updatedAt, ...rest } = parsed;
+      const payload = { canvasId, createdAt, updatedAt, ...rest };
+
       await mkdir(path.dirname(safePath), { recursive: true });
-      await writeFile(safePath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
+      await writeFile(safePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 
       // Extract each markdown node's _rawMarkdown to its sidecar file path so
       // disk copies stay current with inline content. Best-effort — failures
@@ -244,6 +269,121 @@ async function handleSaveMarkdown(request, response, parsedUrl) {
   });
 }
 
+// Generic file imports are allowed for all extensions; filename sanitization
+// keeps writes inside the board directory and the size cap below limits abuse.
+// A small denylist blocks scripts/executables that would be dangerous to serve
+// back from the local dev server.
+const BLOCKED_ASSET_EXTENSIONS = new Set([
+  ".exe", ".bat", ".cmd", ".com", ".msi", ".dll",
+  ".ps1", ".vbs", ".sh", ".jar", ".scr"
+]);
+
+function sanitizeAssetFilename(value) {
+  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "asset";
+  const extMatch = raw.match(/\.[a-z0-9]+$/i);
+  const ext = extMatch ? extMatch[0].toLowerCase() : "";
+  const base = (extMatch ? raw.slice(0, -extMatch[0].length) : raw)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "asset";
+  return `${base}${ext}`;
+}
+
+async function uniqueAssetPath(dir, filename) {
+  const parsed = path.parse(filename);
+  let candidate = path.join(dir, filename);
+  let counter = 1;
+  while (existsSync(candidate)) {
+    candidate = path.join(dir, `${parsed.name}-${counter}${parsed.ext}`);
+    counter += 1;
+    if (counter > 9999) break;
+  }
+  return candidate;
+}
+
+async function handleSaveAsset(request, response, parsedUrl) {
+  const MAX_BYTES = 200 * 1024 * 1024;
+  try {
+    const filenameParam = parsedUrl.searchParams.get("filename");
+    if (!filenameParam) {
+      sendJson(response, 400, { success: false, error: "Missing filename query parameter." });
+      request.resume();
+      return;
+    }
+
+    const safeFilename = sanitizeAssetFilename(filenameParam);
+    const ext = path.extname(safeFilename).toLowerCase();
+    if (BLOCKED_ASSET_EXTENSIONS.has(ext)) {
+      sendJson(response, 400, { success: false, error: `Blocked file type: ${ext}` });
+      request.resume();
+      return;
+    }
+
+    const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+    const boardDir = path.normalize(path.dirname(boardTarget.filePath));
+    const targetPath = await uniqueAssetPath(boardDir, safeFilename);
+    const safePath = path.normalize(targetPath);
+    if (!safePath.startsWith(rootDir)) {
+      sendJson(response, 403, { success: false, error: "Forbidden asset path." });
+      request.resume();
+      return;
+    }
+
+    await mkdir(path.dirname(safePath), { recursive: true });
+
+    let total = 0;
+    let aborted = false;
+    const writeStream = createWriteStream(safePath);
+
+    const cleanup = async () => {
+      try { await unlink(safePath); } catch { /* ignore */ }
+    };
+
+    request.on("data", (chunk) => {
+      if (aborted) return;
+      total += chunk.length;
+      if (total > MAX_BYTES) {
+        aborted = true;
+        writeStream.destroy();
+        cleanup().finally(() => {
+          if (!response.headersSent) sendJson(response, 413, { success: false, error: "Asset exceeds 200MB cap." });
+          request.destroy();
+        });
+        return;
+      }
+      writeStream.write(chunk);
+    });
+
+    request.on("end", () => {
+      if (aborted) return;
+      writeStream.end(() => {
+        const relativePath = path.relative(rootDir, safePath).replaceAll("\\", "/");
+        sendJson(response, 200, {
+          success: true,
+          slug: boardTarget.slug,
+          path: relativePath,
+          url: `/${relativePath}`
+        });
+      });
+    });
+
+    request.on("error", async () => {
+      writeStream.destroy();
+      await cleanup();
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: "Upload stream failed." });
+    });
+
+    writeStream.on("error", async (err) => {
+      aborted = true;
+      await cleanup();
+      if (!response.headersSent) sendJson(response, 500, { success: false, error: err.message || "Disk write failed." });
+    });
+  } catch (error) {
+    if (!response.headersSent) sendJson(response, 500, { success: false, error: error.message || "Asset save failed." });
+    request.resume();
+  }
+}
+
 async function handleListMarkdown(request, response, parsedUrl) {
   try {
     const slug = parsedUrl.searchParams.get("slug");
@@ -372,6 +512,11 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (request.method === "POST" && parsedUrl.pathname === "/api/save-asset") {
+    handleSaveAsset(request, response, parsedUrl);
+    return;
+  }
+
   if (request.method === "GET" && parsedUrl.pathname === "/api/list-markdown") {
     handleListMarkdown(request, response, parsedUrl);
     return;
@@ -425,6 +570,7 @@ server.listen(port, "0.0.0.0", () => {
   console.log(`Local Access: http://127.0.0.1:${port}`);
   console.log(`Board save endpoint: http://127.0.0.1:${port}/api/save-board`);
   console.log(`Markdown save endpoint: http://127.0.0.1:${port}/api/save-markdown`);
+  console.log(`Asset save endpoint: http://127.0.0.1:${port}/api/save-asset`);
 
   for (const url of getNetworkAccessUrls()) {
     console.log(`Network Access: ${url}`);

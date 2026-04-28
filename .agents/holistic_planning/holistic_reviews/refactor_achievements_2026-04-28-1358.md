@@ -55,7 +55,7 @@ So the *achievement* of Stages 4 + 6 is **unlocking the rest of the refactor**. 
 
 ## 4. The braindump.js implication
 
-`JavaScript/braindump.js` is 5,998 lines containing 173 functions and ~108 module-level declarations — flagged as the chief structural problem in [structural_codebase_review.md](./structural_codebase_review.md).
+`JavaScript/braindump.js` is 5,998 lines containing 173 functions and ~108 module-level declarations — flagged as the chief structural problem in [structural_codebase_review_2026-04-28-1306.md](./structural_codebase_review_2026-04-28-1306.md).
 
 `JavaScript/AGENTS.md` now codifies the **touch-driven modularization rule**:
 

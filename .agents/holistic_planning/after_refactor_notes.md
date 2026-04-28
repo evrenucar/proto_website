@@ -245,3 +245,44 @@ PR-based landing was overkill for 15 doc-only commits in a personal-repo flow. I
 ### Worktrees and source branches
 
 **Done 2026-04-28:** all 18 worktrees removed (required `git worktree unlock` first because the agent isolation system holds a process-level lock, then `git worktree remove --force`). All 33 redundant branches deleted: 15 `refactor/stage-4-6-*` + 18 `worktree-agent-*` (3 of which had cherry-picked work; 15 just pointed at base commits). `.claude/worktrees/` directory itself also removed. Final state: `fix/canvas-wipe-and-markdown-render` (current, has the canvas-wipe fix and phase-1 markdown imports on top of the refactor), `new_features_expension`, `main`, plus the two `origin/*` remote refs.
+
+## Round 4 — Live branch is now `fix/canvas-wipe-and-markdown-render`
+
+Date: 2026-04-28 (later same day)
+
+### Where the refactor commits live now
+
+The 15 refactor cherry-picks (`6c2119a` … `b672e95`) landed on `new_features_expension` in Round 3. After landing, the user continued working and added three more commits on top, on a new branch `fix/canvas-wipe-and-markdown-render`. **All 15 refactor commits are reachable from this branch** (it branches from `b672e95` — the Round-3 tip).
+
+| Commit | Branch tip? | Note |
+|---|---|---|
+| `49ff0fc After_refactor` | `fix/canvas-wipe-and-markdown-render` (HEAD) | Most recent — staged Stage-1 dead-file archive plus other in-flight changes |
+| `fa92754 feat: phase 1 — portable markdown imports (self-healing, sidecar round-trip)` | — | New feature work, builds on the refactor docs |
+| `dd55fed fix: stop empty-state autosave from wiping canvases + render markdown from inline` | — | **Fixes the bug that wiped `content/boards/braindump/current.canvas` to empty** — root cause was empty-state autosave clobbering the canvas before user input was loaded |
+| `b672e95 docs(refactor): rewrite root README ...` | `new_features_expension` (tip) | Last refactor commit; Round-3 endpoint |
+| ... 14 earlier refactor commits ... | reachable from both branches | Cherry-picks from Round 3 |
+
+### Branch landscape
+
+| Branch | Tip | Vs `origin` | Role |
+|---|---|---|---|
+| `fix/canvas-wipe-and-markdown-render` | `49ff0fc` | no remote tracking | **Live working branch** — current, latest |
+| `new_features_expension` | `b672e95` | `[ahead 16, behind 4]` | Holds the 15 refactor cherry-picks; not pushed yet; 4 Notion-sync commits on origin not yet pulled |
+| `main` | `9fb9540` | `[behind 16]` | Stale local copy; origin is at `01231be` (Notion sync) |
+| `origin/main` | `01231be` | — | Production |
+| `origin/new_features_expension` | `4b913b9` | — | Pre-refactor merge from main |
+
+### Implications
+
+- **The braindump canvas-wipe issue is already fixed** on `fix/canvas-wipe-and-markdown-render` (`dd55fed`). The earlier worry — that something kept deleting `content/AGENTS.md` and the canvas — is resolved going forward; just need to make sure the user is on this branch, not on `new_features_expension`.
+- **`fix/canvas-wipe-and-markdown-render` is the only branch that should be merged forward** when this work lands. `new_features_expension` is now a strict subset.
+- **Pushing remains pending.** Neither `fix/canvas-wipe-and-markdown-render` nor `new_features_expension` (post-refactor state) has been pushed. When the user does push, the cleanest path is: push `fix/canvas-wipe-and-markdown-render` directly (perhaps merging into `new_features_expension` first to consolidate, perhaps just renaming and pushing). The 4 Notion-sync commits on `origin/new_features_expension` will need to be pulled/rebased in.
+
+### What's still pending after this round
+
+- Stages 2 (lowercase rename), 3 (test reorg), 5 (cleanup pass) of the refactoring plan
+- 7 pre-existing broken links in `refactoring_plan.md` (repo-rooted paths)
+- Stage 1 partially landed (some dead files deleted, some moves staged) — needs a final commit to consolidate
+- Push `fix/canvas-wipe-and-markdown-render` upstream when ready
+- `main` is 16 commits behind `origin/main` — pull when convenient
+- braindump.js touch-driven carve-out (organic, triggered by future feature work)

@@ -176,6 +176,7 @@ content/
 | Bundle export safety | Serialized state is cloned before bundle path rewriting, so export cannot mutate live board nodes |
 | Linked sub-page estimates | Export size estimation fetches linked board/markdown byte sizes when `HEAD` has no `content-length` |
 | Board URL paste | Generated board pages include `data-board-index`; pasted board URLs become preview cards with SVG/minimap previews |
+| Drag-and-drop ingest | `attachMarkdownDropHandler` in `JavaScript/braindump.js` classifies dropped files by extension. `.md` → `/api/save-markdown` + markdown node. Images (`.png/.jpg/.jpeg/.gif/.webp/.svg`) and `.pdf` → `/api/save-asset` (raw-binary streaming, 200MB cap, allowlisted ext, collision-safe filename) + image or live-embed link node. `.txt` → text node inline. Drop UX: dashed teal outline + centered overlay card. |
 | Proof | `tests/board/board-save-export-runtime.test.mjs`, `tests/preview/preview-save-endpoint.test.mjs`, `tests/board/board-save-reload-e2e.test.mjs`, `tests/board/board-url-paste-preview-e2e.test.mjs`, `tests/export/export-size-subpages-e2e.test.mjs` |
 
 ## Dual Export & Base64 Extraction Workflow

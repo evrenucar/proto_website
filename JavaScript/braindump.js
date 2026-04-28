@@ -298,6 +298,9 @@ const toolbarMoreButton =
 const fileInput =
   queryBoard('[data-board-ui="import-input"]') ||
   queryBoard("#braindump-import");
+const openCanvasInput =
+  queryBoard('[data-board-ui="open-canvas-input"]') ||
+  queryBoard("#braindump-open-canvas");
 const toolbarToast =
   queryBoard('[data-board-ui="toolbar-toast"]') ||
   queryBoard("#braindump-toolbar-toast");
@@ -318,6 +321,7 @@ const settingsAutosaveSecondsInput = queryBoard("#braindump-setting-autosave-sec
 const settingsResetButton = queryBoard("#braindump-settings-reset");
 const recommendationSummaryInput = queryBoard("#braindump-recommend-summary");
 const recommendationSubmitButton = queryBoard("#braindump-recommend-submit");
+const recommendationFullCanvasInput = queryBoard("#braindump-recommend-full-canvas");
 const featureRequestSummaryInput = queryBoard("#braindump-feature-summary");
 const featureRequestSubmitButton = queryBoard("#braindump-feature-submit");
 const bugReportSummaryInput = queryBoard("#braindump-bug-summary");
@@ -1157,7 +1161,7 @@ function buildBugReportIssueUrl(summary, details) {
   return url.toString();
 }
 
-function beginRecommendationFlow() {
+async function beginRecommendationFlow() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
     showToolbarToast("Recommendations are not set up for this board.", "error");
     return;
@@ -1170,9 +1174,42 @@ function beginRecommendationFlow() {
     return;
   }
 
-  const recommendationFilename = buildRecommendationFilename();
+  // Default: diff-only export against the on-disk base. Falls back to a full
+  // canvas when the toggle is checked, when no on-disk base exists, or when
+  // canvasIds don't match (e.g. base predates the canvasId backfill).
+  const wantsFull = !!recommendationFullCanvasInput?.checked;
+  const currentState = serializeState();
+  let baseState = null;
+  if (!wantsFull && boardConfig.sourcePath) {
+    try { baseState = await fetchBoardState(boardConfig.sourcePath); }
+    catch { baseState = null; }
+  }
+
+  let recommendationFilename;
+  let blobContent;
+  if (!wantsFull && baseState && baseState.canvasId && baseState.canvasId === currentState.canvasId) {
+    const diff = createCanvasDiff(baseState, currentState);
+    diff.baseVersion.hash = await canonicalCanvasHash(baseState);
+    const slugSeg = sanitizeFileSegment(boardConfig.slug || boardConfig.title || document.title);
+    recommendationFilename = `${slugSeg}_${formatTimestamp()}.canvas.diff`;
+    blobContent = JSON.stringify(diff, null, 2);
+  } else {
+    recommendationFilename = buildRecommendationFilename();
+    blobContent = JSON.stringify(currentState, null, 2);
+  }
+
   const issueUrl = buildRecommendationIssueUrl(summary, "", recommendationFilename);
-  downloadStateFile(recommendationFilename, "application/json");
+
+  const blob = new Blob([blobContent], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = recommendationFilename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  setTimeout(() => { document.body.removeChild(anchor); URL.revokeObjectURL(url); }, 200);
+
   setRecommendationPanelOpen(false);
   if (shouldSkipRecommendationModal()) {
     if (recommendationSummaryInput) {
@@ -1248,7 +1285,15 @@ function downloadStateFile(filename, mimeType = "application/octet-stream") {
 }
 
 function serializeState() {
-  return { nodes, edges, viewport: { x: camera.x, y: camera.y, z: camera.z } };
+  ensureCanvasId();
+  return {
+    canvasId: boardMeta.canvasId,
+    createdAt: boardMeta.createdAt,
+    updatedAt: boardMeta.updatedAt,
+    nodes,
+    edges,
+    viewport: { x: camera.x, y: camera.y, z: camera.z }
+  };
 }
 
 function persistLocalState(state) {
@@ -1376,6 +1421,19 @@ const touchPlacementState = {
 
 let nodes = [];
 let edges = [];
+let boardMeta = { canvasId: null, createdAt: null, updatedAt: null };
+
+function ensureCanvasId() {
+  if (!boardMeta.canvasId) {
+    boardMeta.canvasId = (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `canvas-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  if (!boardMeta.createdAt) {
+    boardMeta.createdAt = new Date().toISOString();
+  }
+  return boardMeta.canvasId;
+}
 
 // Undo/Redo history
 let undoHistory = [];
@@ -2456,7 +2514,8 @@ window.addEventListener("keydown", (e) => {
   // Undo/Redo/Cut/Copy/Delete
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) { e.preventDefault(); saveLocalFile(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && e.shiftKey) { e.preventDefault(); saveLocalFileAs(); return; }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); openLocalFile(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); openCanvasPicker(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); importContentPicker(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') { e.preventDefault(); cutSelected(); return; }
@@ -2568,7 +2627,7 @@ function handleToolbarAction(btn) {
     setBugReportPanelOpen(shouldOpen);
     return;
   }
-  if (btn.dataset.tool === "open") return openLocalFile();
+  if (btn.dataset.tool === "open") return openCanvasPicker();
   if (btn.dataset.tool === "save") return saveLocalFile();
   if (btn.dataset.tool === "export") return openExportModal();
   if (btn.dataset.tool === "new-markdown") return openMarkdownPanel();
@@ -2985,71 +3044,10 @@ window.addEventListener("keydown", (event) => {
 
 if (fileInput) {
   fileInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.name.endsWith(".zip")) {
-      if (!window.fflate) {
-        showToolbarToast("Bundler library not loaded.", "error");
-        return;
-      }
-      try {
-        const importedState = await readProjectBundleFile(file);
-        loadState(importedState);
-        persistLocalState(serializeState());
-        setComparisonBaseline(serializeState());
-        autosaveRepositorySupported = true;
-        markBoardDirty({ scheduleLocalSave: false });
-        setToolbarActionsOpen(false);
-        setRecommendationPanelOpen(false);
-        setFeatureRequestPanelOpen(false);
-        setBugReportPanelOpen(false);
-        setSettingsPanelOpen(false);
-        showToolbarToast(`Imported bundle ${file.name}`, "success");
-      } catch(err) {
-        showToolbarToast(err.message === "No board file found in bundle." ? err.message : "Failed to import bundle.", "error");
-      }
-      fileInput.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        // Best-effort fetch any markdown sidecars referenced by the import.
-        // Populates _rawMarkdown so the canvas becomes self-contained even if
-        // the .md files are missing on disk after the import lands.
-        if (Array.isArray(data.nodes)) {
-          await Promise.all(data.nodes.map(async (node) => {
-            if (node.type === "markdown" && node.file && typeof node._rawMarkdown !== "string") {
-              try {
-                const r = await fetch(node.file, { cache: "no-store" });
-                if (r.ok) {
-                  node._rawMarkdown = (await r.text()).replace(/\r\n?/g, "\n");
-                }
-              } catch {
-                // Sidecar unreachable — renderer empty branch handles it.
-              }
-            }
-          }));
-        }
-        loadState(data);
-        persistLocalState(serializeState());
-        setComparisonBaseline(serializeState());
-        autosaveRepositorySupported = true;
-        markBoardDirty({ scheduleLocalSave: false });
-        setToolbarActionsOpen(false);
-        setRecommendationPanelOpen(false);
-        setFeatureRequestPanelOpen(false);
-        setBugReportPanelOpen(false);
-        setSettingsPanelOpen(false);
-        showToolbarToast(`Imported ${file.name}`, "success");
-      } catch(err) {
-        showToolbarToast("Import failed. Use .canvas, .canvas.json, .json or .zip.", "error");
-      }
-    };
-    reader.readAsText(file);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setToolbarActionsOpen(false);
+    await importContentFiles(files);
     fileInput.value = "";
   });
 }
@@ -3081,55 +3079,6 @@ if (settingsResetButton) {
     boardSettings = { ...DEFAULT_BOARD_SETTINGS };
     applyBoardSettings({ announce: true });
   });
-}
-
-async function openLocalFile() {
-  if (supportsFileSystemAccessAPI) {
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{
-          description: 'Canvas or Bundle Files',
-          accept: { 
-            'application/json': ['.canvas', '.json', '.canvas.json'],
-            'application/zip': ['.zip']
-          }
-        }],
-        multiple: false
-      });
-      const file = await handle.getFile();
-      
-      if (file.name.endsWith(".zip")) {
-        if (!window.fflate) {
-          showToolbarToast("Bundler library not loaded.", "error");
-          return;
-        }
-        const importedState = await readProjectBundleFile(file);
-        loadState(importedState);
-        currentFileHandle = handle;
-        showToolbarToast(`Opened bundle ${file.name}`, "success");
-        return;
-      }
-
-      const text = await file.text();
-      const importedState = JSON.parse(text);
-      if (typeof importedState === "object" && Array.isArray(importedState.nodes)) {
-        loadState(importedState);
-        currentFileHandle = handle;
-        showToolbarToast(`Opened ${file.name}`, "success");
-      } else {
-        showToolbarToast("Invalid canvas format.", "error");
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.error("Open file failed:", err);
-        showToolbarToast("Failed to open file.", "error");
-      }
-    }
-  } else {
-    // Fallback for unsupported browsers (Safari/Firefox)
-    const input = document.getElementById("braindump-import");
-    if (input) input.click();
-  }
 }
 
 async function verifyFilePermission(handle, mode) {
@@ -3317,27 +3266,6 @@ function exportCanvas() {
   const result = downloadStateFile(buildExportFilename(), "application/octet-stream");
   showToolbarToast(`Exported ${result.filename}`, "success");
   return result;
-}
-
-function submitRecommendation() {
-  if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Recommendations are not set up for this board.", "error");
-    return;
-  }
-
-  const summary = normalizeIssueSummary(recommendationSummaryInput?.value);
-  if (!summary) {
-    showToolbarToast("Add a short description for the recommendation.", "error");
-    recommendationSummaryInput?.focus();
-    return;
-  }
-  const recommendationFilename = buildRecommendationFilename();
-  downloadStateFile(recommendationFilename, "application/json");
-  const issueUrl = buildRecommendationIssueUrl(summary, "", recommendationFilename);
-  window.open(issueUrl, "_blank", "noopener,noreferrer");
-  setRecommendationPanelOpen(false);
-  if (recommendationSummaryInput) recommendationSummaryInput.value = "";
-  showToolbarToast(`Recommendation opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
 }
 
 // Drawing logic
@@ -3561,7 +3489,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           Preview
         </button>
-        <div class="bd-embed-domain">${escapeHtml(new URL(nodeObj.url || "http://localhost").hostname)}</div>
+        <div class="bd-embed-domain">${escapeHtml(new URL(nodeObj.url || "http://localhost", typeof location !== "undefined" ? location.origin : "http://localhost").hostname)}</div>
         <a class="bd-embed-open-btn" href="${escapeHtml(nodeObj.url)}" target="_blank" rel="noreferrer" draggable="false" aria-label="Open in new tab" title="Open in new tab">
           Open
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
@@ -5256,15 +5184,56 @@ async function saveMarkdownFromPanel() {
   }
 }
 
+function ensureDropOverlay() {
+  let overlay = document.getElementById("bd-drop-overlay");
+  if (overlay) return overlay;
+  overlay = document.createElement("div");
+  overlay.id = "bd-drop-overlay";
+  overlay.className = "bd-drop-overlay";
+  overlay.innerHTML = `
+    <div class="bd-drop-overlay-card">
+      <div class="bd-drop-overlay-title">Drop to add to board</div>
+      <div class="bd-drop-overlay-hint">Markdown · Images · PDF · Text</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function setDropTargetActive(active) {
+  if (!viewport) return;
+  const overlay = ensureDropOverlay();
+  if (active) {
+    viewport.classList.add("bd-md-drop-target");
+    overlay.classList.add("is-active");
+  } else {
+    viewport.classList.remove("bd-md-drop-target");
+    overlay.classList.remove("is-active");
+  }
+}
+
 function attachMarkdownDropHandler() {
   if (!viewport || isPreviewMode) return;
   let dragDepth = 0;
+
+  // Swallow file drops on the window so the browser doesn't navigate to the
+  // file when a drop lands outside the viewport.
+  window.addEventListener("dragover", (e) => {
+    if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+  });
+  window.addEventListener("drop", (e) => {
+    if (e.dataTransfer?.types?.includes("Files") && e.target !== viewport && !viewport.contains(e.target)) {
+      e.preventDefault();
+      dragDepth = 0;
+      setDropTargetActive(false);
+    }
+  });
 
   viewport.addEventListener("dragenter", (e) => {
     if (!e.dataTransfer?.types?.includes("Files")) return;
     e.preventDefault();
     dragDepth += 1;
-    viewport.classList.add("bd-md-drop-target");
+    setDropTargetActive(true);
   });
 
   viewport.addEventListener("dragover", (e) => {
@@ -5275,44 +5244,601 @@ function attachMarkdownDropHandler() {
 
   viewport.addEventListener("dragleave", () => {
     dragDepth = Math.max(0, dragDepth - 1);
-    if (dragDepth === 0) viewport.classList.remove("bd-md-drop-target");
+    if (dragDepth === 0) setDropTargetActive(false);
   });
 
   viewport.addEventListener("drop", async (e) => {
     const files = e.dataTransfer?.files;
     if (!files || files.length === 0) return;
-    const mdFiles = Array.from(files).filter((f) => f.name.toLowerCase().endsWith(".md"));
-    if (mdFiles.length === 0) return;
     e.preventDefault();
     e.stopPropagation();
     dragDepth = 0;
-    viewport.classList.remove("bd-md-drop-target");
+    setDropTargetActive(false);
 
     const dropPos = screenToCanvas(e.clientX, e.clientY);
-    for (let i = 0; i < mdFiles.length; i++) {
-      const file = mdFiles[i];
+    const all = Array.from(files);
+    const boardFiles = all.filter((f) => isCanvasKind(classifyDroppedFile(f)));
+    const contentFiles = all.filter((f) => !isCanvasKind(classifyDroppedFile(f)));
+
+    // Board files route through openCanvasFlow individually (each handles its
+    // own reconcile / nested-page branching). Stagger drop positions slightly
+    // so multiple board-preview embeds don't stack at the same spot.
+    for (let i = 0; i < boardFiles.length; i++) {
+      const file = boardFiles[i];
+      const pos = { x: dropPos.x + i * 32, y: dropPos.y + i * 32 };
       try {
-        const text = await file.text();
-        const filename = sanitizeMarkdownFilename(file.name);
-        const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename, path: "", content: text })
-        });
-        const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
-        createNode("markdown", dropPos.x + i * 24, dropPos.y + i * 24, {
-          file: result.url,
-          href: result.url,
-          title: filename.replace(/\.md$/i, ""),
-          width: 380,
-          height: 420
-        });
+        await openCanvasFlow(file, pos);
       } catch (error) {
-        showToolbarToast(`Failed to import ${file.name}: ${error.message}`, "error");
+        showToolbarToast(`Failed to open ${file.name}: ${error.message}`, "error");
       }
     }
-    showToolbarToast(`Imported ${mdFiles.length} markdown file${mdFiles.length === 1 ? "" : "s"}`, "success");
+
+    if (contentFiles.length > 0) {
+      await importContentFiles(contentFiles, dropPos);
+    }
+  });
+}
+
+function classifyDroppedFile(file) {
+  const name = (file?.name || "").toLowerCase();
+  if (name.endsWith(".canvas.diff") || name.endsWith(".diff")) return "canvas-diff";
+  if (name.endsWith(".canvas.json") || name.endsWith(".canvas")) return "canvas-file";
+  if (name.endsWith(".zip")) return "canvas-bundle";
+  if (name.endsWith(".md")) return "markdown";
+  if (/\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return "image";
+  if (name.endsWith(".pdf")) return "pdf";
+  if (name.endsWith(".txt")) return "text";
+  return "unknown";
+}
+
+function isCanvasKind(kind) {
+  return kind === "canvas-file" || kind === "canvas-bundle" || kind === "canvas-diff";
+}
+
+async function uploadAsset(file) {
+  const params = new URLSearchParams({
+    slug: boardConfig.slug || "",
+    filename: file.name
+  });
+  const response = await fetch(`/api/save-asset?${params.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+  return result;
+}
+
+async function importDroppedFile(file, x, y) {
+  const kind = classifyDroppedFile(file);
+  if (kind === "markdown") {
+    const text = await file.text();
+    const filename = sanitizeMarkdownFilename(file.name);
+    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, path: "", content: text })
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+    createNode("markdown", x, y, {
+      file: result.url,
+      href: result.url,
+      title: filename.replace(/\.md$/i, ""),
+      width: 380,
+      height: 420
+    });
+    return true;
+  }
+
+  if (kind === "image") {
+    const result = await uploadAsset(file);
+    createNode("image", x, y, { file: result.url });
+    return true;
+  }
+
+  if (kind === "pdf") {
+    const result = await uploadAsset(file);
+    const absoluteUrl = new URL(result.url, location.origin).href;
+    createNode("bookmark", x, y, {
+      url: absoluteUrl,
+      title: file.name.replace(/\.pdf$/i, ""),
+      embedMode: "live",
+      width: 600,
+      height: 760
+    });
+    return true;
+  }
+
+  if (kind === "text") {
+    const text = await file.text();
+    createNode("text", x, y, {
+      text,
+      width: 360,
+      height: 240
+    });
+    return true;
+  }
+
+  if (kind === "unknown") {
+    const result = await uploadAsset(file);
+    const absoluteUrl = new URL(result.url, location.origin).href;
+    const ext = (file.name.match(/\.[^.]+$/) || [""])[0];
+    createNode("bookmark", x, y, {
+      url: absoluteUrl,
+      title: file.name,
+      embedMode: "preview",
+      width: 320,
+      height: 140,
+      _genericFileExtension: ext
+    });
+    return true;
+  }
+
+  return false;
+}
+
+// =====================================================================
+// Canvas import / open / diff flows
+// =====================================================================
+
+async function sha1Hex(input) {
+  const bytes = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest("SHA-1", bytes);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function canonicalCanvasJson(state) {
+  const { canvasId, createdAt, updatedAt, viewport, ...rest } = state || {};
+  return stableStringify(rest);
+}
+
+async function canonicalCanvasHash(state) {
+  return sha1Hex(canonicalCanvasJson(state));
+}
+
+async function uploadFileAsAsset(file) {
+  const params = new URLSearchParams({
+    slug: boardConfig.slug || "",
+    filename: file.name
+  });
+  const response = await fetch(`/api/save-asset?${params.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+  return result;
+}
+
+async function parseCanvasFile(file) {
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".zip")) {
+    if (!window.fflate) throw new Error("Bundler library not loaded.");
+    const importedState = await readProjectBundleFile(file);
+    return { kind: "bundle", canvasData: importedState, file };
+  }
+  const text = await file.text();
+  const data = JSON.parse(text);
+  if (data && data.type === "canvas-diff") {
+    return { kind: "diff", diff: data, file };
+  }
+  if (!data || !Array.isArray(data.nodes)) {
+    throw new Error("Not a valid canvas file (missing nodes array).");
+  }
+  return { kind: "canvas", canvasData: data, file };
+}
+
+function extractCanvasMetadata(canvasData) {
+  const nodesArr = Array.isArray(canvasData?.nodes) ? canvasData.nodes : [];
+  const edgesArr = Array.isArray(canvasData?.edges) ? canvasData.edges : [];
+  let sidecarCount = 0;
+  let assetCount = 0;
+  let boardPreviewCount = 0;
+  for (const n of nodesArr) {
+    if (!n) continue;
+    if (n.type === "markdown") sidecarCount += 1;
+    else if (n.type === "image" || (n.type === "link" && /\.(pdf|png|jpe?g|gif|webp)(\?|$)/i.test(n.url || ""))) assetCount += 1;
+    else if (n.type === "board-preview") boardPreviewCount += 1;
+  }
+  return {
+    canvasId: typeof canvasData?.canvasId === "string" ? canvasData.canvasId : null,
+    createdAt: canvasData?.createdAt || null,
+    updatedAt: canvasData?.updatedAt || null,
+    nodeCount: nodesArr.length,
+    edgeCount: edgesArr.length,
+    sidecarCount,
+    assetCount,
+    boardPreviewCount,
+    sizeBytes: JSON.stringify(canvasData).length
+  };
+}
+
+function getCurrentBoardMetadata() {
+  return {
+    canvasId: boardMeta.canvasId,
+    createdAt: boardMeta.createdAt,
+    updatedAt: boardMeta.updatedAt,
+    nodeCount: nodes.length,
+    edgeCount: edges.length,
+    sidecarCount: nodes.filter((n) => n.type === "markdown").length,
+    assetCount: nodes.filter((n) => n.type === "image" || (n.type === "link" && /\.(pdf|png|jpe?g|gif|webp)(\?|$)/i.test(n.url || ""))).length,
+    boardPreviewCount: nodes.filter((n) => n.type === "board-preview").length,
+    sizeBytes: JSON.stringify(serializeState()).length
+  };
+}
+
+function formatBytes(n) {
+  if (!Number.isFinite(n)) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function formatTimestampDisplay(ts) {
+  if (!ts) return "—";
+  try { return new Date(ts).toLocaleString(); } catch { return String(ts); }
+}
+
+async function openCanvasFlow(file, dropPos) {
+  let parsed;
+  try {
+    parsed = await parseCanvasFile(file);
+  } catch (err) {
+    showToolbarToast(`Cannot open ${file.name}: ${err.message}`, "error");
+    return;
+  }
+
+  if (parsed.kind === "diff") {
+    return applyDiffFlow(parsed.diff);
+  }
+
+  const incomingMeta = extractCanvasMetadata(parsed.canvasData);
+  const localMeta = getCurrentBoardMetadata();
+
+  if (incomingMeta.canvasId && incomingMeta.canvasId === localMeta.canvasId) {
+    const choice = await reconcilePrompt({ local: localMeta, incoming: incomingMeta });
+    if (choice !== "apply") return;
+    loadState(parsed.canvasData);
+    persistLocalState(serializeState());
+    setComparisonBaseline(serializeState());
+    markBoardDirty({ scheduleLocalSave: false });
+    saveBoard({ showFeedback: false }).catch(() => {});
+    const isNewer = new Date(incomingMeta.updatedAt || 0).getTime() >= new Date(localMeta.updatedAt || 0).getTime();
+    showToolbarToast(isNewer ? `Updated to ${file.name}` : `Restored from ${file.name}`, "success");
+    return;
+  }
+
+  await embedCanvasAsBoardPreview(file, parsed.canvasData, incomingMeta, dropPos);
+}
+
+async function embedCanvasAsBoardPreview(file, canvasData, incomingMeta, dropPos) {
+  let url;
+  try {
+    const result = await uploadFileAsAsset(file);
+    url = result.url;
+  } catch (err) {
+    showToolbarToast(`Could not stage ${file.name} as a sub-page: ${err.message}`, "error");
+    return;
+  }
+  const pos = dropPos || screenToCanvas(window.innerWidth / 2, window.innerHeight / 2);
+  const titleBase = file.name
+    .replace(/\.(zip|canvas\.json|canvas|json)$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim() || "Imported board";
+  createNode("board-preview", pos.x, pos.y, {
+    boardSource: url,
+    boardSlug: incomingMeta.canvasId ? incomingMeta.canvasId.slice(0, 8) : "",
+    boardHref: url,
+    title: titleBase,
+    description: `${incomingMeta.nodeCount} node${incomingMeta.nodeCount === 1 ? "" : "s"}, ${incomingMeta.edgeCount} edge${incomingMeta.edgeCount === 1 ? "" : "s"}`,
+    width: 320,
+    height: 220
+  });
+  markBoardDirty();
+  showToolbarToast(`Embedded ${file.name} as a sub-page`, "success");
+}
+
+// --- Diff format: export + apply ---
+
+function createCanvasDiff(baseState, currentState) {
+  if (!baseState || !currentState) throw new Error("createCanvasDiff requires both states.");
+  if (!baseState.canvasId) throw new Error("Base canvas has no canvasId; cannot diff.");
+  const baseNodes = new Map((baseState.nodes || []).map((n) => [n.id, n]));
+  const currentNodes = new Map((currentState.nodes || []).map((n) => [n.id, n]));
+  const added = [];
+  const modified = [];
+  const removed = [];
+  for (const [id, n] of currentNodes) {
+    if (!baseNodes.has(id)) added.push(n);
+    else if (stableStringify(baseNodes.get(id)) !== stableStringify(n)) {
+      modified.push({ id, fields: n });
+    }
+  }
+  for (const id of baseNodes.keys()) {
+    if (!currentNodes.has(id)) removed.push(id);
+  }
+  const baseEdges = new Map((baseState.edges || []).map((e, i) => [e.id || `__i${i}`, e]));
+  const currentEdges = new Map((currentState.edges || []).map((e, i) => [e.id || `__i${i}`, e]));
+  const edgesAdded = [];
+  const edgesRemoved = [];
+  for (const [id, e] of currentEdges) {
+    if (!baseEdges.has(id) || stableStringify(baseEdges.get(id)) !== stableStringify(e)) edgesAdded.push(e);
+  }
+  for (const id of baseEdges.keys()) {
+    if (!currentEdges.has(id)) edgesRemoved.push(id);
+  }
+  return {
+    type: "canvas-diff",
+    baseCanvasId: baseState.canvasId,
+    baseVersion: {
+      timestamp: baseState.updatedAt || null,
+      hash: null
+    },
+    createdAt: new Date().toISOString(),
+    changes: { added, modified, removed, edges: { added: edgesAdded, removed: edgesRemoved } }
+  };
+}
+
+async function applyDiffFlow(diff) {
+  if (!diff || diff.type !== "canvas-diff" || !diff.baseCanvasId) {
+    showToolbarToast("Not a valid canvas diff file.", "error");
+    return;
+  }
+  if (diff.baseCanvasId !== boardMeta.canvasId) {
+    showToolbarToast(`This diff is for a different board (${String(diff.baseCanvasId).slice(0, 8)}…).`, "error");
+    return;
+  }
+  const localHash = await canonicalCanvasHash(serializeState());
+  const expectedHash = diff.baseVersion?.hash || null;
+  const diverged = expectedHash && expectedHash !== localHash;
+  const summary = {
+    added: diff.changes?.added?.length || 0,
+    modified: diff.changes?.modified?.length || 0,
+    removed: diff.changes?.removed?.length || 0,
+    edgesAdded: diff.changes?.edges?.added?.length || 0,
+    edgesRemoved: diff.changes?.edges?.removed?.length || 0
+  };
+  const choice = await applyDiffPrompt({ diff, diverged, summary });
+  if (choice !== "apply") return;
+  applyDiffToState(diff);
+  persistLocalState(serializeState());
+  setComparisonBaseline(serializeState());
+  markBoardDirty({ scheduleLocalSave: false });
+  saveBoard({ showFeedback: false }).catch(() => {});
+  showToolbarToast(`Applied diff (+${summary.added} ~${summary.modified} -${summary.removed})`, "success");
+}
+
+function applyDiffToState(diff) {
+  const removeIds = new Set(diff.changes?.removed || []);
+  const modifiedMap = new Map((diff.changes?.modified || []).map((m) => [m.id, m.fields]));
+  // Drop removed nodes; replace modified nodes.
+  const remainingNodes = nodes.filter((n) => !removeIds.has(n.id)).map((n) => {
+    if (modifiedMap.has(n.id)) return { ...n, ...modifiedMap.get(n.id) };
+    return n;
+  });
+  const addedNodes = (diff.changes?.added || []).filter((n) => n && n.id);
+  const nextNodes = [...remainingNodes, ...addedNodes];
+  const removedEdgeIds = new Set(diff.changes?.edges?.removed || []);
+  const remainingEdges = edges.filter((e) => !removedEdgeIds.has(e.id || ""));
+  const addedEdges = diff.changes?.edges?.added || [];
+  const nextEdges = [...remainingEdges, ...addedEdges];
+  loadState({
+    canvasId: boardMeta.canvasId,
+    createdAt: boardMeta.createdAt,
+    updatedAt: new Date().toISOString(),
+    nodes: nextNodes,
+    edges: nextEdges,
+    viewport: { x: camera.x, y: camera.y, z: camera.z }
+  });
+}
+
+// --- Prompt overlays (reconcile + diff apply) ---
+
+function buildPromptOverlay(html) {
+  const overlay = document.createElement("div");
+  overlay.className = "braindump-modal is-open";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "10000";
+  overlay.style.background = "rgba(0,0,0,0.5)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.innerHTML = `<div class="braindump-modal-panel" style="max-width: 680px; max-height: 80vh; overflow:auto;">${html}</div>`;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function reconcilePrompt({ local, incoming }) {
+  return new Promise((resolve) => {
+    const incomingNewer = new Date(incoming.updatedAt || 0).getTime() >= new Date(local.updatedAt || 0).getTime();
+    const verb = incomingNewer ? "Update" : "Restore";
+    const projected = {
+      nodeCount: incoming.nodeCount,
+      edgeCount: incoming.edgeCount,
+      sidecarCount: incoming.sidecarCount,
+      assetCount: incoming.assetCount,
+      boardPreviewCount: incoming.boardPreviewCount,
+      sizeBytes: incoming.sizeBytes,
+      updatedAt: incoming.updatedAt
+    };
+    const row = (label, l, i, p) => `
+      <tr>
+        <th style="text-align:left;padding:4px 12px 4px 0;font-weight:500;color:#666;">${label}</th>
+        <td style="padding:4px 12px;">${l}</td>
+        <td style="padding:4px 12px;">${i}</td>
+        <td style="padding:4px 12px;color:#0a0;">${p}</td>
+      </tr>`;
+    const html = `
+      <h2 class="braindump-modal-title">${verb} this board?</h2>
+      <p class="braindump-modal-description">Same canvas ID. Choose ${verb.toLowerCase()} to replace local with incoming, or cancel to keep local as-is.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:0.5rem 0 1rem;">
+        <thead>
+          <tr>
+            <th></th>
+            <th style="text-align:left;padding:4px 12px;">Local now</th>
+            <th style="text-align:left;padding:4px 12px;">Incoming</th>
+            <th style="text-align:left;padding:4px 12px;color:#0a0;">After</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${row("File size", formatBytes(local.sizeBytes), formatBytes(incoming.sizeBytes), formatBytes(projected.sizeBytes))}
+          ${row("Last updated", formatTimestampDisplay(local.updatedAt), formatTimestampDisplay(incoming.updatedAt), formatTimestampDisplay(projected.updatedAt))}
+          ${row("Nodes", local.nodeCount, incoming.nodeCount, projected.nodeCount)}
+          ${row("Edges", local.edgeCount, incoming.edgeCount, projected.edgeCount)}
+          ${row("Markdown sidecars", local.sidecarCount, incoming.sidecarCount, projected.sidecarCount)}
+          ${row("Image / PDF assets", local.assetCount, incoming.assetCount, projected.assetCount)}
+          ${row("Board-preview links", local.boardPreviewCount, incoming.boardPreviewCount, projected.boardPreviewCount)}
+        </tbody>
+      </table>
+      <div class="braindump-modal-actions">
+        <button type="button" data-action="cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+        <button type="button" data-action="apply" class="braindump-modal-button braindump-modal-button-primary">${verb}</button>
+      </div>
+    `;
+    const overlay = buildPromptOverlay(html);
+    const finish = (choice) => {
+      overlay.remove();
+      resolve(choice);
+    };
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target.closest("[data-action]");
+      if (!target && ev.target === overlay) return finish("cancel");
+      if (!target) return;
+      finish(target.dataset.action);
+    });
+    overlay.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") finish("cancel");
+    });
+    overlay.tabIndex = -1;
+    overlay.focus();
+  });
+}
+
+function applyDiffPrompt({ diff, diverged, summary }) {
+  return new Promise((resolve) => {
+    const html = `
+      <h2 class="braindump-modal-title">Apply diff?</h2>
+      <p class="braindump-modal-description">
+        Diff base: <code>${String(diff.baseCanvasId || "").slice(0, 8)}…</code>
+        ${diff.baseVersion?.timestamp ? `(from ${formatTimestampDisplay(diff.baseVersion.timestamp)})` : ""}
+      </p>
+      <ul style="margin:0.5rem 0 1rem;padding-left:1.5rem;font-size:13px;">
+        <li>+${summary.added} added · ~${summary.modified} modified · -${summary.removed} removed</li>
+        <li>Edges: +${summary.edgesAdded} / -${summary.edgesRemoved}</li>
+      </ul>
+      ${diverged ? `<p style="color:#a40;background:#fff8e8;padding:8px;border-radius:6px;font-size:13px;">⚠ Local board has diverged from the diff's base. Applying anyway: incoming wins on conflicts.</p>` : ""}
+      <div class="braindump-modal-actions">
+        <button type="button" data-action="cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+        <button type="button" data-action="apply" class="braindump-modal-button braindump-modal-button-primary">Apply diff</button>
+      </div>
+    `;
+    const overlay = buildPromptOverlay(html);
+    const finish = (choice) => { overlay.remove(); resolve(choice); };
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target.closest("[data-action]");
+      if (!target && ev.target === overlay) return finish("cancel");
+      if (!target) return;
+      finish(target.dataset.action);
+    });
+    overlay.tabIndex = -1;
+    overlay.focus();
+  });
+}
+
+// --- Multi-file content import (grid layout) ---
+
+async function importContentFiles(files, basePos) {
+  if (!files || !files.length) return 0;
+  const start = basePos || screenToCanvas(window.innerWidth / 2, window.innerHeight / 2);
+  const cols = files.length === 1 ? 1 : Math.min(3, files.length);
+  const cellW = 360;
+  const cellH = 280;
+  let imported = 0;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = start.x + col * cellW;
+    const y = start.y + row * cellH;
+    try {
+      const ok = await importDroppedFile(file, x, y);
+      if (ok) imported += 1;
+    } catch (err) {
+      showToolbarToast(`Failed to import ${file.name}: ${err.message}`, "error");
+    }
+  }
+  if (imported > 0) {
+    showToolbarToast(`Imported ${imported} file${imported === 1 ? "" : "s"}`, "success");
+  }
+  return imported;
+}
+
+// --- File pickers ---
+
+async function openCanvasPicker() {
+  if (supportsFileSystemAccessAPI && window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          { description: "Canvas files", accept: { "application/json": [".canvas", ".canvas.json", ".json"] } },
+          { description: "Canvas bundle", accept: { "application/zip": [".zip"] } },
+          { description: "Canvas diff", accept: { "application/json": [".canvas.diff", ".diff"] } }
+        ],
+        multiple: false
+      });
+      const file = await handle.getFile();
+      currentFileHandle = handle;
+      await openCanvasFlow(file);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Open canvas failed:", err);
+        showToolbarToast("Failed to open canvas.", "error");
+      }
+    }
+  } else if (openCanvasInput) {
+    openCanvasInput.click();
+  }
+}
+
+async function importContentPicker() {
+  if (supportsFileSystemAccessAPI && window.showOpenFilePicker) {
+    try {
+      const handles = await window.showOpenFilePicker({
+        types: [
+          { description: "Content files", accept: {
+            "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"],
+            "application/pdf": [".pdf"],
+            "text/markdown": [".md"],
+            "text/plain": [".txt"]
+          } }
+        ],
+        multiple: true
+      });
+      const files = await Promise.all(handles.map((h) => h.getFile()));
+      await importContentFiles(files);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Import failed:", err);
+        showToolbarToast("Failed to import.", "error");
+      }
+    }
+  } else if (fileInput) {
+    fileInput.click();
+  }
+}
+
+// --- File-input change handlers ---
+
+if (openCanvasInput) {
+  openCanvasInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await openCanvasFlow(file);
+    openCanvasInput.value = "";
   });
 }
 
@@ -5931,6 +6457,13 @@ function loadState(data) {
   nodes = [];
   edges = [];
 
+  boardMeta = {
+    canvasId: typeof data?.canvasId === "string" && data.canvasId ? data.canvasId : null,
+    createdAt: typeof data?.createdAt === "string" && data.createdAt ? data.createdAt : null,
+    updatedAt: typeof data?.updatedAt === "string" && data.updatedAt ? data.updatedAt : null
+  };
+  ensureCanvasId();
+
   if (data.viewport) {
     if (typeof data.viewport.x === 'number') camera.x = data.viewport.x;
     if (typeof data.viewport.y === 'number') camera.y = data.viewport.y;
@@ -5985,6 +6518,7 @@ async function saveBoard(options = {}) {
     return { ok: false, skipped: true };
   }
 
+  boardMeta.updatedAt = new Date().toISOString();
   const state = serializeState();
   const serialized = flushLocalStateSave(state);
   isPersistingRepositoryState = true;

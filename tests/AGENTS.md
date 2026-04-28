@@ -40,6 +40,6 @@ Diagnostic helpers (`_diag-*`, `screenshot-markdown-indent.mjs`, legacy `A_test_
 - [README.md](README.md) — running tests, layout details, server-spawning test list
 - [../AGENTS.md](../AGENTS.md) — root session workflow
 - [../.agents/holistic_planning/refactoring_plan.md](../.agents/holistic_planning/refactoring_plan.md) — Stage 3 (test reorg, **landed**) and Stage 4 (per-dir docs) detail
-- [../.agents/holistic_planning/holistic_reviews/refactor_achievements.md](../.agents/holistic_planning/holistic_reviews/refactor_achievements.md) — Round 5 documents the Stage 3 landing
+- [../.agents/holistic_planning/holistic_reviews/refactor_achievements_2026-04-28-1358.md](../.agents/holistic_planning/holistic_reviews/refactor_achievements_2026-04-28-1358.md) — Round 5 documents the Stage 3 landing
 - [../scripts/AGENTS.md](../scripts/AGENTS.md) — build and preview scripts that tests exercise
 - [../.archive/AGENTS.md](../.archive/AGENTS.md) — `_diag-*` archive location

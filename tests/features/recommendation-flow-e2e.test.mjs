@@ -69,7 +69,8 @@ try {
   const download = await downloadPromise;
   const filename = download.suggestedFilename();
 
-  assert.match(filename, /^cosmoboard_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.canvas\.json$/);
+  // Default is now diff-only; full canvas requires the toggle.
+  assert.match(filename, /^cosmoboard_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.canvas\.(diff|json)$/);
 
   await page.locator("#braindump-modal:not([hidden])").waitFor();
   const modalText = await page.locator("#braindump-modal").innerText();

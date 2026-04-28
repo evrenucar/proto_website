@@ -1117,7 +1117,8 @@ html:has(body.page-board) {
   border-radius: 12px;
   box-shadow: 0 12px 30px rgba(0,0,0,0.45);
   padding: 10px 12px;
-  min-width: 320px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .braindump-issue-panel[hidden] {
@@ -1125,7 +1126,8 @@ html:has(body.page-board) {
 }
 
 .braindump-issue-input {
-  width: 250px;
+  flex: 1 1 250px;
+  min-width: 0;
   height: 40px;
   padding: 0 12px;
   border-radius: 8px;
@@ -1848,10 +1850,49 @@ html:has(body.page-board) {
   color: #d8d8d8;
 }
 
-/* Drop highlight when dragging .md files onto the viewport */
+/* Drop highlight when dragging files onto the viewport */
 .bd-md-drop-target {
-  outline: 2px dashed #3fdaca;
-  outline-offset: -8px;
+  outline: 3px dashed #3fdaca;
+  outline-offset: -10px;
+  box-shadow: inset 0 0 0 9999px rgba(63, 218, 202, 0.06);
+}
+
+.bd-drop-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 9999;
+}
+.bd-drop-overlay.is-active {
+  display: flex;
+}
+.bd-drop-overlay-card {
+  background: rgba(15, 18, 24, 0.92);
+  border: 1px solid rgba(63, 218, 202, 0.55);
+  border-radius: 14px;
+  padding: 22px 28px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.bd-drop-overlay-title {
+  font-size: 16px;
+  color: #3fdaca;
+  font-weight: 600;
+}
+.bd-drop-overlay-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
 }
 
 /* Markdown index (markdown-db) node */

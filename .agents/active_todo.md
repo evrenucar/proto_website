@@ -5,9 +5,18 @@ Status legend:
 - `[A]` agent-confirmed via browser/Playwright test, not yet user-verified
 - `[ ]` pending / not started
 
+At the top there is an active scratchpad this is used and updated by the user don't change it. Only write inside the [] for those items
+
 Last touched: 2026-04-26 / 2026-04-27 (cluster fix + polish session).
 
 ---
+
+## SCRATCH PAD (FAST NOTES BUGS AND TODOS)
+- [x] [FEATURE REQUEST] Importing files and images via drag and drop — now supports `.md`, images (`.png/.jpg/.jpeg/.gif/.webp/.svg`), `.pdf`, and `.txt`. Backed by new `/api/save-asset` endpoint (raw-binary streaming, 200MB cap). Drop overlay card + dashed teal outline added. User-verified working with `Participant information.pdf`.
+
+
+
+# Tasks and other todo items
 
 ## [A] Selection state machine cluster
 Root cause: `setMarkdownLineRaw` did `lineEl.textContent = raw`, destroying rendered DOM children that the browser's caret pointed into. Fix: capture click coords in `mousedown`, `preventDefault`, switch to raw, then re-place caret via `caretRangeFromPoint` in rAF, with a `_suppressSelectionChange` guard to avoid re-entrancy.

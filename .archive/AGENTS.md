@@ -36,4 +36,4 @@ Files removed from active code paths but kept in git history under their new loc
 ## See also
 
 - [../.agents/holistic_planning/refactoring_plan.md](../.agents/holistic_planning/refactoring_plan.md) — Stage 1 dead-file inventory and rationale
-- [../.agents/holistic_planning/holistic_reviews/structural_codebase_review.md](../.agents/holistic_planning/holistic_reviews/structural_codebase_review.md) — review that prompted this archival
+- [../.agents/holistic_planning/holistic_reviews/structural_codebase_review_2026-04-28-1306.md](../.agents/holistic_planning/holistic_reviews/structural_codebase_review_2026-04-28-1306.md) — review that prompted this archival

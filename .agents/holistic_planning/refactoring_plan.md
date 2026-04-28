@@ -105,12 +105,12 @@ Each stage is a single PR/commit. Test gate must pass before moving to the next 
 
 | Stage | Status | Landed | Evidence |
 | --- | --- | --- | --- |
-| 1 — Dead-file archive | **landed (staged)** | 2026-04-28 | [refactor_achievements.md → Stage 1 round](holistic_reviews/refactor_achievements.md) |
+| 1 — Dead-file archive | **landed (staged)** | 2026-04-28 | [refactor_achievements_2026-04-28-1358.md → Stage 1 round](holistic_reviews/refactor_achievements_2026-04-28-1358.md) |
 | 2 — Lowercase rename | pending | — | scheduled verification agent fires Mon 2026-05-04 |
-| 3 — Test reorganization | **landed (staged)** | 2026-04-28 | [refactor_achievements.md → Stage 3 round](holistic_reviews/refactor_achievements.md) |
-| 4 — Per-dir AGENTS.md + READMEs | **landed** | 2026-04-27 | [refactor_achievements.md sections 1–9](holistic_reviews/refactor_achievements.md) |
+| 3 — Test reorganization | **landed (staged)** | 2026-04-28 | [refactor_achievements_2026-04-28-1358.md → Stage 3 round](holistic_reviews/refactor_achievements_2026-04-28-1358.md) |
+| 4 — Per-dir AGENTS.md + READMEs | **landed** | 2026-04-27 | [refactor_achievements_2026-04-28-1358.md sections 1–9](holistic_reviews/refactor_achievements_2026-04-28-1358.md) |
 | 5 — Cleanup pass | pending | — | runs after Stage 2 |
-| 6 — Extension-readiness | **landed** | 2026-04-27 | [refactor_achievements.md sections 1–9](holistic_reviews/refactor_achievements.md) |
+| 6 — Extension-readiness | **landed** | 2026-04-27 | [refactor_achievements_2026-04-28-1358.md sections 1–9](holistic_reviews/refactor_achievements_2026-04-28-1358.md) |
 
 ### Stage 1 — Dead-file archive ✅ landed 2026-04-28
 

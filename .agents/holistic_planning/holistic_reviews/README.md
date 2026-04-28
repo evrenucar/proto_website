@@ -1,7 +1,7 @@
 # Holistic Reviews
 
 - **Created:** 2026-04-28 13:42 WEDT
-- **Last updated:** 2026-04-28 14:55 WEDT (filled HH:MM TZ on refactor_achievements + index rows)
+- **Last updated:** 2026-04-28 15:05 WEDT (added timestamp suffix to review filenames)
 
 ## Purpose
 
@@ -38,14 +38,14 @@ Point-in-time snapshots of the codebase along a single dimension (structure, per
 
 ## Filename convention
 
-`<dimension>_<scope>_review.md` — e.g. `structural_codebase_review.md`, `perf_braindump_review.md`, `a11y_site_review.md`.
+`<dimension>_<scope>_review_YYYY-MM-DD-HHMM.md` — date-time suffix matches the `Created` header and lets the topic stay readable up front. e.g. `structural_codebase_review_2026-04-28-1306.md`, `perf_braindump_review_2026-05-12-0930.md`.
 
 ## Index
 
 | File | Created | Dimension | Scope |
 | --- | --- | --- | --- |
-| [structural_codebase_review.md](./structural_codebase_review.md) | 2026-04-28 13:06 WEDT | Structure / readability / expandability | Whole repo |
-| [refactor_achievements.md](./refactor_achievements.md) | 2026-04-28 13:58 WEDT | Refactor outcomes (Stages 4 + 6) | Doc-first hardening |
+| [structural_codebase_review_2026-04-28-1306.md](./structural_codebase_review_2026-04-28-1306.md) | 2026-04-28 13:06 WEDT | Structure / readability / expandability | Whole repo |
+| [refactor_achievements_2026-04-28-1358.md](./refactor_achievements_2026-04-28-1358.md) | 2026-04-28 13:58 WEDT | Refactor outcomes (Stages 4 + 6) | Doc-first hardening |
 
 Add a row here when you create a new review.
 
