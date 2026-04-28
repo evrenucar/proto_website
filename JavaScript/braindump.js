@@ -2799,7 +2799,15 @@ async function readProjectBundleFile(file) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const unzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
+  const rawUnzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
+  // Normalize zip entry keys to forward-slash form. Different zip tools use
+  // different separators (PowerShell Compress-Archive uses backslashes, the
+  // JS exporter and most others use forward slashes). Normalizing here lets
+  // `node.file` lookups work regardless of how the bundle was produced.
+  const unzipped = {};
+  for (const key in rawUnzipped) {
+    unzipped[key.replaceAll("\\", "/")] = rawUnzipped[key];
+  }
 
   let jsonStr = null;
   let boardFileKey = null;
