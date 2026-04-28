@@ -4766,6 +4766,13 @@ function renderMarkdownNode(nodeObj, el) {
     if (!isPreviewMode && filePath) attachMarkdownEditor(nodeObj, body);
   };
 
+  // Prefer inline content when present (mirrors fullscreen viewer).
+  // Handles canvases where `file` is a stale path or transient blob: URL.
+  if (typeof nodeObj._rawMarkdown === "string" && nodeObj._rawMarkdown.length > 0) {
+    renderEditorBody(nodeObj._rawMarkdown);
+    return;
+  }
+
   if (!filePath) {
     body.innerHTML = `<p class="bd-markdown-empty">No file path set.</p>`;
     return;
@@ -5936,20 +5943,29 @@ async function saveBoard(options = {}) {
 setActiveTool(isPreviewMode ? "pan" : "select");
 applyBoardSettings({ persist: false });
 let saved = isPreviewMode ? getCanvasDraftStateForPreview() : getSavedState();
+// Treat empty/stub localStorage drafts as "no saved state" — otherwise loading
+// them sets dirty=true and the next autosave wipes the on-disk canvas.
 if (saved) {
   try {
-    loadState(JSON.parse(saved));
-    if (!isPreviewMode) {
-      const state = serializeState();
-      flushLocalStateSave(state);
-      setComparisonBaseline(state);
-      hasPendingRepositorySave = true;
-      autosaveRepositorySupported = true;
+    const parsedSaved = JSON.parse(saved);
+    const hasContent = parsedSaved && Array.isArray(parsedSaved.nodes) && parsedSaved.nodes.length > 0;
+    if (!hasContent) {
+      saved = null;
+    } else {
+      loadState(parsedSaved);
+      if (!isPreviewMode) {
+        const state = serializeState();
+        flushLocalStateSave(state);
+        setComparisonBaseline(state);
+        hasPendingRepositorySave = true;
+        autosaveRepositorySupported = true;
+      }
     }
   } catch(e) {
-    loadBoard();
+    saved = null;
   }
-} else { loadBoard(); }
+}
+if (!saved) { loadBoard(); }
 updateTransform();
 
 if (pendingStartupToast && !isPreviewMode) {

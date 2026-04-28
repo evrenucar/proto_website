@@ -87,6 +87,26 @@ async function handleSaveBoard(request, response, parsedUrl) {
         return;
       }
 
+      // Refuse writes that would drop a non-empty board to zero nodes.
+      // The editor's mount path can serialize an empty in-memory state and
+      // POST it before the canvas finishes loading; that race wipes data.
+      // Override with ?confirm-empty=1 for legitimate "clear board" actions.
+      const confirmEmpty = parsedUrl.searchParams.get("confirm-empty") === "1";
+      if (parsed.nodes.length === 0 && !confirmEmpty) {
+        try {
+          const existing = JSON.parse(await readFile(safePath, "utf8"));
+          if (Array.isArray(existing.nodes) && existing.nodes.length > 0) {
+            sendJson(response, 409, {
+              success: false,
+              error: `Refused empty save (${existing.nodes.length} existing nodes). Pass ?confirm-empty=1 to override.`
+            });
+            return;
+          }
+        } catch {
+          // No existing file or unreadable — fine to proceed.
+        }
+      }
+
       await mkdir(path.dirname(safePath), { recursive: true });
       await writeFile(safePath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
       sendJson(response, 200, { success: true, slug: target.slug, path: target.relativePath });
