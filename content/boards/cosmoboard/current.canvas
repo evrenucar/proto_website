@@ -1,7 +1,7 @@
 {
   "canvasId": "bfca6ad2-3592-424a-a463-533da7c29720",
   "createdAt": "2026-04-28T15:42:09.615Z",
-  "updatedAt": "2026-04-28T15:42:49.630Z",
+  "updatedAt": "2026-04-28T16:28:17.735Z",
   "nodes": [
     {
       "id": "cosmo-title",
@@ -80,7 +80,7 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 280,
+      "height": 260,
       "type": "board-preview",
       "boardSlug": "braindump",
       "boardSource": "boards/cosmo-braindump_current.canvas",
@@ -242,8 +242,8 @@
     },
     {
       "id": "qu2ftm9gnkh",
-      "x": 940.6952229573719,
-      "y": 2847.971565501739,
+      "x": 671.6435565118461,
+      "y": 2909.0995861112256,
       "width": 400,
       "height": 399.0772779700115,
       "file": "/content/boards/cosmoboard/screenshot-4.png",
@@ -253,8 +253,8 @@
   ],
   "edges": [],
   "viewport": {
-    "x": 186.03090168183826,
-    "y": 582.8267059768559,
-    "z": 0.1
+    "x": 614.1335374439066,
+    "y": 134.1588515714041,
+    "z": 0.2108277062873104
   }
 }
