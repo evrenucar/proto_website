@@ -12,6 +12,8 @@ Holding pen for evolving discussion. Stable decisions belong in `.agents/holisti
 Sibling docs in this folder:
 - [`security_and_access.md`](./security_and_access.md) — encryption, identity, segmented access.
 - [`ai_agents_in_the_loop.md`](./ai_agents_in_the_loop.md) — AI agents as collaborators, scope grants, audit trail.
+- [`version_control_and_backups.md`](./version_control_and_backups.md) — five-layer model (undo, rolling history, git, backups, key recovery), visual canvas diff, time scrubber.
+- [`searchbar_tools.md`](./searchbar_tools.md) — toolbar, command palette, and search as one ecosystem; inspirations from OSes / editors / browsers / spatial apps; Cmd-K recommendation.
 
 ---
 
@@ -287,6 +289,8 @@ Bare-bones list. When a topic earns more than a line, give it its own `.md` file
 
 - **AI / vision-model integration as a first-class capability** — see [`ai_agents_in_the_loop.md`](./ai_agents_in_the_loop.md).
 - **Encryption story** — see [`security_and_access.md`](./security_and_access.md).
+- **Version control, recovery, and backups** — see [`version_control_and_backups.md`](./version_control_and_backups.md).
+- **Toolbar, command palette, and search** — see [`searchbar_tools.md`](./searchbar_tools.md).
 - Plugin / extension system. What is the smallest API surface that does not lock us in?
 - Real-time collab without a backend. Possible with WebRTC + Yjs; what is the discovery story?
 - The "stream apps" idea — what is the smallest demo that proves it (e.g. embedded VS Code Web with persistent state)?
@@ -301,3 +305,4 @@ Bare-bones list. When a topic earns more than a line, give it its own `.md` file
 
 - 2026-04-28 — File created. Vision discussion captured. Round 1 decisions locked: Obsidian round-trip is top priority for the next 3 months, and `Cosmoboard` stays as working name.
 - 2026-04-28 — Round 2 added: security/access (sibling doc) and AI agents in the loop. Four new decisions locked (commitment = startup intent, wedge = aspirational, validation = 5 weekly outside users, recovery = optional opt-in escrow). New sections added: Two-tier Artifact Model, First Five Users, AI Agents summary, Security summary. Open questions re-numbered.
+- 2026-04-28 — Round 3: created `version_control_and_backups.md`. Five-layer model (undo, rolling history, git, backups, key recovery), visual canvas diff and time scrubber as showpiece features. Linked from sibling docs list and Notes section. No new decisions locked yet — remaining open questions about plaintext-vs-encrypted git default, auto-commit cadence, and multi-device sync rendezvous.
