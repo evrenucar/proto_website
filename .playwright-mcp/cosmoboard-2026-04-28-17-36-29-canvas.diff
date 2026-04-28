@@ -1,0 +1,18 @@
+{
+  "type": "canvas-diff",
+  "baseCanvasId": "e72c0953-ad65-47aa-a21a-9e085a9ced29",
+  "baseVersion": {
+    "timestamp": "2026-04-28T15:35:53.328Z",
+    "hash": "9dc054764770154d55073fb0431f7039a2445f93"
+  },
+  "createdAt": "2026-04-28T15:36:29.794Z",
+  "changes": {
+    "added": [],
+    "modified": [],
+    "removed": [],
+    "edges": {
+      "added": [],
+      "removed": []
+    }
+  }
+}
