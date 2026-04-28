@@ -1126,7 +1126,7 @@ html:has(body.page-board) {
 }
 
 .braindump-issue-input {
-  flex: 1 1 250px;
+  width: 250px;
   min-width: 0;
   height: 40px;
   padding: 0 12px;
@@ -1321,7 +1321,7 @@ html:has(body.page-board) {
 }
 
 /* Mobile Adjustments */
-@media screen and (max-width: 1200px) and (pointer: coarse), screen and (max-width: 1200px) and (hover: none) {
+@media screen and (max-width: 1200px) and (pointer: coarse), screen and (max-width: 1200px) and (hover: none), screen and (max-width: 1000px) {
   .braindump-viewport {
     left: 0;
   }
