@@ -1,7 +1,7 @@
 # Holistic Reviews
 
-- **Created:** 2026-04-28 13:06 WEDT
-- **Last updated:** 2026-04-28 13:30 WEDT (added timestamps to existing files)
+- **Created:** 2026-04-28 13:42 WEDT
+- **Last updated:** 2026-04-28 14:55 WEDT (filled HH:MM TZ on refactor_achievements + index rows)
 
 ## Purpose
 
@@ -44,8 +44,8 @@ Point-in-time snapshots of the codebase along a single dimension (structure, per
 
 | File | Created | Dimension | Scope |
 | --- | --- | --- | --- |
-| [structural_codebase_review.md](./structural_codebase_review.md) | 2026-04-28 | Structure / readability / expandability | Whole repo |
-| [refactor_achievements.md](./refactor_achievements.md) | 2026-04-28 | Refactor outcomes (Stages 4 + 6) | Doc-first hardening |
+| [structural_codebase_review.md](./structural_codebase_review.md) | 2026-04-28 13:06 WEDT | Structure / readability / expandability | Whole repo |
+| [refactor_achievements.md](./refactor_achievements.md) | 2026-04-28 13:58 WEDT | Refactor outcomes (Stages 4 + 6) | Doc-first hardening |
 
 Add a row here when you create a new review.
 

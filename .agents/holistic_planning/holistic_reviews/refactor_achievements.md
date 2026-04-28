@@ -1,6 +1,6 @@
 # Refactor Achievements — Stages 4 + 6 + 1 + 3
 
-- **Created:** 2026-04-28 (initial; Stages 4 + 6)
+- **Created:** 2026-04-28 13:58 WEDT (initial; Stages 4 + 6)
 - **Last updated:** 2026-04-28 13:50 WEDT (Stage 3 landed)
 - **Scope landed (staged):** Stages 4 (per-directory docs + root README rewrite), 6 (extension-readiness), **1 (dead-file archive)**, and **3 (test reorganization)** of the 6-stage [refactoring_plan.md](../refactoring_plan.md). All staged in working tree, not yet committed.
 - **Stages NOT landed:** 2 (lowercase rename), 5 (cleanup pass).
