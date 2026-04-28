@@ -1150,6 +1150,8 @@ html:has(body.page-board) {
   color: #3fdaca;
   font: inherit;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
