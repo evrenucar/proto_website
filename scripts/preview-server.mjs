@@ -109,7 +109,43 @@ async function handleSaveBoard(request, response, parsedUrl) {
 
       await mkdir(path.dirname(safePath), { recursive: true });
       await writeFile(safePath, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
-      sendJson(response, 200, { success: true, slug: target.slug, path: target.relativePath });
+
+      // Extract each markdown node's _rawMarkdown to its sidecar file path so
+      // disk copies stay current with inline content. Best-effort — failures
+      // here don't fail the canvas save (canvas already on disk above).
+      const canvasDir = path.dirname(safePath);
+      const sidecarsWritten = [];
+      for (const node of parsed.nodes) {
+        if (!node || node.type !== "markdown") continue;
+        if (typeof node.file !== "string" || typeof node._rawMarkdown !== "string") continue;
+        // Skip transient or external references.
+        if (/^(?:blob:|data:|https?:|file:)/i.test(node.file)) continue;
+
+        let sidecarPath;
+        if (node.file.startsWith("/")) {
+          sidecarPath = path.normalize(path.join(rootDir, node.file.replace(/^\/+/, "")));
+        } else {
+          sidecarPath = path.normalize(path.join(canvasDir, node.file));
+        }
+        if (!sidecarPath.startsWith(rootDir)) continue;
+        if (path.extname(sidecarPath).toLowerCase() !== ".md") continue;
+
+        try {
+          await mkdir(path.dirname(sidecarPath), { recursive: true });
+          const content = node._rawMarkdown.replace(/\r\n?/g, "\n");
+          await writeFile(sidecarPath, content.endsWith("\n") ? content : `${content}\n`, "utf8");
+          sidecarsWritten.push(path.relative(rootDir, sidecarPath).replaceAll("\\", "/"));
+        } catch {
+          // Sidecar write failure is informational — canvas save already succeeded.
+        }
+      }
+
+      sendJson(response, 200, {
+        success: true,
+        slug: target.slug,
+        path: target.relativePath,
+        sidecarsWritten
+      });
     } catch (error) {
       sendJson(response, 500, { success: false, error: error.message || "Save failed." });
     }

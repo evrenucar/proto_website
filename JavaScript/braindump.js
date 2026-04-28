@@ -2830,6 +2830,12 @@ async function readProjectBundleFile(file) {
     } else if (node.type === "board-preview" && node.boardSource && blobUrlMap[node.boardSource]) {
       node.boardSource = blobUrlMap[node.boardSource];
     } else if (node.type === "markdown" && node.file && blobUrlMap[node.file]) {
+      // Inline markdown content into _rawMarkdown so it survives page reloads.
+      // Blob URLs evaporate on reload; the inline copy is the durable one.
+      const bundleEntry = unzipped[node.file];
+      if (bundleEntry) {
+        node._rawMarkdown = new TextDecoder().decode(bundleEntry).replace(/\r\n?/g, "\n");
+      }
       node.file = blobUrlMap[node.file];
     }
   }
@@ -2963,9 +2969,26 @@ if (fileInput) {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = JSON.parse(e.target.result);
+        // Best-effort fetch any markdown sidecars referenced by the import.
+        // Populates _rawMarkdown so the canvas becomes self-contained even if
+        // the .md files are missing on disk after the import lands.
+        if (Array.isArray(data.nodes)) {
+          await Promise.all(data.nodes.map(async (node) => {
+            if (node.type === "markdown" && node.file && typeof node._rawMarkdown !== "string") {
+              try {
+                const r = await fetch(node.file, { cache: "no-store" });
+                if (r.ok) {
+                  node._rawMarkdown = (await r.text()).replace(/\r\n?/g, "\n");
+                }
+              } catch {
+                // Sidecar unreachable — renderer empty branch handles it.
+              }
+            }
+          }));
+        }
         loadState(data);
         persistLocalState(serializeState());
         setComparisonBaseline(serializeState());
@@ -4046,12 +4069,20 @@ function scheduleMarkdownSave(nodeObj, body) {
 }
 
 async function saveMarkdownNodeFile(nodeObj, body) {
-  const filePath = String(nodeObj?.file || "");
-  if (!filePath) return;
-  const filename = filePath.split("/").pop() || "note.md";
-  const sourcePath = filePath.replace(/^\//, "");
+  // _rawMarkdown is the canonical inline store — always update it so the
+  // canvas-level save captures the latest content even when no file sidecar
+  // path is set (or when the sidecar write below fails).
   const content = readMarkdownEditorContent(body);
   nodeObj._rawMarkdown = content;
+  if (typeof markBoardDirty === "function") markBoardDirty();
+
+  const filePath = String(nodeObj?.file || "");
+  if (!filePath) return;
+  // Skip blob: / data: / external URLs — only repo-relative paths are persisted.
+  if (/^(?:blob:|data:|https?:|file:)/i.test(filePath)) return;
+
+  const filename = filePath.split("/").pop() || "note.md";
+  const sourcePath = filePath.replace(/^\//, "");
   try {
     const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
       method: "POST",
@@ -4059,9 +4090,10 @@ async function saveMarkdownNodeFile(nodeObj, body) {
       body: JSON.stringify({ filename, path: sourcePath, content })
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    if (typeof markBoardDirty === "function") markBoardDirty();
   } catch (error) {
-    showToolbarToast(`Save failed: ${error.message}`, "error");
+    // Sidecar disk write failed — content is still saved inline via the
+    // canvas-level save. Show a toast so the user knows the sidecar is stale.
+    showToolbarToast(`Sidecar save failed: ${error.message}`, "error");
   }
 }
 
@@ -4763,34 +4795,40 @@ function renderMarkdownNode(nodeObj, el) {
     const lines = text.split("\n");
     if (lines.length === 0) lines.push("");
     lines.forEach((line) => body.appendChild(buildMarkdownLineEl(line)));
-    if (!isPreviewMode && filePath) attachMarkdownEditor(nodeObj, body);
+    // Editor attaches regardless of filePath — _rawMarkdown is the canonical
+    // store; the file sidecar is an optional convenience for git/external edits.
+    if (!isPreviewMode) attachMarkdownEditor(nodeObj, body);
   };
 
-  // Prefer inline content when present (mirrors fullscreen viewer).
-  // Handles canvases where `file` is a stale path or transient blob: URL.
-  if (typeof nodeObj._rawMarkdown === "string" && nodeObj._rawMarkdown.length > 0) {
+  // Prefer inline content when present — string of any length, including "".
+  // Handles canvases where `file` is a stale path, transient blob: URL, or
+  // missing on disk. Inline _rawMarkdown is the canonical, portable store.
+  if (typeof nodeObj._rawMarkdown === "string") {
     renderEditorBody(nodeObj._rawMarkdown);
     return;
   }
 
-  if (!filePath) {
-    body.innerHTML = `<p class="bd-markdown-empty">No file path set.</p>`;
+  // No inline content; try fetching from file path if any.
+  if (filePath) {
+    body.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
+    fetch(filePath)
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.text();
+      })
+      .then((text) => {
+        renderEditorBody(text.replace(/\r\n?/g, "\n"));
+      })
+      .catch(() => {
+        // Sidecar missing or unreachable — start a fresh editor so the user
+        // can fill it in. Save will persist the new content inline.
+        renderEditorBody("");
+      });
     return;
   }
 
-  body.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
-
-  fetch(filePath)
-    .then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.text();
-    })
-    .then((text) => {
-      renderEditorBody(text.replace(/\r\n?/g, "\n"));
-    })
-    .catch((err) => {
-      body.innerHTML = `<p class="bd-markdown-error">Could not load <code>${escapeHtml(filePath)}</code> (${escapeHtml(err.message)}).</p>`;
-    });
+  // No file path and no inline content — start a fresh editor.
+  renderEditorBody("");
 }
 
 // ---------------------------------------------------------------------------
