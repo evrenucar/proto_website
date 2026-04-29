@@ -56,7 +56,8 @@
       "Bash(tasklist //FI \"PID eq 31804\")",
       "Bash(wmic process *)",
       "Bash(awk '/^function / {name=$2; start=NR} /^}$/ {if \\(start\\) {print NR-start, name; start=0}}' JavaScript/braindump.js)",
-      "mcp__chrome-devtools__take_screenshot"
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__close_page"
     ]
   },
   "effortLevel": "xhigh"

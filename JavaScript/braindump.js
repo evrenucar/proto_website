@@ -886,6 +886,13 @@ function getYouTubeEmbedUrl(url) {
   if (!videoId) return "";
 
   const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+  // Enable the IFrame Player API so the parent can send postMessage commands
+  // (play/pause/seek) when a YouTube embed is the selected node and the user
+  // presses Space / arrow keys without first clicking inside the iframe.
+  embedUrl.searchParams.set("enablejsapi", "1");
+  if (typeof location !== "undefined" && location.origin && location.origin !== "null") {
+    embedUrl.searchParams.set("origin", location.origin);
+  }
   try {
     const parsed = new URL(url);
     const start = parseYouTubeStartSeconds(parsed.searchParams.get("start") || parsed.searchParams.get("t"));
@@ -1284,13 +1291,26 @@ function downloadStateFile(filename, mimeType = "application/octet-stream") {
   return { filename, jsonStr };
 }
 
+const TRANSIENT_NODE_FIELDS = ["isCropping", "_cropDraft", "_cropEnterCrop", "_cropEnterSize", "_cropEnterPos"];
+
+function stripTransientNodeFields(node) {
+  let copy = null;
+  for (const k of TRANSIENT_NODE_FIELDS) {
+    if (k in node) {
+      if (!copy) copy = { ...node };
+      delete copy[k];
+    }
+  }
+  return copy || node;
+}
+
 function serializeState() {
   ensureCanvasId();
   return {
     canvasId: boardMeta.canvasId,
     createdAt: boardMeta.createdAt,
     updatedAt: boardMeta.updatedAt,
-    nodes,
+    nodes: nodes.map(stripTransientNodeFields),
     edges,
     viewport: { x: camera.x, y: camera.y, z: camera.z }
   };
@@ -1953,6 +1973,51 @@ function applyReverse(action) {
       const ta = el.querySelector(".bd-text-editor");
       if (ta) syncTextEditorValue(ta, action.oldText || "");
     }
+  } else if (action.type === 'crop') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      if (action.fromCrop) node.crop = { ...action.fromCrop };
+      else delete node.crop;
+      if (action.fromSize) {
+        node.width = action.fromSize.w;
+        node.height = action.fromSize.h;
+      }
+      if (action.fromPos) {
+        node.x = action.fromPos.x;
+        node.y = action.fromPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
+    }
+  } else if (action.type === 'bake') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      node.file = action.fromFile;
+      if (action.fromCrop) node.crop = { ...action.fromCrop };
+      else delete node.crop;
+      if (action.fromSize) {
+        node.width = action.fromSize.w;
+        node.height = action.fromSize.h;
+      }
+      if (action.fromPos) {
+        node.x = action.fromPos.x;
+        node.y = action.fromPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
+    }
   } else if (action.type === 'batch') {
     for (let i = action.actions.length - 1; i >= 0; i--) applyReverse(action.actions[i]);
   }
@@ -1990,6 +2055,50 @@ function applyForward(action) {
       node.text = action.newText;
       const ta = el.querySelector(".bd-text-editor");
       if (ta) syncTextEditorValue(ta, action.newText || "");
+    }
+  } else if (action.type === 'crop') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      if (action.toCrop) node.crop = { ...action.toCrop };
+      else delete node.crop;
+      if (action.toSize) {
+        node.width = action.toSize.w;
+        node.height = action.toSize.h;
+      }
+      if (action.toPos) {
+        node.x = action.toPos.x;
+        node.y = action.toPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
+    }
+  } else if (action.type === 'bake') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      node.file = action.toFile;
+      delete node.crop;
+      if (action.toSize) {
+        node.width = action.toSize.w;
+        node.height = action.toSize.h;
+      }
+      if (action.toPos) {
+        node.x = action.toPos.x;
+        node.y = action.toPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
     }
   } else if (action.type === 'batch') {
     action.actions.forEach(a => applyForward(a));
@@ -2072,17 +2181,18 @@ function getDrawCursor() {
   return `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="%233fdaca" stroke-width="1.5"/><circle cx="${cx}" cy="${cx}" r="1" fill="%233fdaca"/></svg>') ${cx} ${cx}, crosshair`;
 }
 
-function placeToolNodeAt(clientX, clientY, tool = activeTool) {
+function placeToolNodeAt(clientX, clientY, tool = activeTool, options = {}) {
   if (isPreviewMode) return;
+  const useTouchPlacement = options.useTouchPlacement ?? shouldUseTouchSelectBehavior();
   if (tool === "text") {
     const dimensions = { width: 250, height: 150 };
-    const position = shouldUseTouchSelectBehavior()
+    const position = useTouchPlacement
       ? getCenteredNodeCanvasPosition(dimensions.width, dimensions.height)
       : screenToCanvas(clientX, clientY);
     const newNode = createNode("text", position.x, position.y, { text: "", ...dimensions });
     focusTextEditor(newNode.id, {
       placeCaretAtEnd: true,
-      centerInView: shouldUseTouchSelectBehavior()
+      centerInView: useTouchPlacement
     });
 
     // Mobile browsers are stricter about focus timing; retry once if the editor
@@ -2091,7 +2201,7 @@ function placeToolNodeAt(clientX, clientY, tool = activeTool) {
     if (editor?.contentEditable !== "true") {
       window.setTimeout(() => focusTextEditor(newNode.id, {
         placeCaretAtEnd: true,
-        centerInView: shouldUseTouchSelectBehavior()
+        centerInView: useTouchPlacement
       }), 0);
     }
 
@@ -2300,7 +2410,7 @@ viewport.addEventListener("touchmove", (e) => {
 
     if (isDrawing) {
       e.preventDefault();
-      draw(touch.clientX, touch.clientY);
+      draw(touch.clientX, touch.clientY, e.shiftKey);
     } else if (dragRect.active) {
       e.preventDefault();
       updateSelectionRect(touch.clientX, touch.clientY);
@@ -2370,7 +2480,8 @@ viewport.addEventListener("touchend", (e) => {
     placeToolNodeAt(
       touchPlacementState.startX,
       touchPlacementState.startY,
-      touchPlacementState.pendingTool
+      touchPlacementState.pendingTool,
+      { useTouchPlacement: true }
     );
   }
 
@@ -2418,7 +2529,11 @@ viewport.addEventListener("contextmenu", (e) => {
 
 viewport.addEventListener("mousedown", (e) => {
   if (e.target.closest?.(".resize-handle")) return;
-  if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
+  // Draw tool wins over the Shift+drag pan shortcut so Shift can start a
+  // straight-line stroke instead of hijacking the click as a pan.
+  if (e.button === 0 && activeTool === "draw") {
+    startDrawing(e.clientX, e.clientY);
+  } else if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
     isPanning = true;
     startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
     viewport.style.cursor = "grabbing";
@@ -2426,9 +2541,7 @@ viewport.addEventListener("mousedown", (e) => {
   } else if (e.button === 0 && isPanning) {
     // handled by window mousedown
   } else if (e.button === 0) {
-    if (activeTool === "draw") {
-      startDrawing(e.clientX, e.clientY);
-    } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !isBoardToolbarTarget(e.target)) {
+    if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !isBoardToolbarTarget(e.target)) {
       startSelectionRect(e.clientX, e.clientY, e.shiftKey);
     }
   }
@@ -2442,9 +2555,9 @@ viewport.addEventListener("click", (e) => {
   if (e.target.closest(".bd-item") || isBoardToolbarTarget(e.target)) return;
 
   if (activeTool === "text") {
-    placeToolNodeAt(e.clientX, e.clientY, "text");
+    placeToolNodeAt(e.clientX, e.clientY, "text", { useTouchPlacement: false });
   } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "draw") {
-    placeToolNodeAt(e.clientX, e.clientY, activeTool);
+    placeToolNodeAt(e.clientX, e.clientY, activeTool, { useTouchPlacement: false });
   }
 });
 
@@ -2467,7 +2580,7 @@ window.addEventListener("pointermove", (e) => {
     camera.y = e.clientY - startPan.y;
     updateTransform();
   } else if (isDrawing) {
-    draw(e.clientX, e.clientY);
+    draw(e.clientX, e.clientY, e.shiftKey);
   } else if (dragRect.active) {
     updateSelectionRect(e.clientX, e.clientY);
   }
@@ -2504,12 +2617,79 @@ window.addEventListener("pointerup", (e) => {
   _activeBoardViewport = null;
 });
 
+// YouTube IFrame Player API integration: when a YouTube embed is the only
+// selected node, forward Space / Left / Right to its iframe so users don't have
+// to click into the video first to use keyboard controls.
+function getSingleSelectedYouTubeIframe() {
+  const selected = canvas.querySelectorAll(".bd-item.selected");
+  if (selected.length !== 1) return null;
+  const iframe = selected[0].querySelector(".bd-embed-iframe");
+  if (!iframe) return null;
+  if (!/^https:\/\/www\.youtube\.com\/embed\//.test(iframe.src || "")) return null;
+  return iframe;
+}
+
+function postYouTubeCommand(iframe, func, args = []) {
+  try {
+    iframe.contentWindow?.postMessage(
+      JSON.stringify({ event: "command", func, args }),
+      "*"
+    );
+  } catch (e) {}
+}
+
+window.addEventListener("message", (e) => {
+  if (typeof e.data !== "string" || !e.data.startsWith("{")) return;
+  let data;
+  try { data = JSON.parse(e.data); } catch { return; }
+  if (!data || (data.event !== "infoDelivery" && data.event !== "onStateChange")) return;
+  const iframes = canvas.querySelectorAll(".bd-embed-iframe");
+  for (const ifr of iframes) {
+    if (ifr.contentWindow !== e.source) continue;
+    const st = ifr.__ytState;
+    if (!st) break;
+    if (data.event === "infoDelivery" && data.info) {
+      if (typeof data.info.currentTime === "number") st.currentTime = data.info.currentTime;
+      if (typeof data.info.duration === "number") st.duration = data.info.duration;
+      if (typeof data.info.playerState === "number") st.playing = data.info.playerState === 1;
+    } else if (data.event === "onStateChange") {
+      st.playing = data.info === 1;
+    }
+    break;
+  }
+});
+
 // Shortcuts
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
   if (_mountedBoardCount > 1) {
     if (_activeBoardViewport && _activeBoardViewport !== viewport) return;
     if (!_activeBoardViewport && !viewport.matches(":focus-within")) return;
+  }
+  // YouTube playback control on the selected embed (Space / Left / Right).
+  // Plain modifiers only; ctrl/cmd combos still go to the regular shortcuts.
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    const ytIframe = getSingleSelectedYouTubeIframe();
+    if (ytIframe) {
+      const st = ytIframe.__ytState || (ytIframe.__ytState = { currentTime: 0, duration: 0, playing: false });
+      if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        const func = st.playing ? "pauseVideo" : "playVideo";
+        postYouTubeCommand(ytIframe, func);
+        st.playing = !st.playing;
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        postYouTubeCommand(ytIframe, "seekTo", [Math.max(0, (st.currentTime || 0) - 5), true]);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        postYouTubeCommand(ytIframe, "seekTo", [(st.currentTime || 0) + 5, true]);
+        return;
+      }
+    }
   }
   // Undo/Redo/Cut/Copy/Delete
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) { e.preventDefault(); saveLocalFile(); return; }
@@ -2552,6 +2732,11 @@ window.addEventListener("keyup", (e) => {
       if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
       else if (activeTool !== "pan") viewport.style.cursor = "default";
     }
+  }
+  // Bake the active straight segment so a second Shift press during the same
+  // stroke starts a fresh anchor at the line's endpoint.
+  if (e.key === "Shift" && isDrawing && wasShiftHeld) {
+    bakeShiftSegment();
   }
 });
 
@@ -2981,6 +3166,28 @@ window.addEventListener("pointerdown", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  // Crop mode owns ESC and Enter while active.
+  const cropping = findCroppingNode();
+  if (cropping) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelCrop(cropping);
+      return;
+    }
+    if (event.key === "Enter") {
+      const active = document.activeElement;
+      const isInEditor = active && (active.classList?.contains("bd-text-editor") ||
+                                    active.classList?.contains("bd-markdown-editor") ||
+                                    active.tagName === "INPUT" || active.tagName === "TEXTAREA" ||
+                                    active.isContentEditable);
+      if (!isInEditor) {
+        event.preventDefault();
+        commitCrop(cropping);
+        return;
+      }
+    }
+  }
+
   if (event.key === "Escape" && recommendationPanel && !recommendationPanel.hidden) {
     event.preventDefault();
     setRecommendationPanelOpen(false);
@@ -3270,11 +3477,63 @@ function exportCanvas() {
 
 // Drawing logic
 let lastDrawPoint = { x: 0, y: 0 };
+
+// Shift-snap state for straight-line drawing.
+// Active only while a stroke is in progress, the draw tool is selected, and Shift is held.
+let preservedPathData = "";
+let lineStartPoint = null;
+let lineEndPoint = null;
+let wasShiftHeld = false;
+
+/* @export-for-test:snapStraightLine */
+function snapStraightLine(start, cursor) {
+  const dx = cursor.x - start.x;
+  const dy = cursor.y - start.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  if (distance < 0.001) {
+    return { x: start.x, y: start.y };
+  }
+  const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+  const targets = [0, 45, 90, 135, 180, -45, -90, -135, -180];
+  const tolerance = 3;
+  let snapped = null;
+  for (const target of targets) {
+    let diff = Math.abs(angleDeg - target);
+    if (diff > 180) diff = 360 - diff;
+    if (diff <= tolerance) {
+      snapped = target;
+      break;
+    }
+  }
+  if (snapped === null) {
+    return { x: cursor.x, y: cursor.y };
+  }
+  const radians = snapped * Math.PI / 180;
+  return {
+    x: start.x + distance * Math.cos(radians),
+    y: start.y + distance * Math.sin(radians),
+  };
+}
+
+function bakeShiftSegment() {
+  if (lineEndPoint) {
+    lastDrawPoint = { x: lineEndPoint.x, y: lineEndPoint.y };
+  }
+  preservedPathData = "";
+  lineStartPoint = null;
+  lineEndPoint = null;
+  wasShiftHeld = false;
+}
+
 function startDrawing(x, y) {
   if (isPreviewMode) return;
   isDrawing = true;
   let pos = screenToCanvas(x, y);
   lastDrawPoint = pos;
+  preservedPathData = "";
+  lineStartPoint = null;
+  lineEndPoint = null;
+  wasShiftHeld = false;
   minX = pos.x; maxX = pos.x;
   minY = pos.y; maxY = pos.y;
   currentPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -3288,10 +3547,34 @@ function startDrawing(x, y) {
   svgLayer.appendChild(currentPath);
 }
 
-function draw(x, y) {
+function draw(x, y, shiftKey = false) {
   if (!isDrawing || !currentPath) return;
   let pos = screenToCanvas(x, y);
-  
+
+  // Shift-snap branch: replace the active tail with a single straight segment.
+  // Only runs while Shift is held and the draw tool is active. The freehand
+  // path below must stay untouched so non-Shift drawing performance is unchanged.
+  if (shiftKey && activeTool === "draw") {
+    if (!wasShiftHeld) {
+      preservedPathData = currentPathData;
+      lineStartPoint = { x: lastDrawPoint.x, y: lastDrawPoint.y };
+      wasShiftHeld = true;
+    }
+    const end = snapStraightLine(lineStartPoint, pos);
+    lineEndPoint = end;
+    currentPathData = `${preservedPathData} L ${end.x} ${end.y}`;
+    currentPath.setAttribute("d", currentPathData);
+    minX = Math.min(minX, end.x); maxX = Math.max(maxX, end.x);
+    minY = Math.min(minY, end.y); maxY = Math.max(maxY, end.y);
+    return;
+  }
+
+  // Shift was released mid-stroke without firing keyup yet (pointer arrived first).
+  // Bake the line so subsequent freehand points start from the segment end.
+  if (wasShiftHeld) {
+    bakeShiftSegment();
+  }
+
   // Throttle points to reduce DOM repaints and lag
   let dist = Math.hypot(pos.x - lastDrawPoint.x, pos.y - lastDrawPoint.y);
   if (dist < 4 / camera.z) return;
@@ -3306,6 +3589,7 @@ function draw(x, y) {
 function stopDrawing() {
   if (!isDrawing) return;
   isDrawing = false;
+  bakeShiftSegment();
   if (currentPath) {
     const isSinglePoint = !currentPathData.includes(" L ");
     let w = Math.max(maxX - minX, 10);
@@ -3385,8 +3669,22 @@ function createNode(type, x, y, data = {}) {
     if (data.file && !data.id && data.width === undefined) {
         let img = new Image();
         img.onload = () => {
-            nodeObj.width = img.width;
-            nodeObj.height = img.height;
+            // Race guard: skip if the user has already cropped, or if the
+            // cropbox-img onload already sized the node. Both this preload and
+            // the cropbox-img onload write to nodeObj.width/height; without a
+            // shared guard, a fast crop+commit on a freshly dropped image can
+            // race and reset dimensions back to the source's natural size.
+            if (nodeObj.crop) return;
+            if (nodeObj.hasAdjustedRatio) return;
+            // Match the cropbox-img onload's clamping behavior so both writers
+            // produce the same displayed size regardless of which fires first.
+            // Without this clamp, a 4000-pixel-wide source would render at
+            // full width and any crop of it would inherit that oversized
+            // displayed width — perceived as a horizontal stretch / squish.
+            const naturalRatio = img.width / img.height;
+            nodeObj.width = Math.min(img.width, 400);
+            nodeObj.height = nodeObj.width / naturalRatio;
+            nodeObj.hasAdjustedRatio = true;
             let el = getBoardElementById(nodeObj.id);
             if (el) {
                 el.style.width = `${nodeObj.width}px`;
@@ -3509,6 +3807,27 @@ function renderLinkNode(nodeObj, el) {
     });
 
     if (isYouTube) {
+      // Subscribe to YouTube IFrame Player API events so keyboard shortcuts
+      // (Space / Left / Right when this node is the only selected one) know
+      // the current playback state and timestamp without round-tripping.
+      const ytIframe = shell.querySelector(".bd-embed-iframe");
+      if (ytIframe) {
+        ytIframe.__ytState = ytIframe.__ytState || { currentTime: 0, duration: 0, playing: false };
+        const subscribe = () => {
+          try {
+            ytIframe.contentWindow?.postMessage(
+              JSON.stringify({ event: "listening", id: nodeObj.id }),
+              "*"
+            );
+          } catch (e) {}
+        };
+        ytIframe.addEventListener("load", subscribe);
+        // Iframe may already be loaded (e.g. cached) by the time we get here.
+        setTimeout(subscribe, 200);
+      }
+    }
+
+    if (isYouTube) {
       // Wheel-shield over YouTube iframe: YouTube has no scrollable content, so
       // hovering over it should keep canvas zoom working instead of being
       // swallowed by the iframe. The shield catches wheel and forwards it to
@@ -3523,16 +3842,40 @@ function renderLinkNode(nodeObj, el) {
         }, { passive: false });
 
         shield.addEventListener("pointerdown", (e) => {
-          // Don't let this initiate an item drag.
+          // Middle-click, right-click, and left-click-with-pan-tool should pan
+          // the canvas (matching the global pointerdown pan handler). Let those
+          // bubble through unchanged.
+          const shouldPan = e.button === 1 || e.button === 2 ||
+            (e.button === 0 && activeTool === "pan");
+          if (shouldPan) return;
+          // Plain left-click: don't let this start an item drag, and don't hand
+          // the gesture off to the iframe — once the iframe owned pointer
+          // events, middle/right-click pan stopped working over a playing
+          // video. Instead the click handler below forwards play/pause to
+          // YouTube via the JS API, so the shield stays in front forever and
+          // pan / wheel-zoom keep working.
           e.stopPropagation();
-          shield.classList.add("is-passthrough");
-          const reactivate = (ev) => {
-            if (!el.contains(ev.target)) {
-              shield.classList.remove("is-passthrough");
-              window.removeEventListener("pointerdown", reactivate, true);
-            }
-          };
-          window.addEventListener("pointerdown", reactivate, true);
+        });
+
+        // The .bd-item drag handler listens for `mousedown`, not `pointerdown`,
+        // so stopping pointerdown above isn't enough. Without these, Chrome
+        // would start an item drag on click and never receive the matching
+        // mouseup, leaving the node stuck to the cursor. Stop for every button
+        // so middle/right-click panning doesn't also kick off a node drag.
+        shield.addEventListener("mousedown", (e) => e.stopPropagation());
+        shield.addEventListener("mouseup", (e) => e.stopPropagation());
+
+        // Forward plain left-clicks to the iframe as a play/pause toggle via
+        // the YouTube IFrame Player API. We stay on top, so pan/zoom always
+        // route through us.
+        shield.addEventListener("click", (e) => {
+          if (e.button !== 0) return;
+          if (activeTool === "pan") return;
+          const iframe = shell.querySelector(".bd-embed-iframe");
+          if (!iframe) return;
+          const st = iframe.__ytState || (iframe.__ytState = { currentTime: 0, duration: 0, playing: false });
+          postYouTubeCommand(iframe, st.playing ? "pauseVideo" : "playVideo");
+          st.playing = !st.playing;
         });
       }
     }
@@ -5984,6 +6327,582 @@ function renderBaseNode(nodeObj, el) {
     });
 }
 
+// ----- Image cropping -----
+
+function applyCropTransform(img, crop) {
+  if (!crop) {
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.left = "0";
+    img.style.top = "0";
+    return;
+  }
+  const w = crop.right - crop.left;
+  const h = crop.bottom - crop.top;
+  if (w <= 0 || h <= 0) return;
+  img.style.width = `${(100 / w).toFixed(4)}%`;
+  img.style.height = `${(100 / h).toFixed(4)}%`;
+  img.style.left = `${(-(crop.left / w) * 100).toFixed(4)}%`;
+  img.style.top = `${(-(crop.top / h) * 100).toFixed(4)}%`;
+}
+
+function renderImageCropbox(nodeObj, el) {
+  const existingOv = el.querySelector(".bd-crop-overlay");
+  if (existingOv && typeof existingOv._cropCleanup === "function") existingOv._cropCleanup();
+  el.querySelectorAll(".bd-file-cropbox, .bd-crop-overlay").forEach(n => n.remove());
+
+  const wrap = document.createElement("div");
+  wrap.className = "bd-file-cropbox";
+  wrap.dataset.fileSrc = nodeObj.file;
+  el.insertBefore(wrap, el.firstChild);
+
+  const img = document.createElement("img");
+  img.draggable = false;
+  img.alt = "file preview";
+  img.src = nodeObj.file;
+  wrap.appendChild(img);
+
+  applyCropTransform(img, nodeObj.crop);
+
+  img.onload = () => {
+    // Skip auto-aspect adjustment when the node already has a crop (the crop
+    // dictates the displayed size) or when the ratio was already measured.
+    // Without these guards a fresh <img> mounted after a commit re-fires the
+    // adjuster and clobbers the cropped width/height.
+    if (nodeObj.crop) {
+      nodeObj.hasAdjustedRatio = true;
+      return;
+    }
+    if (nodeObj.hasAdjustedRatio) return;
+    const naturalRatio = img.naturalWidth / img.naturalHeight;
+    nodeObj.width = Math.min(img.naturalWidth, 400);
+    nodeObj.height = nodeObj.width / naturalRatio;
+    nodeObj.hasAdjustedRatio = true;
+    el.style.width = `${nodeObj.width}px`;
+    el.style.height = `${nodeObj.height}px`;
+    markBoardDirty();
+  };
+}
+
+function renderImageCropOverlay(nodeObj, el) {
+  el.querySelectorAll(".bd-file-cropbox, .bd-crop-overlay").forEach(n => n.remove());
+
+  const ov = document.createElement("div");
+  ov.className = "bd-crop-overlay";
+  el.insertBefore(ov, el.firstChild);
+
+  const img = document.createElement("img");
+  img.draggable = false;
+  img.alt = "crop preview";
+  img.src = nodeObj.file;
+  ov.appendChild(img);
+
+  const dimTop = document.createElement("div");
+  dimTop.className = "bd-crop-dim top";
+  ov.appendChild(dimTop);
+  const dimBottom = document.createElement("div");
+  dimBottom.className = "bd-crop-dim bottom";
+  ov.appendChild(dimBottom);
+  const dimLeft = document.createElement("div");
+  dimLeft.className = "bd-crop-dim left";
+  ov.appendChild(dimLeft);
+  const dimRight = document.createElement("div");
+  dimRight.className = "bd-crop-dim right";
+  ov.appendChild(dimRight);
+
+  const win = document.createElement("div");
+  win.className = "bd-crop-window";
+  ov.appendChild(win);
+
+  const handles = {};
+  ["tl", "tr", "bl", "br", "t", "r", "b", "l"].forEach(corner => {
+    const h = document.createElement("div");
+    h.className = `bd-crop-handle ${corner}`;
+    h.dataset.corner = corner;
+    ov.appendChild(h);
+    handles[corner] = h;
+  });
+
+  const bar = document.createElement("div");
+  bar.className = "bd-crop-actionbar";
+  const px = document.createElement("span");
+  px.className = "bd-crop-px";
+  bar.appendChild(px);
+  const bake = document.createElement("button");
+  bake.type = "button";
+  bake.className = "bd-crop-bake";
+  bake.textContent = "Bake";
+  bake.title = "Re-encode the cropped pixels and replace the source file";
+  const done = document.createElement("button");
+  done.type = "button";
+  done.className = "bd-crop-done";
+  done.textContent = "Done";
+  bar.appendChild(bake);
+  bar.appendChild(done);
+  ov.appendChild(bar);
+
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function updateGeometry() {
+    const c = nodeObj._cropDraft;
+    const left = clamp01(c.left) * 100;
+    const top = clamp01(c.top) * 100;
+    const right = clamp01(c.right) * 100;
+    const bottom = clamp01(c.bottom) * 100;
+    const w = right - left;
+    const h = bottom - top;
+
+    win.style.left = `${left}%`;
+    win.style.top = `${top}%`;
+    win.style.width = `${w}%`;
+    win.style.height = `${h}%`;
+
+    dimTop.style.left = "0";
+    dimTop.style.top = "0";
+    dimTop.style.width = "100%";
+    dimTop.style.height = `${top}%`;
+
+    dimBottom.style.left = "0";
+    dimBottom.style.top = `${bottom}%`;
+    dimBottom.style.width = "100%";
+    dimBottom.style.height = `${100 - bottom}%`;
+
+    dimLeft.style.left = "0";
+    dimLeft.style.top = `${top}%`;
+    dimLeft.style.width = `${left}%`;
+    dimLeft.style.height = `${h}%`;
+
+    dimRight.style.left = `${right}%`;
+    dimRight.style.top = `${top}%`;
+    dimRight.style.width = `${100 - right}%`;
+    dimRight.style.height = `${h}%`;
+
+    handles.tl.style.left = `${left}%`;
+    handles.tl.style.top = `${top}%`;
+    handles.tr.style.left = `${right}%`;
+    handles.tr.style.top = `${top}%`;
+    handles.bl.style.left = `${left}%`;
+    handles.bl.style.top = `${bottom}%`;
+    handles.br.style.left = `${right}%`;
+    handles.br.style.top = `${bottom}%`;
+
+    const cx = (left + right) / 2;
+    const cy = (top + bottom) / 2;
+    handles.t.style.left = `${cx}%`;
+    handles.t.style.top = `${top}%`;
+    handles.r.style.left = `${right}%`;
+    handles.r.style.top = `${cy}%`;
+    handles.b.style.left = `${cx}%`;
+    handles.b.style.top = `${bottom}%`;
+    handles.l.style.left = `${left}%`;
+    handles.l.style.top = `${cy}%`;
+
+    const naturalW = ovImg.naturalWidth || 0;
+    const naturalH = ovImg.naturalHeight || 0;
+    if (naturalW && naturalH) {
+      const pxW = Math.round((c.right - c.left) * naturalW);
+      const pxH = Math.round((c.bottom - c.top) * naturalH);
+      px.textContent = `${pxW} × ${pxH}`;
+    } else {
+      px.textContent = "";
+    }
+  }
+  const ovImg = img;
+  if (img.complete && img.naturalWidth) {
+    updateGeometry();
+  } else {
+    img.addEventListener("load", () => updateGeometry(), { once: true });
+    updateGeometry();
+  }
+
+  let dragMode = null;        // 'corner' | 'translate'
+  let dragCorner = null;
+  let dragStartRect = null;
+  let dragStartPoint = null;
+
+  function pointerToNorm(clientX, clientY) {
+    const rect = ov.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 };
+    return {
+      x: (clientX - rect.left) / rect.width,
+      y: (clientY - rect.top) / rect.height
+    };
+  }
+
+  function beginCornerDrag(corner, clientX, clientY) {
+    dragMode = "corner";
+    dragCorner = corner;
+    dragStartRect = { ...nodeObj._cropDraft };
+    dragStartPoint = pointerToNorm(clientX, clientY);
+  }
+
+  function beginTranslateDrag(clientX, clientY) {
+    dragMode = "translate";
+    dragCorner = null;
+    dragStartRect = { ...nodeObj._cropDraft };
+    dragStartPoint = pointerToNorm(clientX, clientY);
+  }
+
+  function updateCornerDrag(clientX, clientY, shiftKey) {
+    const p = pointerToNorm(clientX, clientY);
+    const dx = p.x - dragStartPoint.x;
+    const dy = p.y - dragStartPoint.y;
+    const min = 0.02;
+    const c = { ...dragStartRect };
+    if (dragCorner.includes("l")) c.left = Math.min(Math.max(0, dragStartRect.left + dx), dragStartRect.right - min);
+    if (dragCorner.includes("r")) c.right = Math.max(Math.min(1, dragStartRect.right + dx), dragStartRect.left + min);
+    if (dragCorner[0] === "t") c.top = Math.min(Math.max(0, dragStartRect.top + dy), dragStartRect.bottom - min);
+    if (dragCorner[0] === "b") c.bottom = Math.max(Math.min(1, dragStartRect.bottom + dy), dragStartRect.top + min);
+
+    // Shift aspect-lock only applies to corner drags (length 2). Edge drags
+    // (length 1) move a single side and ignore Shift.
+    if (shiftKey && dragCorner.length === 2) {
+      const startW = dragStartRect.right - dragStartRect.left;
+      const startH = dragStartRect.bottom - dragStartRect.top;
+      if (startW > 0 && startH > 0) {
+        const startRatio = startW / startH;
+        const newW = c.right - c.left;
+        const newH = c.bottom - c.top;
+        const widthRel = Math.abs(newW - startW) / startW;
+        const heightRel = Math.abs(newH - startH) / startH;
+        if (widthRel >= heightRel) {
+          const targetH = newW / startRatio;
+          if (dragCorner[0] === "t") c.top = clamp01(c.bottom - targetH);
+          else c.bottom = clamp01(c.top + targetH);
+        } else {
+          const targetW = newH * startRatio;
+          if (dragCorner.includes("l")) c.left = clamp01(c.right - targetW);
+          else c.right = clamp01(c.left + targetW);
+        }
+      }
+    }
+    nodeObj._cropDraft = c;
+    updateGeometry();
+  }
+
+  function updateTranslateDrag(clientX, clientY) {
+    const p = pointerToNorm(clientX, clientY);
+    const dx = p.x - dragStartPoint.x;
+    const dy = p.y - dragStartPoint.y;
+    const w = dragStartRect.right - dragStartRect.left;
+    const h = dragStartRect.bottom - dragStartRect.top;
+    let newLeft = clamp01(dragStartRect.left + dx);
+    let newTop = clamp01(dragStartRect.top + dy);
+    if (newLeft + w > 1) newLeft = 1 - w;
+    if (newTop + h > 1) newTop = 1 - h;
+    nodeObj._cropDraft = { left: newLeft, top: newTop, right: newLeft + w, bottom: newTop + h };
+    updateGeometry();
+  }
+
+  function endCropDrag() {
+    dragMode = null;
+    dragCorner = null;
+    dragStartRect = null;
+    dragStartPoint = null;
+  }
+
+  Object.entries(handles).forEach(([corner, h]) => {
+    h.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      beginCornerDrag(corner, e.clientX, e.clientY);
+    });
+    h.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginCornerDrag(corner, e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+  });
+
+  // Translate gesture: mousedown on the clear crop window translates the rect.
+  win.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    beginTranslateDrag(e.clientX, e.clientY);
+  });
+  win.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    beginTranslateDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  function onMove(e) {
+    if (!dragMode) return;
+    let cx, cy, shift;
+    if (e.touches) {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      cx = e.touches[0].clientX; cy = e.touches[0].clientY; shift = e.shiftKey;
+    } else {
+      cx = e.clientX; cy = e.clientY; shift = e.shiftKey;
+    }
+    if (dragMode === "corner") updateCornerDrag(cx, cy, shift);
+    else if (dragMode === "translate") updateTranslateDrag(cx, cy);
+  }
+  function onUp() { endCropDrag(); }
+
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("touchmove", onMove, { passive: false });
+  window.addEventListener("mouseup", onUp);
+  window.addEventListener("touchend", onUp);
+  window.addEventListener("touchcancel", onUp);
+
+  ov.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  ov.addEventListener("touchstart", (e) => { e.stopPropagation(); }, { passive: false });
+  ov.addEventListener("dblclick", (e) => { e.stopPropagation(); });
+
+  done.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  done.addEventListener("click", (e) => {
+    e.stopPropagation();
+    commitCrop(nodeObj);
+  });
+  bake.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  bake.addEventListener("click", (e) => {
+    e.stopPropagation();
+    bakeCrop(nodeObj);
+  });
+
+  ov._cropCleanup = () => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("touchmove", onMove);
+    window.removeEventListener("mouseup", onUp);
+    window.removeEventListener("touchend", onUp);
+    window.removeEventListener("touchcancel", onUp);
+  };
+}
+
+function findCroppingNode() {
+  return nodes.find(n => n.isCropping);
+}
+
+let _cropOutsideClickHandler = null;
+function installCropOutsideClick(nodeObj) {
+  uninstallCropOutsideClick();
+  _cropOutsideClickHandler = (e) => {
+    const el = getBoardElementById(nodeObj.id);
+    if (!el) return;
+    if (e.target instanceof Node && el.contains(e.target)) return;
+    commitCrop(nodeObj);
+  };
+  document.addEventListener("mousedown", _cropOutsideClickHandler, true);
+}
+function uninstallCropOutsideClick() {
+  if (_cropOutsideClickHandler) {
+    document.removeEventListener("mousedown", _cropOutsideClickHandler, true);
+    _cropOutsideClickHandler = null;
+  }
+}
+
+function enterCropMode(nodeObj) {
+  if (nodeObj.type !== "file") return;
+  const other = findCroppingNode();
+  if (other && other !== nodeObj) commitCrop(other);
+
+  const el = getBoardElementById(nodeObj.id);
+  if (!el) return;
+  const oldCrop = nodeObj.crop || { left: 0, top: 0, right: 1, bottom: 1 };
+  const cropW = oldCrop.right - oldCrop.left;
+  const cropH = oldCrop.bottom - oldCrop.top;
+  if (cropW <= 0 || cropH <= 0) return;
+
+  nodeObj._cropEnterCrop = nodeObj.crop ? { ...nodeObj.crop } : null;
+  nodeObj._cropEnterSize = { w: nodeObj.width, h: nodeObj.height };
+  nodeObj._cropEnterPos = { x: nodeObj.x, y: nodeObj.y };
+  nodeObj._cropDraft = { ...oldCrop };
+  nodeObj.isCropping = true;
+
+  // Expand the node to display the full source at the same visual scale as
+  // the cropped slice. Then shift the node's top-left BACK by the slice's
+  // offset inside the source so the slice stays visually where it was; the
+  // hidden area of the image extends outward around it.
+  const fullW = nodeObj.width / cropW;
+  const fullH = nodeObj.height / cropH;
+  nodeObj.x = nodeObj.x - oldCrop.left * fullW;
+  nodeObj.y = nodeObj.y - oldCrop.top * fullH;
+  nodeObj.width = fullW;
+  nodeObj.height = fullH;
+
+  el.classList.add("is-cropping");
+  el.classList.remove("selected");
+  renderNode(nodeObj);
+  installCropOutsideClick(nodeObj);
+}
+
+function commitCrop(nodeObj) {
+  if (!nodeObj.isCropping) return;
+  uninstallCropOutsideClick();
+  const draft = nodeObj._cropDraft;
+  const fullW = nodeObj.width;
+  const fullH = nodeObj.height;
+  const draftW = draft.right - draft.left;
+  const draftH = draft.bottom - draft.top;
+  const newW = fullW * draftW;
+  const newH = fullH * draftH;
+  // The slice's screen position equals the expanded node's position plus the
+  // slice offset. After commit, the node's top-left moves to the slice's
+  // top-left so the visible content stays visually anchored.
+  const newX = nodeObj.x + draft.left * fullW;
+  const newY = nodeObj.y + draft.top * fullH;
+
+  const fromCrop = nodeObj._cropEnterCrop;
+  const fromSize = nodeObj._cropEnterSize;
+  const fromPos = nodeObj._cropEnterPos;
+  const isFullRect = (draft.left <= 0.0001 && draft.top <= 0.0001 && draft.right >= 0.9999 && draft.bottom >= 0.9999);
+  const toCrop = isFullRect ? null : { ...draft };
+  const toSize = { w: newW, h: newH };
+  const toPos = { x: newX, y: newY };
+
+  if (toCrop) nodeObj.crop = toCrop;
+  else delete nodeObj.crop;
+  nodeObj.x = newX;
+  nodeObj.y = newY;
+  nodeObj.width = newW;
+  nodeObj.height = newH;
+  delete nodeObj.isCropping;
+  delete nodeObj._cropDraft;
+  delete nodeObj._cropEnterCrop;
+  delete nodeObj._cropEnterSize;
+  delete nodeObj._cropEnterPos;
+
+  const el = getBoardElementById(nodeObj.id);
+  if (el) el.classList.remove("is-cropping");
+
+  const cropChanged = JSON.stringify(fromCrop || null) !== JSON.stringify(toCrop || null);
+  const sizeChanged = Math.abs(fromSize.w - toSize.w) > 0.5 || Math.abs(fromSize.h - toSize.h) > 0.5;
+  const posChanged = fromPos && (Math.abs(fromPos.x - toPos.x) > 0.5 || Math.abs(fromPos.y - toPos.y) > 0.5);
+  if (cropChanged || sizeChanged || posChanged) {
+    pushAction({
+      type: "crop",
+      nodeId: nodeObj.id,
+      fromCrop: fromCrop ? { ...fromCrop } : null,
+      toCrop: toCrop ? { ...toCrop } : null,
+      fromSize,
+      toSize,
+      fromPos: fromPos ? { ...fromPos } : null,
+      toPos: { ...toPos }
+    });
+  }
+  renderNode(nodeObj);
+}
+
+function cancelCrop(nodeObj) {
+  if (!nodeObj.isCropping) return;
+  uninstallCropOutsideClick();
+  if (nodeObj._cropEnterCrop) nodeObj.crop = { ...nodeObj._cropEnterCrop };
+  else delete nodeObj.crop;
+  if (nodeObj._cropEnterSize) {
+    nodeObj.width = nodeObj._cropEnterSize.w;
+    nodeObj.height = nodeObj._cropEnterSize.h;
+  }
+  if (nodeObj._cropEnterPos) {
+    nodeObj.x = nodeObj._cropEnterPos.x;
+    nodeObj.y = nodeObj._cropEnterPos.y;
+  }
+  delete nodeObj.isCropping;
+  delete nodeObj._cropDraft;
+  delete nodeObj._cropEnterCrop;
+  delete nodeObj._cropEnterSize;
+  delete nodeObj._cropEnterPos;
+
+  const el = getBoardElementById(nodeObj.id);
+  if (el) el.classList.remove("is-cropping");
+  renderNode(nodeObj);
+}
+
+function deriveBakeFilename(srcUrl, ext) {
+  try {
+    const u = new URL(srcUrl, location.origin);
+    const segs = u.pathname.split("/").filter(Boolean);
+    const last = segs[segs.length - 1] || `image.${ext}`;
+    const dot = last.lastIndexOf(".");
+    const stem = dot > 0 ? last.slice(0, dot) : last;
+    return `${stem}-cropped.${ext}`;
+  } catch {
+    return `image-cropped.${ext}`;
+  }
+}
+
+async function bakeCrop(nodeObj) {
+  if (!nodeObj.isCropping) return;
+  const el = getBoardElementById(nodeObj.id);
+  const img = el && el.querySelector(".bd-crop-overlay img");
+  if (!img || !img.complete || !img.naturalWidth) {
+    showToolbarToast("Image not ready for bake", "error");
+    return;
+  }
+  const draft = nodeObj._cropDraft;
+  const sx = Math.round(draft.left * img.naturalWidth);
+  const sy = Math.round(draft.top * img.naturalHeight);
+  const sw = Math.round((draft.right - draft.left) * img.naturalWidth);
+  const sh = Math.round((draft.bottom - draft.top) * img.naturalHeight);
+  if (sw < 1 || sh < 1) return;
+  const cv = document.createElement("canvas");
+  cv.width = sw;
+  cv.height = sh;
+  const ctx = cv.getContext("2d");
+  try {
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  } catch (err) {
+    showToolbarToast(`Bake failed: ${err.message}`, "error");
+    return;
+  }
+  const ext = /\.jpe?g(\?|#|$)/i.test(nodeObj.file) ? "jpeg" : "png";
+  const mime = ext === "jpeg" ? "image/jpeg" : "image/png";
+  const blob = await new Promise(res => cv.toBlob(res, mime, 0.92));
+  if (!blob) {
+    showToolbarToast("Bake failed: encoding error", "error");
+    return;
+  }
+  const filename = deriveBakeFilename(nodeObj.file, ext === "jpeg" ? "jpg" : "png");
+  const file = new File([blob], filename, { type: mime });
+  let result;
+  try {
+    result = await uploadAsset(file);
+  } catch (err) {
+    showToolbarToast(`Bake upload failed: ${err.message}`, "error");
+    return;
+  }
+  uninstallCropOutsideClick();
+  const fromFile = nodeObj.file;
+  const fromCrop = nodeObj._cropEnterCrop ? { ...nodeObj._cropEnterCrop } : null;
+  const fromSize = nodeObj._cropEnterSize ? { ...nodeObj._cropEnterSize } : { w: nodeObj.width, h: nodeObj.height };
+  const fromPos = nodeObj._cropEnterPos ? { ...nodeObj._cropEnterPos } : { x: nodeObj.x, y: nodeObj.y };
+  const fullW = nodeObj.width;
+  const fullH = nodeObj.height;
+  const newW = fullW * (draft.right - draft.left);
+  const newH = fullH * (draft.bottom - draft.top);
+  const newX = nodeObj.x + draft.left * fullW;
+  const newY = nodeObj.y + draft.top * fullH;
+  const toFile = result.url;
+  const toSize = { w: newW, h: newH };
+  const toPos = { x: newX, y: newY };
+
+  nodeObj.file = result.url;
+  delete nodeObj.crop;
+  nodeObj.x = newX;
+  nodeObj.y = newY;
+  nodeObj.width = newW;
+  nodeObj.height = newH;
+  delete nodeObj.isCropping;
+  delete nodeObj._cropDraft;
+  delete nodeObj._cropEnterCrop;
+  delete nodeObj._cropEnterSize;
+  delete nodeObj._cropEnterPos;
+
+  const el2 = getBoardElementById(nodeObj.id);
+  if (el2) el2.classList.remove("is-cropping");
+
+  pushAction({
+    type: "bake",
+    nodeId: nodeObj.id,
+    fromFile, fromCrop, fromSize, fromPos,
+    toFile, toSize, toPos
+  });
+  renderNode(nodeObj);
+}
+
 function renderNode(nodeObj) {
   let el = getBoardElementById(nodeObj.id);
   if (!el) {
@@ -6296,6 +7215,15 @@ function renderNode(nodeObj) {
     window.addEventListener("mouseup", finishNodeResize);
     window.addEventListener("touchend", finishNodeResize);
     window.addEventListener("touchcancel", finishNodeResize);
+
+    el.addEventListener("dblclick", (e) => {
+      if (nodeObj.type !== "file") return;
+      if (e.target && e.target.closest && e.target.closest(".bd-crop-overlay")) return;
+      if (nodeObj.isCropping) return;
+      e.preventDefault();
+      e.stopPropagation();
+      enterCropMode(nodeObj);
+    });
   }
 
   el.style.left = `${nodeObj.x}px`;
@@ -6343,21 +7271,18 @@ function renderNode(nodeObj) {
       }
     }
   } else if (nodeObj.type === "file") {
-    let img = el.querySelector("img");
-    if (!img) {
-      el.insertAdjacentHTML("afterbegin", `<img src="${nodeObj.file}" draggable="false" alt="file preview">`);
-      img = el.querySelector("img");
-      img.onload = () => {
-        let naturalRatio = img.naturalWidth / img.naturalHeight;
-        if (!nodeObj.hasAdjustedRatio) {
-           nodeObj.width = Math.min(img.naturalWidth, 400);
-           nodeObj.height = nodeObj.width / naturalRatio;
-           nodeObj.hasAdjustedRatio = true;
-           el.style.width = `${nodeObj.width}px`;
-           el.style.height = `${nodeObj.height}px`;
-           markBoardDirty();
-        }
-      };
+    if (nodeObj.isCropping) {
+      el.classList.add("is-cropping");
+      renderImageCropOverlay(nodeObj, el);
+    } else {
+      el.classList.remove("is-cropping");
+      const wrap = el.querySelector(".bd-file-cropbox");
+      const img = wrap && wrap.querySelector("img");
+      if (wrap && img && wrap.dataset.fileSrc === nodeObj.file) {
+        applyCropTransform(img, nodeObj.crop);
+      } else {
+        renderImageCropbox(nodeObj, el);
+      }
     }
   } else if (nodeObj.type === "link") {
     renderLinkNode(nodeObj, el);

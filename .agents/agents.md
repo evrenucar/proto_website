@@ -11,6 +11,7 @@
 | Product strategy or roadmap question | `project.md`, `holistic_planning/holistic_planning.md` |
 | Architecture or capability matrix | `project.md`, `holistic_planning/holistic_architecture.md` |
 | Technology research or references | `holistic_planning/holistic_research.md` |
+| Deep research artifact or candidate comparison | `.agents/research/` |
 | Active implementation follow-up | `current_scratch_pad.md`, `holistic_planning/holistic_tasks.md` |
 | Page database or structured content | `.agents/page_database/` |
 | Cross-domain inbox or quick notes | `general_issues_and_tasks.md` |
@@ -40,3 +41,6 @@
 
 - Always start a local server before reporting progress on site work.
 - Share the active local preview address at session start and end.
+- Use `npm run preview` (port 4173, `scripts/preview-server.mjs`). It owns the write APIs: `/api/save-board`, `/api/save-markdown`, `/api/save-asset`, `/api/list-markdown`, `/api/get-video-meta`.
+- `scripts/dev-server.mjs` (port 3000) is a legacy mini-server that only handles `/api/save-board`. Treat it as deprecated. Do not use it for board sessions, markdown, or drag-drop uploads. Anything that drops a PDF, image, or `.md` against it returns 404.
+- If an API route returns 404 in the browser but the route exists in `scripts/preview-server.mjs` on disk, the running Node process is stale. Stop it (Ctrl+C) and run `npm run preview` again. Pulling commits does not reload an already-running server.

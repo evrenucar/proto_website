@@ -43,56 +43,25 @@ This file is the shared short-term work log for the current session.
 
 ## Current Scope
 
-- Creating a core board review under `reviews_and_feedback/gpt_review_<timestamp>.md`.
-- Scope is performance, functionality, product vision alignment, and code cleanliness for the current board runtime.
-- Skipping brainstorming, backlog, handoff, archive, and planning-management docs except required session context.
+- Adding concise GPT performance testing feedback under `.agents/reviews_and_feedback/`.
+- Scope is a visual Markdown review file summarizing the latest benchmark consensus.
+- Avoid app/runtime changes and do not alter benchmark result artifacts.
 
 ### Start Of Session
 
 - Date: 2026-04-29
-- Working on: Core board review document with diagrams and tables.
-- Why now: User asked for a complete review of the current board, focused on core implementation rather than planning docs.
-- Known constraints: Do not change board runtime behavior; keep code/content files untouched except scratch pad and the new review document.
+- Working on: `gpt_performance_testing_feedback_<timestamp>.md`.
+- Why now: User asked to save the performance findings as a concise visual feedback file.
+- Known constraints: Target `.agents/reviews_and_feedback/`; main recommendations/issues must be at the top; keep it to the point with graphs and tables.
 
 ### End Of Session
 
 - Date: 2026-04-29
 - What changed:
-  - Created `reviews_and_feedback/gpt_review_20260429_032501.md`.
-  - Review covers performance, functionality, product vision alignment, and code cleanliness for the board core.
-  - Included Mermaid diagrams, finding matrices, test results, and a prioritized roadmap.
-  - Ran targeted verification; several board/export/preview/feature tests currently fail and are documented in the review.
-  - Cleaned up test-generated tracked output changes and a temporary markdown note; remaining dirty files match pre-existing work plus this scratch pad and review file.
+  - Added `.agents/reviews_and_feedback/gpt_performance_testing_feedback_20260429_134703.md`.
+  - Feedback starts with main recommendations/issues, then concise consensus, metric table, and Mermaid visuals.
+  - Verified the file path and required sections/visual blocks with `Test-Path` and `Select-String`.
 - What still needs work:
-  - Fix red test paths called out in the review, especially export modal `.canvas`, markdown save path, recommendation source version, board previews, bundle E2E, markdown authoring, shared entities, and YouTube nocookie.
+  - No follow-up needed for this documentation artifact.
 - Next step:
-  - Pick the first P0 item from the review and implement it with a focused regression test.
-
-### Start Of Session
-
-- Date: 2026-04-29
-- Working on: Checking current login/auth state visible from this environment.
-- Why now: User asked whether they are logged in.
-- Known constraints: "Logged in" is ambiguous, so verify concrete local indicators before answering.
-
-### End Of Session
-
-- Date: 2026-04-28
-- What changed:
-  - **New endpoint** `/api/save-asset` in `scripts/preview-server.mjs` — accepts raw-binary POST (`?slug=&filename=`), streams chunks to disk, allowlists `.png/.jpg/.jpeg/.gif/.webp/.svg/.pdf/.txt`, 200MB cap, collision-safe filenames. MIME types extended to cover `.pdf/.gif/.webp/.jpeg`.
-  - **Drop handler** in `JavaScript/braindump.js` (`attachMarkdownDropHandler`) now classifies by extension and routes to:
-    - `.md` → existing markdown save + markdown node
-    - images → `/api/save-asset` then image node (auto-sized)
-    - `.pdf` → `/api/save-asset` then live-embed link node (iframe), URL stored absolute via `location.origin`
-    - `.txt` → text node with content inline (no upload)
-  - Unsupported drops now show a clear toast instead of letting the browser navigate to the file.
-  - Window-level dragover/drop guards prevent the browser from opening dropped files outside the viewport.
-  - **Drop UX**: 3px dashed teal outline (`bd-md-drop-target`) plus a centered overlay card "Drop to add to board / Markdown · Images · PDF · Text" (`bd-drop-overlay`). Both shown during dragover.
-  - **`renderLinkNode`** hostname extraction now passes `location.origin` as a base so relative URLs (e.g. local PDF paths) don't throw.
-  - User-verified end-to-end with `Participant information.pdf` (118KB) on cosmoboard via http://127.0.0.1:4173.
-  - Active todo line in `.agents/active_todo.md` flipped to `[x]`.
-- What still needs work:
-  - PDF iframe falls back to opening the raw PDF in browser. A richer file card (Phase 6A in `cosmoboard_implementation_plan.md`) is still open work.
-  - Bundle export does not yet round-trip dropped images/PDFs as portable sidecars (markdown sidecars are persisted; assets are not).
-- Next step:
-  - User reviews and commits when ready.
+  - Use the feedback file as the short performance-review summary before any import/render optimization work.

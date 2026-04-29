@@ -243,6 +243,173 @@ html:has(body.page-board) {
   display: block;
 }
 
+/* Image crop */
+.bd-file-cropbox {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.bd-file-cropbox img {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  /* Defeat the site-wide `img { max-width: 100% }` rule from site.css.
+     applyCropTransform sets width above 100% to scale the source so the
+     wrapper can show only the cropped slice; the global max-width clamp
+     would silently cap that and the cropped view would just show the full
+     image squished into the wrapper. */
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.bd-item.is-cropping {
+  z-index: 200 !important;
+  outline: 2px solid #3fdaca;
+  outline-offset: 4px;
+}
+
+.bd-item.is-cropping .resize-handle {
+  display: none !important;
+}
+
+.bd-crop-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bd-crop-overlay img {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.bd-crop-dim {
+  position: absolute;
+  background: rgba(8, 8, 8, 0.55);
+  pointer-events: none;
+}
+
+.bd-crop-window {
+  position: absolute;
+  border: 1px solid rgba(63, 218, 202, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  cursor: move;
+  touch-action: none;
+}
+
+.bd-crop-handle {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  z-index: 25;
+  touch-action: none;
+}
+
+.bd-crop-handle::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  background: #fafafa;
+  border: 1px solid #1a1a1a;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.bd-crop-handle.tl { cursor: nwse-resize; }
+.bd-crop-handle.tr { cursor: nesw-resize; }
+.bd-crop-handle.bl { cursor: nesw-resize; }
+.bd-crop-handle.br { cursor: nwse-resize; }
+.bd-crop-handle.t  { cursor: ns-resize; }
+.bd-crop-handle.b  { cursor: ns-resize; }
+.bd-crop-handle.l  { cursor: ew-resize; }
+.bd-crop-handle.r  { cursor: ew-resize; }
+
+/* Edge handles are thin rounded-corner pills, not dots. The 24px hit-target
+   stays the same; only the visible mark shrinks. */
+.bd-crop-handle.t::after,
+.bd-crop-handle.b::after { width: 14px; height: 3px; left: 5px; top: 10px; border-radius: 2px; }
+.bd-crop-handle.l::after,
+.bd-crop-handle.r::after { width: 3px; height: 14px; left: 10px; top: 5px; border-radius: 2px; }
+
+.bd-crop-actionbar {
+  position: absolute;
+  right: 0;
+  top: -42px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 30;
+}
+
+.bd-crop-px {
+  font: inherit;
+  font-size: 11px;
+  color: rgba(245, 245, 245, 0.78);
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.bd-crop-px:empty { display: none; }
+
+.bd-crop-actionbar button {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 20, 20, 0.92);
+  color: #f5f5f5;
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.bd-crop-actionbar button:hover {
+  background: rgba(40, 40, 40, 0.96);
+  border-color: rgba(63, 218, 202, 0.6);
+}
+
+.bd-crop-actionbar button.bd-crop-bake {
+  border-color: rgba(63, 218, 202, 0.55);
+}
+
+.bd-crop-actionbar button.bd-crop-done {
+  background: rgba(63, 218, 202, 0.9);
+  color: #0a0a0a;
+  border-color: transparent;
+}
+
 /* Text Component */
 .bd-layer-text {
   background: rgba(0, 0, 0, 0.85);

@@ -1,7 +1,7 @@
 {
   "canvasId": "bfca6ad2-3592-424a-a463-533da7c29720",
   "createdAt": "2026-04-28T15:42:09.615Z",
-  "updatedAt": "2026-04-29T01:20:00.880Z",
+  "updatedAt": "2026-04-29T11:57:23.921Z",
   "nodes": [
     {
       "id": "cosmo-title",
@@ -231,8 +231,8 @@
     },
     {
       "id": "nfw8czu22uq",
-      "x": -104.34042481266766,
-      "y": 2457.3900107019253,
+      "x": -1152.4953295721964,
+      "y": 1974.459135161894,
       "width": 780.5871776961721,
       "height": 947.2123234865269,
       "url": "http://127.0.0.1:4173/content/boards/cosmoboard/participant-information.pdf",
@@ -249,12 +249,23 @@
       "file": "/content/boards/cosmoboard/screenshot-4.png",
       "type": "file",
       "hasAdjustedRatio": true
+    },
+    {
+      "id": "fjam96so57",
+      "x": -2358.8862063865477,
+      "y": 1968.4233203548733,
+      "width": 1176.0516462723128,
+      "height": 767.7844817063831,
+      "url": "http://127.0.0.1:4173/content/boards/cosmoboard/funda-hoca-sunum-26-4-28.pdf",
+      "title": "Funda Hoca Sunum 26_4_28",
+      "embedMode": "live",
+      "type": "link"
     }
   ],
   "edges": [],
   "viewport": {
-    "x": 160.51233120760935,
-    "y": -160.9610498182193,
-    "z": 0.1316561190801615
+    "x": 1169.8799309503156,
+    "y": 56.22879981168319,
+    "z": 0.27667013424762027
   }
 }
