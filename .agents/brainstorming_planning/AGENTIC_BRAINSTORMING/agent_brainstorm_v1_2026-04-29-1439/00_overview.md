@@ -35,7 +35,7 @@ Sibling files:
 | 0. Seed prompt and project read | [A] | Seed: vision, realism, uniqueness, issues. Coordinator read `project.md`, `holistic_planning.md`, `holistic_tasks.md`, `vison_planning.md`, `current_scratch_pad.md`, `general_issues_and_tasks.md`. |
 | 1. Joint kickoff | [A] | Synthetic single-session kickoff. Five topics agreed. See `01_kickoff.md`. |
 | 2. Work distribution | [A] | Locked split with boundary notes. See `02_distribution.md`. |
-| 3. Parallel deep dives | [ ] | Five background Opus agents fanned out. |
+| 3. Parallel deep dives | [ ] | PAUSED before fan-out. Resume per `continue.md` in this folder. |
 | 4. Cross-check | [ ] | Pending Phase 3. |
 | 5. Handoff and ranking | [ ] | Pending Phase 4. |
 
