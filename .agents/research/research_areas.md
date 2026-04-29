@@ -33,3 +33,39 @@ Active and proposed research directions. Add a bullet here before opening a new 
 ## Other
 
 - (none yet)
+
+## Detailed Notes
+
+Longer notes per idea, keyed by the same ID used in the bullet lists above. Each idea's note lives under the subsection that matches its bullet's heading.
+
+### Canvas and Board Engines
+
+(none yet)
+
+### Markdown and Editor Frameworks
+
+(none yet)
+
+### Local-First Storage and File Access
+
+(none yet)
+
+### Realtime and Sync
+
+(none yet)
+
+### File Formats and Portability
+
+(none yet)
+
+### Onboarding and UX
+
+(none yet)
+
+### AI Agents in the Loop
+
+(none yet)
+
+### Other
+
+(none yet)
