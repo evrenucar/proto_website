@@ -1291,7 +1291,7 @@ function downloadStateFile(filename, mimeType = "application/octet-stream") {
   return { filename, jsonStr };
 }
 
-const TRANSIENT_NODE_FIELDS = ["isCropping", "_cropDraft", "_cropEnterCrop", "_cropEnterSize", "_cropEnterPos"];
+const TRANSIENT_NODE_FIELDS = ["isCropping", "_cropDraft", "_cropEnterCrop", "_cropEnterSize", "_cropEnterPos", "__blobObjectUrl", "__blobObjectUrlSource"];
 
 function stripTransientNodeFields(node) {
   let copy = null;
@@ -1927,6 +1927,12 @@ function pushAction(action) {
 function removeNodeById(nodeId) {
   const el = getBoardElementById(nodeId);
   if (el) el.remove();
+  const removed = nodes.find(n => n.id === nodeId);
+  if (removed?.__blobObjectUrl) {
+    URL.revokeObjectURL(removed.__blobObjectUrl);
+    removed.__blobObjectUrl = null;
+    removed.__blobObjectUrlSource = null;
+  }
   nodes = nodes.filter(n => n.id !== nodeId);
 }
 
@@ -3778,8 +3784,15 @@ function renderLinkNode(nodeObj, el) {
       el.style.height = `${nodeObj.height}px`;
     }
 
-    const embedUrl = getYouTubeEmbedUrl(nodeObj.url) || nodeObj.url;
+    // Chrome blocks data:application/pdf in iframes, so swap in a blob: URL when
+    // the stored asset is inlined (static-host fallback). Firefox accepts both.
+    const blobUrlForData = ensureBlobUrlForDataUrl(nodeObj);
+    const runtimeUrl = blobUrlForData || nodeObj.url;
+    const embedUrl = getYouTubeEmbedUrl(nodeObj.url) || runtimeUrl;
     const isYouTube = !!getYouTubeVideoId(nodeObj.url);
+    const headerDomain = blobUrlForData
+      ? "Local file"
+      : new URL(nodeObj.url || "http://localhost", typeof location !== "undefined" ? location.origin : "http://localhost").hostname;
 
     shell.innerHTML = `
       <div class="bd-embed-header">
@@ -3787,8 +3800,8 @@ function renderLinkNode(nodeObj, el) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           Preview
         </button>
-        <div class="bd-embed-domain">${escapeHtml(new URL(nodeObj.url || "http://localhost", typeof location !== "undefined" ? location.origin : "http://localhost").hostname)}</div>
-        <a class="bd-embed-open-btn" href="${escapeHtml(nodeObj.url)}" target="_blank" rel="noreferrer" draggable="false" aria-label="Open in new tab" title="Open in new tab">
+        <div class="bd-embed-domain">${escapeHtml(headerDomain)}</div>
+        <a class="bd-embed-open-btn" href="${escapeHtml(runtimeUrl)}" target="_blank" rel="noreferrer" draggable="false" aria-label="Open in new tab" title="Open in new tab">
           Open
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
@@ -5634,6 +5647,44 @@ async function uploadAsset(file) {
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
   return result;
+}
+
+// Chrome's PDF viewer refuses data:application/pdf in iframes (Firefox allows it).
+// We keep the data URL on disk for portability and lazily mint a blob: URL for
+// the live embed src at render time. Cached on the node so repeat renders reuse
+// it; revoked when the node is destroyed.
+function ensureBlobUrlForDataUrl(nodeObj) {
+  const url = nodeObj?.url;
+  if (typeof url !== "string" || !url.startsWith("data:")) return null;
+  if (nodeObj.__blobObjectUrl && nodeObj.__blobObjectUrlSource === url) {
+    return nodeObj.__blobObjectUrl;
+  }
+  if (nodeObj.__blobObjectUrl) {
+    URL.revokeObjectURL(nodeObj.__blobObjectUrl);
+    nodeObj.__blobObjectUrl = null;
+  }
+  try {
+    const commaIdx = url.indexOf(",");
+    if (commaIdx < 0) return null;
+    const meta = url.slice(5, commaIdx);
+    const payload = url.slice(commaIdx + 1);
+    const isBase64 = /;base64/i.test(meta);
+    const mime = (meta.split(";")[0] || "").trim() || "application/octet-stream";
+    let bytes;
+    if (isBase64) {
+      const bin = atob(payload);
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } else {
+      bytes = new TextEncoder().encode(decodeURIComponent(payload));
+    }
+    const objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    nodeObj.__blobObjectUrl = objectUrl;
+    nodeObj.__blobObjectUrlSource = url;
+    return objectUrl;
+  } catch {
+    return null;
+  }
 }
 
 // Strip same-origin / localhost prefixes so embedded asset URLs stay portable
