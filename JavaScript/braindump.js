@@ -3793,7 +3793,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
       </div>
-      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allowfullscreen loading="lazy"></iframe>
       ${isYouTube ? `<div class="bd-yt-wheel-shield" aria-hidden="true"></div>` : ""}
     `;
 
@@ -5442,39 +5442,27 @@ async function createNewMarkdownNote(spawnAt = null) {
   if (isPreviewMode) return;
   const title = defaultMarkdownTimestampName();
   const filename = sanitizeMarkdownFilename(`${title}.md`);
-  try {
-    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, path: "", content: "" })
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+  const result = await trySaveMarkdownSidecar({ filename, path: "", content: "" });
 
-    const dimensions = { width: 380, height: 420 };
-    let spawnX, spawnY;
-    if (spawnAt) {
-      // Spawn at given canvas coords (e.g. cursor for keyboard shortcut), centered on the point.
-      spawnX = spawnAt.x - dimensions.width / 2;
-      spawnY = spawnAt.y - dimensions.height / 2;
-    } else {
-      // Lift the spawn point above the toolbar so the block lands fully visible.
-      const center = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-      spawnX = center.x;
-      spawnY = center.y - 80;
-    }
-    const node = createNode("markdown", spawnX, spawnY, {
-      file: result.url,
-      href: result.url,
-      title,
-      ...dimensions
-    });
-    flushLocalStateSave();
-    showToolbarToast(`Created ${title}`, "success");
-    return node;
-  } catch (error) {
-    showToolbarToast(`Create failed: ${error.message}`, "error");
+  const dimensions = { width: 380, height: 420 };
+  let spawnX, spawnY;
+  if (spawnAt) {
+    spawnX = spawnAt.x - dimensions.width / 2;
+    spawnY = spawnAt.y - dimensions.height / 2;
+  } else {
+    const center = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
+    spawnX = center.x;
+    spawnY = center.y - 80;
   }
+  const props = { title, ...dimensions, _rawMarkdown: "" };
+  if (result?.url) {
+    props.file = result.url;
+    props.href = result.url;
+  }
+  const node = createNode("markdown", spawnX, spawnY, props);
+  flushLocalStateSave();
+  showToolbarToast(`Created ${title}`, "success");
+  return node;
 }
 
 function openMarkdownPanel(spawnAt = null) {
@@ -5500,28 +5488,23 @@ async function saveMarkdownFromPanel() {
 
   _markdownPanelSave.disabled = true;
   try {
-    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, path: "", content })
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
-
+    const result = await trySaveMarkdownSidecar({ filename, path: "", content });
     const dimensions = { width: 380, height: 420 };
     const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-    createNode("markdown", position.x, position.y, {
-      file: result.url,
-      href: result.url,
+    const nodeProps = {
       title: title || filename.replace(/\.md$/i, ""),
-      ...dimensions
-    });
-    // Immediately save to localStorage to prevent loss on quick refresh
+      ...dimensions,
+      _rawMarkdown: content
+    };
+    if (result?.url) {
+      nodeProps.file = result.url;
+      nodeProps.href = result.url;
+    }
+    createNode("markdown", position.x, position.y, nodeProps);
     flushLocalStateSave();
     closeMarkdownPanel();
-    showToolbarToast(`Saved ${result.path}`, "success");
-  } catch (error) {
-    showToolbarToast(`Save failed: ${error.message}`, "error");
+    if (result?.path) showToolbarToast(`Saved ${result.path}`, "success");
+    else showToolbarToast(`Created ${nodeProps.title}`, "success");
   } finally {
     _markdownPanelSave.disabled = false;
   }
@@ -5653,39 +5636,94 @@ async function uploadAsset(file) {
   return result;
 }
 
+// Strip same-origin / localhost prefixes so embedded asset URLs stay portable
+// across hosts (preview at 127.0.0.1, deployed at evrenucar.com, etc.).
+function normalizeAssetUrl(url) {
+  if (typeof url !== "string" || !url) return url;
+  if (/^(data:|blob:|#)/i.test(url)) return url;
+  try {
+    const u = new URL(url, location.origin);
+    const host = u.hostname;
+    const isSameOrigin = u.origin === location.origin;
+    const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0";
+    if (isSameOrigin || isLocalHost) {
+      return `${u.pathname}${u.search}${u.hash}`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+// Static-host fallbacks: when /api/save-* is absent (e.g. GitHub Pages returns
+// 405 for POST), drag-drop still embeds the file inline so the board grows
+// instead of erroring out.
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function tryUploadAsset(file) {
+  try {
+    return await uploadAsset(file);
+  } catch {
+    return null;
+  }
+}
+
+async function trySaveMarkdownSidecar({ filename, path = "", content }) {
+  try {
+    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, path, content })
+    });
+    if (!response.ok) return null;
+    const result = await response.json().catch(() => null);
+    if (!result?.url) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 async function importDroppedFile(file, x, y) {
   const kind = classifyDroppedFile(file);
   if (kind === "markdown") {
     const text = await file.text();
     const filename = sanitizeMarkdownFilename(file.name);
-    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, path: "", content: text })
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
-    createNode("markdown", x, y, {
-      file: result.url,
-      href: result.url,
-      title: filename.replace(/\.md$/i, ""),
+    const title = filename.replace(/\.md$/i, "");
+    const result = await trySaveMarkdownSidecar({ filename, path: "", content: text });
+    const props = {
+      title,
       width: 380,
-      height: 420
-    });
+      height: 420,
+      _rawMarkdown: text
+    };
+    if (result?.url) {
+      props.file = result.url;
+      props.href = result.url;
+    }
+    createNode("markdown", x, y, props);
     return true;
   }
 
   if (kind === "image") {
-    const result = await uploadAsset(file);
-    createNode("image", x, y, { file: result.url });
+    const result = await tryUploadAsset(file);
+    const fileSrc = result?.url || await readFileAsDataURL(file);
+    createNode("image", x, y, { file: fileSrc });
     return true;
   }
 
   if (kind === "pdf") {
-    const result = await uploadAsset(file);
-    const absoluteUrl = new URL(result.url, location.origin).href;
+    const result = await tryUploadAsset(file);
+    const url = result?.url || await readFileAsDataURL(file);
     createNode("bookmark", x, y, {
-      url: absoluteUrl,
+      url,
       title: file.name.replace(/\.pdf$/i, ""),
       embedMode: "live",
       width: 600,
@@ -5705,11 +5743,14 @@ async function importDroppedFile(file, x, y) {
   }
 
   if (kind === "unknown") {
-    const result = await uploadAsset(file);
-    const absoluteUrl = new URL(result.url, location.origin).href;
+    const result = await tryUploadAsset(file);
+    if (!result?.url) {
+      showToolbarToast(`Can't host ${file.name} on a static site. Drop unsupported.`, "error");
+      return false;
+    }
     const ext = (file.name.match(/\.[^.]+$/) || [""])[0];
     createNode("bookmark", x, y, {
-      url: absoluteUrl,
+      url: result.url,
       title: file.name,
       embedMode: "preview",
       width: 320,
@@ -7397,15 +7438,27 @@ function loadState(data) {
 
   if (data.nodes) {
     data.nodes.forEach(n => {
-      let type = n.type === "text" && n.text?.includes("<svg") ? "draw" : n.type;
-      if (type === "text") createNode("text", n.x, n.y, n);
-      else if (type === "link") createNode("link", n.x, n.y, n);
-      else if (type === "file") createNode("image", n.x, n.y, n);
-      else if (type === "draw") createNode("draw", n.x, n.y, n);
-      else createNode(n.type, n.x, n.y, n);
+      const node = normalizeNodeAssetUrls(n);
+      let type = node.type === "text" && node.text?.includes("<svg") ? "draw" : node.type;
+      if (type === "text") createNode("text", node.x, node.y, node);
+      else if (type === "link") createNode("link", node.x, node.y, node);
+      else if (type === "file") createNode("image", node.x, node.y, node);
+      else if (type === "draw") createNode("draw", node.x, node.y, node);
+      else createNode(node.type, node.x, node.y, node);
     });
   }
   isLoadingState = false;
+}
+
+function normalizeNodeAssetUrls(n) {
+  if (!n || typeof n !== "object") return n;
+  const next = { ...n };
+  for (const key of ["file", "url", "href", "boardSource", "boardHref", "source"]) {
+    if (typeof next[key] === "string" && next[key]) {
+      next[key] = normalizeAssetUrl(next[key]);
+    }
+  }
+  return next;
 }
 
 async function loadBoard() {

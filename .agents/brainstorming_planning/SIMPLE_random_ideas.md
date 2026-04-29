@@ -91,6 +91,8 @@ at the end of a video there are recommendations appearing. When I click it a new
 
 ----COMPLETED--------------------------------------
 
+The website asks permisions when in canvas website (not great we could do this later but for now when stuff is not secure its a bad idea). Disabled by stripping the iframe `allow=` attribute on embeds. See `.agents/feature_implementation/embed-iframe-permissions.md` for the spec when we want to bring this back safely.
+
 If I click on an embedded youtube video to start it in chrome the youtube window gets stuck to my cursor almost as if im holding down m1. Same behavior doesn't happen in firefox. reproduce it, Find the cause, fix it, test and confirm its fixed
  
 when I add text by clicking t and then clicking somewhere the text box should be added at my    cursor. with the top left of the text box being where my cursor is and the tet box being fix this!
