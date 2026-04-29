@@ -8,6 +8,25 @@ Started: 2026-04-28
 
 ---
 
+## Index
+
+- [Decisions (locked)](#decisions-locked)
+- [What The User Wants](#what-the-user-wants-paraphrased)
+- [Goals (priority order)](#goals-in-priority-order)
+- [Anti-goals (explicit)](#anti-goals-explicit)
+- [Threat Model](#threat-model)
+- [The Three Real Approaches](#the-three-real-approaches)
+  - [Option A — Capability URLs](#option-a--capability-urls-key-in-fragment)
+  - [Option B — Public-key wrapping](#option-b--public-key-wrapping-a-la-age--pgp--mls)
+  - [Option C — Passkey + PRF-derived keys](#option-c--passkey--prf-derived-keys)
+- [Recommended Path](#recommended-path)
+- [Segmented Access (the team case)](#segmented-access-the-team-case)
+- [Hard Questions Specific To This Layer](#hard-questions-specific-to-this-layer)
+- [Open Questions](#open-questions)
+- [Update Log](#update-log)
+
+---
+
 ## Decisions (locked)
 
 - **Recovery model: optional opt-in escrow** *(2026-04-28).* Pure key-only purity is rejected. There will be a recovery vector (third-party or self-hosted) that users opt into. Defeats some of the "no server" purity but matches normal-user expectations. Implications:
@@ -62,6 +81,24 @@ Who are we protecting against:
 | Stolen unlocked device | **Partial.** If someone steals your unlocked laptop, they get everything. Same as any local-first app. |
 | Sophisticated state-level adversary | **Not a goal.** We are not building a tool for dissidents in v1. Be honest about this. |
 
+### Coverage at a glance
+
+```
+                     ATTACK SURFACE                       COVERAGE
+                     ─────────────────────────            ──────────────
+   PUBLIC LANE     stranger on a public URL              ████████████  full
+                   hosting provider reading              ████████████  full
+                   ISP / on-path observer                ████████████  full
+   
+   ENDPOINT LANE   stolen unlocked device                ████░░░░░░░░  partial
+                                                         (same as any local-first app)
+   
+   OUT OF SCOPE    compromised browser / extension       ░░░░░░░░░░░░  none (explicit)
+                   sophisticated state-level adversary   ░░░░░░░░░░░░  none (not a goal)
+```
+
+Reading the diagram: anything in the **public lane** sees ciphertext only — that's the trust line we draw with confidence. Endpoint protection is the same as every local-first app on the planet (lock your screen). Anything in the **out-of-scope** band is explicitly not a v1 goal — naming it keeps marketing honest.
+
 ---
 
 ## The Three Real Approaches
@@ -98,13 +135,34 @@ The browser's WebAuthn PRF extension lets a passkey deterministically derive a p
 
 ## Recommended Path
 
-The honest sequencing, oldest-trick-first:
+The honest sequencing, oldest-trick-first.
+
+```
+   PHASE A   ──▶   PHASE B   ──▶   PHASE C   ──▶   PHASE D   ──▶   PHASE E
+   ────────       ────────       ────────       ────────       ────────
+   capability     local-first    keypair        passkey +      encrypted
+   URLs for       data at rest   identity       PRF as the     realtime
+   read-only      passphrase +   age-compatible key holder     collab
+   shares         downloaded     keypair per                   (CRDT over
+                  recovery file  user, public                  encrypted
+                  + opt-in       keys exchanged                relay)
+                  escrow         out-of-band
+   
+   ⌛ trivial     ⌛ low          ⌛ medium        ⌛ medium       ⌛ hard
+   ship-now       ship next      design now     adopt when     when realtime
+                                 build during   browser PRF    arrives
+                                 Phase B+       stabilizes
+   
+   ─── 80% of trust earned by here ───┤                                     ┤
+                                       │                                     │
+                                  the rest is depth, scale, and convenience  │
+```
 
 1. **Phase A — Capability URLs for read-only shares.** Easy to ship, immediately useful, no identity infrastructure needed. Encrypt board exports with a per-share random key, put the key in the fragment.
-2. **Phase B — Local-first data at rest.** All locally stored data (IndexedDB, exported bundles) gets a master key derived from a user-chosen passphrase + a recovery file the user downloads once. No server involved. Use age-style envelopes so the same file format extends to multi-recipient later.
+2. **Phase B — Local-first data at rest.** All locally stored data (IndexedDB, exported bundles) gets a master key derived from a user-chosen passphrase + a recovery file the user downloads once. No server involved. Use age-style envelopes so the same file format extends to multi-recipient later. Optional opt-in escrow ships alongside (locked decision).
 3. **Phase C — Public/private keypair identity.** Each user generates an age-compatible keypair on first use. Public key is the user's "identity." Sharing a board with a teammate means wrapping the data key to their public key. Still no account server — public keys can be exchanged via QR code, link, or stored in a public file.
 4. **Phase D — Passkey + PRF as the key holder.** Once browser support is uniform, the passkey replaces the passphrase. The keypair from Phase C is wrapped with a passkey-PRF-derived key. Survives device loss if passkey sync is enabled.
-5. **Phase E — Realtime collab over encrypted state.** Hard. CRDT documents need a shared key. Combine Phase C wrapping with Yjs / Automerge over an untrusted relay. Defer.
+5. **Phase E — Realtime collab over encrypted state.** Hard. CRDT documents need a shared key. Combine Phase C wrapping with the Yjs/Yrs op-envelope encryption from `version_control_and_backups.md` over an untrusted relay.
 
 **Critical principle.** Ship Phase A and B before any of the harder phases. They earn 80% of the trust at 5% of the engineering cost.
 
@@ -112,7 +170,35 @@ The honest sequencing, oldest-trick-first:
 
 ## Segmented Access (the team case)
 
-A workspace contains many boards / folders / files. Each artifact has its own symmetric key. Access is granted by wrapping that key to a user's public key. To share a sub-tree:
+A workspace contains many boards / folders / files. Each artifact has its own symmetric key. Access is granted by wrapping that key to a user's public key.
+
+```
+                     each artifact has a symmetric data key K
+                                       │
+                                       ▼
+                wrap K with each authorized user's public key
+                                       │
+              ┌─────────────┬──────────┴──────────┬─────────────┐
+              ▼             ▼                     ▼             ▼
+        wrap_pub(Alice) wrap_pub(Bob)     wrap_pub(Carol)  wrap_pub(Dave)
+              │             │                     │             │
+              └─────────────┴──────────┬──────────┴─────────────┘
+                                       ▼
+                  stored as sidecar.keys next to artifact ciphertext
+                                       │
+                  reader unwraps with their own private key,
+                  recovers K, decrypts artifact
+   
+   ──────────────────────────────────────────────────────────────────────
+   • adding a user        re-wrap K to their pubkey                  cheap
+   • removing a user      rotate K going forward (re-encrypt new    moderate
+                          versions with K')
+   • forward-only revoke  past content stays accessible to ex-      property
+                          members; documented as a property of      of the math
+                          the math, not a bug
+```
+
+To share a sub-tree:
 
 - Owner picks the sub-tree.
 - Owner selects the team members' public keys.
@@ -147,3 +233,4 @@ Revocation is **forward-only**: rotating a sub-tree's key prevents future reads,
 
 - 2026-04-28 — File created. Approach laid out (capability URLs → local-passphrase → keypair identity → passkey-PRF → encrypted realtime). Hard questions raised. No decisions locked yet.
 - 2026-04-28 — Round 2: recovery model decided as **optional opt-in escrow**. Hard question 1 closed. Sibling doc `ai_agents_in_the_loop.md` created — flagged tension between encryption and AI agents (granting hosted-AI access = deliberate decrypt-and-export).
+- 2026-04-29 — Format pass: added top-of-doc index. Three diagrams added — threat model coverage (gradient bars across PUBLIC / ENDPOINT / OUT-OF-SCOPE lanes), phased path timeline (A → E with effort markers and the "80% trust" line), key wrapping flow for segmented access. No content changes; only readability scaffolding.

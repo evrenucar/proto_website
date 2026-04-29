@@ -43,7 +43,37 @@ This file is the shared short-term work log for the current session.
 
 ## Current Scope
 
-- Drag-and-drop file ingest now supports markdown, images, PDFs, and text (was markdown-only).
+- Creating a core board review under `reviews_and_feedback/gpt_review_<timestamp>.md`.
+- Scope is performance, functionality, product vision alignment, and code cleanliness for the current board runtime.
+- Skipping brainstorming, backlog, handoff, archive, and planning-management docs except required session context.
+
+### Start Of Session
+
+- Date: 2026-04-29
+- Working on: Core board review document with diagrams and tables.
+- Why now: User asked for a complete review of the current board, focused on core implementation rather than planning docs.
+- Known constraints: Do not change board runtime behavior; keep code/content files untouched except scratch pad and the new review document.
+
+### End Of Session
+
+- Date: 2026-04-29
+- What changed:
+  - Created `reviews_and_feedback/gpt_review_20260429_032501.md`.
+  - Review covers performance, functionality, product vision alignment, and code cleanliness for the board core.
+  - Included Mermaid diagrams, finding matrices, test results, and a prioritized roadmap.
+  - Ran targeted verification; several board/export/preview/feature tests currently fail and are documented in the review.
+  - Cleaned up test-generated tracked output changes and a temporary markdown note; remaining dirty files match pre-existing work plus this scratch pad and review file.
+- What still needs work:
+  - Fix red test paths called out in the review, especially export modal `.canvas`, markdown save path, recommendation source version, board previews, bundle E2E, markdown authoring, shared entities, and YouTube nocookie.
+- Next step:
+  - Pick the first P0 item from the review and implement it with a focused regression test.
+
+### Start Of Session
+
+- Date: 2026-04-29
+- Working on: Checking current login/auth state visible from this environment.
+- Why now: User asked whether they are logged in.
+- Known constraints: "Logged in" is ambiguous, so verify concrete local indicators before answering.
 
 ### End Of Session
 
@@ -66,4 +96,3 @@ This file is the shared short-term work log for the current session.
   - Bundle export does not yet round-trip dropped images/PDFs as portable sidecars (markdown sidecars are persisted; assets are not).
 - Next step:
   - User reviews and commits when ready.
-

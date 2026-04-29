@@ -9,6 +9,30 @@ Source conversation: user request to ideate on a "common toolbar/searchbar" taki
 
 ---
 
+## Index
+
+- [Decisions (locked)](#decisions-locked)
+- [Why This Doc Exists](#why-this-doc-exists)
+- [Current State (Braindump today)](#current-state-braindump-today)
+- [The Three Surfaces (vocabulary)](#the-three-surfaces-vocabulary)
+- [Inspirations](#inspirations)
+  - [OS-level](#os-level)
+  - [Editors / IDEs](#editors--ides)
+  - [Browsers](#browsers)
+  - [Productivity / spatial apps](#productivity--spatial-apps)
+  - [Mobile](#mobile)
+- [What's Actually Different About Cosmoboard](#whats-actually-different-about-cosmoboard)
+- [Design Dimensions](#design-dimensions)
+- [Mobile / Touch Ergonomics](#mobile--touch-ergonomics)
+- [Recommendation (opinionated)](#recommendation-opinionated)
+- [Search: Scopes, Flows, And Logic](#search-scopes-flows-and-logic)
+- [Phasing Suggestion](#phasing-suggestion)
+- [Open Questions](#open-questions)
+- [Notes And Future Topics](#notes-and-future-topics)
+- [Update Log](#update-log)
+
+---
+
 ## Decisions (locked)
 
 - *None yet.* This file is at the open-ideation stage. Promote items from *Recommendation* and *Open Questions* into this section as they harden.
@@ -48,6 +72,30 @@ Different products fuse different combinations of these. Naming them up front so
 | **Search / find** | No, transient (Cmd-F or persistent input) | Locate content — nodes, files, markdown bodies, board names, even text inside attachments. | If folded into the palette without thought, results turn into noise (commands and matches mixed). |
 
 Some products fuse two of these (Arc fuses the address bar and palette; Notion fuses palette and search). Some keep all three deliberately separate (VS Code: toolbar, Cmd+P / Cmd+Shift+P, Cmd+F / Ctrl+Shift+F).
+
+How Cosmoboard's three surfaces relate to each other (the recommendation later in this doc):
+
+```
+   ┌─────────────────────────────┐
+   │  Persistent Toolbar         │   always visible · touch-friendly · status surface
+   │  modes (V / T / P / L) +    │   capped at ~5 canonical action buttons
+   │  small canonical action set │
+   └─────────────────────────────┘
+                │
+                │ every toolbar button has a mirrored verb in the palette
+                ▼
+   ┌─────────────────────────────┐         ┌─────────────────────────────┐
+   │  Command Palette            │ ←─────→ │  Search / Find              │
+   │  verb mode (prefix '>')     │  same   │  default mode (no prefix)   │
+   │  e.g. "> Export bundle"     │ overlay │  e.g. "draft kitchen"       │
+   └─────────────────────────────┘         └─────────────────────────────┘
+                │                                     │
+                │ Cmd-K opens this overlay; the prefix decides which mode.
+                ▼                                     ▼
+            execute verb                       jump to / preview result
+```
+
+Cmd-F (lighter, in-artifact next/prev find) is a separate cousin overlay; covered in the *Search: Scopes, Flows, And Logic* section below.
 
 ---
 
@@ -163,6 +211,30 @@ A concrete design across the three surfaces. Each piece states *what* and *why*.
 - **Why:** Two overlays is one too many. The find/palette distinction is a developer concept, not a user one. Users want "Cmd-K and start typing." Prefix mode-switching is proven (VS Code) and the scope chip rescues it from invisible-prefix syndrome (JetBrains' lesson).
 - **Why centered, not bottom-anchored:** centered is the convention; users have muscle memory for it. The cost (eyes off the canvas) is acceptable because the overlay is transient. Reconsider if usability testing says otherwise.
 
+**Mockup of the Cmd-K overlay:**
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ [board ▾]   Search this board…                                   ⌘K   │  ← input + scope chip
+├────────────────────────────────────────────────────────────────────────┤
+│ 📄  Draft kitchen plan.md                              in workspace    │
+│     …and the **draft** plan we discussed last week…                    │
+│                                                                        │
+│ 🗺  Renovation Ideas › "draft layout"                  in board        │
+│     canvas node · Enter to jump                                        │
+│                                                                        │
+│ ❯   Export current board                                    verb       │
+│     Bundles board + linked assets to a .zip                            │
+│                                                                        │
+│ 🔒  Tax 2025                                       in workspace        │
+│     encrypted · Enter to unlock and search                             │
+├────────────────────────────────────────────────────────────────────────┤
+│ ↵ open · Tab widen scope · → preview · Esc close                       │  ← keymap footer
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+Scope chip (top-left) cycles `board → workspace → everywhere`. Each row carries a type icon, a snippet, the scope it came from, and an action hint. Encrypted artifacts surface as titles only unless the user has opted that board into in-clear search.
+
 ### 3. Every toolbar button has a verb-equivalent in the palette
 
 - **What:** "Save board," "Export bundle," "Toggle pen," "New markdown node" — every toolbar action is also a named palette verb. The mode tools too (`Activate pen`, `Switch to select`).
@@ -192,6 +264,256 @@ A concrete design across the three surfaces. Each piece states *what* and *why*.
 
 - **What:** Phase 1 = linear scan over the in-memory board model. Phase 2 = MiniSearch index in IndexedDB, scoped per board. Phase 3 = workspace-wide index with rich-tier exclusion respecting encryption boundaries.
 - **Why:** Linear scan is fine until ~2k nodes. Premature indexing costs more than it saves. The phasing matches the rest of the roadmap (`vison_planning.md → Performance Approach`).
+
+---
+
+## Search: Scopes, Flows, And Logic
+
+The Cmd-K bar can search at four nested scopes: a single selection, the current artifact (this board or this markdown file), the current workspace (the open folder + everything under it), and globally across every workspace Cosmoboard has been shown. This section is the deep dive on what each scope *is*, how the user *signals* which one they want, what the *backend* looks like, and how a result *resolves*.
+
+### Scope rings
+
+```
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  D · Global             every workspace ever opened             │
+  │   ┌─────────────────────────────────────────────────────────┐   │
+  │   │  C · Workspace      the open folder + all subfolders    │   │
+  │   │   ┌─────────────────────────────────────────────────┐   │   │
+  │   │   │  B · Artifact   this board / this .md file      │   │   │
+  │   │   │   ┌─────────────────────────────────────────┐   │   │   │
+  │   │   │   │  A · Selection                          │   │   │   │
+  │   │   │   │  one node · one paragraph being edited  │   │   │   │
+  │   │   │   └─────────────────────────────────────────┘   │   │   │
+  │   │   └─────────────────────────────────────────────────┘   │   │
+  │   └─────────────────────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────────────────────┘
+                         ▲                       ▲
+                         │                       │
+                  default Cmd-F            default Cmd-K
+                  (artifact + selection-   (workspace, with the
+                   aware highlight)         scope chip to widen
+                                            or narrow)
+```
+
+### Scope comparison
+
+| Scope | Default trigger | Dataset size | Backend | Privacy default | Result types | Speed budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| **A · Selection** | Cmd-F inside an editor + "in selection" toggle | one node / one paragraph | substring scan | always plaintext (you are editing it) | text matches with offsets | <8 ms |
+| **B · Artifact** (board or `.md`) | Cmd-F | 1 – ~1k nodes / paragraphs | linear scan over the in-memory model | always plaintext | nodes, headings, paragraphs | <16 ms (one frame) |
+| **C · Workspace** | Cmd-K (default chip) | 10 – 10k items | MiniSearch / SQLite-FTS persisted in IndexedDB | encrypted boards: title-only by default | files, boards, nodes, sections, tags | <100 ms |
+| **D · Global** | Cmd-K with chip widened to "Everywhere" | 1k – ∞ across workspaces | union of per-workspace indices | excluded by default; opt-in per workspace | same as C plus a cross-workspace breadcrumb | <250 ms |
+
+### Keystroke routing
+
+Where a keystroke ends up depends on focus and modifier. Decision tree for an in-board keystroke:
+
+```
+keystroke received
+       │
+       ▼
+   focus inside a text editor (markdown body, node text)?
+       │
+       ├── YES ──→  Cmd-F   → editor's local find             (Scope A inside B)
+       │            Cmd-K   → global palette overlay          (Scope per chip; default C)
+       │            typing  → editor input
+       │            Esc     → leave editor focus
+       │
+       └── NO  ──→  Cmd-F   → in-board find overlay           (Scope B)
+                    Cmd-K   → global palette overlay          (Scope per chip; default C)
+                    V/T/P/L → tool mode switch                (existing behavior)
+                    Esc     → close any open overlay
+```
+
+Two rules fall out of this:
+
+- **Cmd-F always means "smaller scope".** Inside an editor it's local-to-editor; outside it's local-to-artifact. It never leaves the artifact.
+- **Cmd-K always means "the palette".** Default scope is the current chip (initialized to *workspace*). The user can also prefix `in:board` / `in:everywhere` to override per-query without touching the chip.
+
+### Query grammar (modifiers)
+
+Default search (no prefix) matches text in the chip's scope. Prefixes route the same input to other modes or scopes.
+
+| Prefix / modifier | Meaning | Example |
+| --- | --- | --- |
+| *(none)* | match in the chip's scope | `draft kitchen` |
+| `>` | run a command verb (palette mode) | `> export bundle` |
+| `@` | mention / agent / collaborator identity | `@planning-agent` |
+| `:` | quick-switcher to a file or board by name | `: cosmoboard` |
+| `type:md` / `type:canvas` / `type:image` / `type:pdf` | restrict by artifact type | `draft type:md` |
+| `in:board` / `in:workspace` / `in:everywhere` / `in:selection` | force scope regardless of chip | `tax in:everywhere` |
+| `tag:x` | restrict to nodes / files with tag | `tag:research` |
+| `path:foo/` | restrict by path prefix | `path:archive/2025/` |
+| `is:encrypted` | only encrypted artifacts the user has authorized for in-clear search | `is:encrypted draft` |
+
+Modifiers compose. `draft type:md in:workspace tag:research` is the natural conjunction.
+
+### What gets indexed per artifact type
+
+The index is built lazily and incrementally. Artifact-specific fields below; the rest (mtime, word count, etc.) lives in a sidecar metadata table.
+
+| Artifact type | Indexed fields | Sidecar fields | Notes |
+| --- | --- | --- | --- |
+| `.md` file | filename, headings (with level), body text | per-section text segments | Long files are also indexed per H1/H2 section so a result can deep-link to a heading anchor. |
+| `.canvas` board | filename, board title, each node's text/title, link URLs, edge labels | OCR text from embedded images / PDFs (when OCR runs) | Each node is its own document keyed by `boardId#nodeId`. |
+| Image | filename, alt-text | OCR transcript when available | OCR sidecar regenerates if the image is replaced; not regenerated on rename. |
+| PDF | filename, pdf.js text-layer text | OCR sidecar for image-only PDFs | Text layer is primary; OCR is fallback. They can coexist. |
+| Plain text / CSV | filename, body | header row for CSV | CSV may later promote to structured field search ("`status:done`"). |
+| Encrypted (rich-tier) | filename only by default | none | "Make this board's contents searchable in plaintext" is a deliberate per-board grant; without it, a hit shows the title only and Enter requires unlock. |
+
+### Result row anatomy
+
+Every result row has the same shape regardless of type. Type icon and action hint differ; the rest stays constant.
+
+| Element | Purpose | Example |
+| --- | --- | --- |
+| **Type icon** | Tells the user what kind of thing this is at a glance | 📄 markdown · 🗺 canvas · 🖼 image · 📕 PDF · ❯ verb · 🔒 encrypted |
+| **Title** | Primary identifier | filename, board title, node title, or verb name |
+| **Breadcrumb** | Where it lives in the folder/board tree | `kitchen-renovation › boards › ideas.canvas` |
+| **Snippet** | Match-in-context with the matched substring bolded | `…and the **draft** plan we discussed…` |
+| **Scope chip** | Reminds the user which scope this result is from (only on the first row of each scope group) | "in workspace" |
+| **Action hint** | What Enter will do | "Open" / "Jump to" / "Run" / "Decrypt and open" |
+
+### Search pipeline (data flow)
+
+What happens after the user types — results render incrementally as the user types, but Enter triggers the action:
+
+```
+input string
+   │
+   ▼
+[1] tokenize + parse modifiers          e.g. "draft type:md in:workspace"
+   │                                     → text="draft"; filters={type:md, scope:workspace}
+   ▼
+[2] resolve effective scope             chip + prefix override + focus context
+   │                                     → scope = workspace
+   ▼
+[3] route to backend(s)
+        ├── Scope A / B → in-memory linear scan   (this artifact)
+        ├── Scope C     → MiniSearch / FTS index  (this workspace)
+        └── Scope D     → union of per-workspace indices
+   ▼
+[4] merge + rank
+        fuzzy_match × recency × scope_proximity × type_weight × tag_boost
+   ▼
+[5] redact rich-tier hits the user has not authorized
+        encrypted boards: show title only · cannot expose body even if matched
+   ▼
+[6] render rows  (icon · title · breadcrumb · snippet · scope chip · action)
+   ▼
+[7] on Enter → dispatch action by result type   (see below)
+```
+
+Steps [1]–[6] run on every keystroke (debounced ~80 ms). Step [7] only runs on Enter or click.
+
+### Opening a result (action by type)
+
+Different types need different "open" behaviors. A switch on `result.type`:
+
+```
+result.type
+   │
+   ├── canvas-node ──────▶  if board not open: open the board first
+   │                        camera-animate to node bbox (zoom-to-fit, ~250 ms)
+   │                        pulse focus ring
+   │                        select node so node-level shortcuts work
+   │
+   ├── canvas-board ─────▶  open .canvas at its saved camera state
+   │
+   ├── markdown-file ────▶  open .md in the markdown panel
+   │                        scroll to first match · highlight inline · next/prev armed
+   │
+   ├── markdown-section ─▶  open .md → jump to heading anchor
+   │
+   ├── image / pdf-text ─▶  open viewer / lightbox
+   │                        overlay match position (PDF) · show OCR snippet (image)
+   │
+   ├── tag / property ───▶  apply as filter to current view (if board)
+   │                        or open a tag-detail panel
+   │
+   ├── verb (>command) ──▶  execute
+   │                        if it touches encrypted content or external service:
+   │                          show inline consent affordance · require second Enter
+   │
+   └── agent (@identity) ▶  open agent profile in side panel
+                            or invoke "Share with…" verb pre-filled
+```
+
+Critical invariant: **selecting a result never destroys the user's current camera/scroll state.** A board-jump pushes the previous camera onto a back-stack so Esc returns. A markdown jump preserves prior scroll position.
+
+### Index lifecycle
+
+Index population is lazy, incremental, and event-driven. No "indexing… please wait" dialogs.
+
+| Event | Action on index | Cost |
+| --- | --- | --- |
+| Workspace opened | load index from IndexedDB · verify schema version · if missing, schedule background build | low (load) · medium (cold build) |
+| File added or dropped | enqueue for indexing (debounced 1 s) | low per file |
+| Markdown saved | reindex that file (and its sections) | low |
+| Canvas node edited | reindex one document (`boardId#nodeId`) | very low |
+| File renamed | update path key; do not touch content | very low |
+| File deleted | drop entries with that path | very low |
+| Encrypted board: contents-search granted | reindex board contents now (with ephemeral key in memory) | medium |
+| Encrypted board: grant revoked | drop body fields · keep title-only entries | low |
+| OCR completed (image / PDF) | append OCR text as sidecar field | low per file |
+| Workspace closed | flush in-flight · persist | low |
+
+Two notable rules:
+
+- **The index never holds plaintext on disk for rich-tier artifacts.** When the user grants in-the-clear search for an encrypted board, the body fields live only in an in-memory index that disappears on session close. This keeps the rest-encryption posture honest. Cost: a re-build on every session for those boards. Acceptable because they're opt-in.
+- **Schema version is part of the persisted index header.** Bumping the index schema invalidates and rebuilds — no hidden upgrade migrations.
+
+### Scope escalation (when there are no results)
+
+When a search in the current scope returns nothing, surface a one-tap widening before the user retypes. Pattern adapted from JetBrains "Search Everywhere" and Linear's empty-state suggestions.
+
+```
+user types "draft"   chip = board   →   0 hits
+        │
+        ▼
+  empty result list, plus a single suggestion row:
+
+   ┌────────────────────────────────────────────────────────┐
+   │ ↳  No results in this board.   Search workspace?  ⇥    │
+   └────────────────────────────────────────────────────────┘
+        │
+        │  Tab pressed (or row clicked)
+        ▼
+  chip widens to workspace · query re-runs
+        │
+        ▼
+  N hits across boards / files, grouped by parent
+
+   ┌────────────────────────────────────────────────────────┐
+   │  in workspace                                          │
+   ├────────────────────────────────────────────────────────┤
+   │  📄 Draft kitchen plan.md         …kitchen-renovation/ │
+   │  🗺 Renovation Ideas              "draft layout" node  │
+   │  📕 Quotes 2026-Q1.pdf            page 3 · "draft #4"  │
+   └────────────────────────────────────────────────────────┘
+
+If there are still 0 hits at workspace, the suggestion offers Global next.
+```
+
+Three implications of this pattern:
+
+- **Default scope can stay narrow.** No user is punished for the chip starting at *board* — widening is one keystroke.
+- **No silent global scans.** The user's content never leaves the chip's scope without a deliberate widening. Privacy posture matches the rest of the product.
+- **The empty state is informative.** "No results" alone is the worst message in software. "No results here, but try here" is honest help.
+
+### Where this lands per surface
+
+Putting it back together: the three surfaces from earlier in this doc map to these scopes as follows.
+
+| Surface | Owns which scope(s) | How |
+| --- | --- | --- |
+| Persistent toolbar | none directly · surfaces a "Find" button that maps to Cmd-F | the toolbar's search button summons the same overlay, pre-set to scope B |
+| Command palette / Cmd-K bar | C and D primarily · B if chip is set to *board* · verbs and agent identities regardless of scope | the same overlay; the chip + prefix tell it what scope to query |
+| Cmd-F find | A and B | a smaller, lighter overlay that only ever queries the current artifact, with next / prev affordances |
+
+Cmd-K and Cmd-F are not the same overlay component — they're cousins. Cmd-K is centered, multi-type, scope-chipped. Cmd-F is anchored to the artifact it's searching (top-right of the board, or inside the markdown panel), text-only, with next/prev. Putting "find in artifact" inside Cmd-K is possible but loses the next/prev rhythm that makes Cmd-F feel right.
+
+That's a deliberate refinement of the *single fused bar* recommendation: the fused bar is the right call for *cross-cutting search and verbs*, but Cmd-F earns its own cheap dedicated overlay because the next/prev / Enter-to-find-next interaction model is distinct.
 
 ---
 
@@ -238,3 +560,5 @@ Mapped to existing roadmap language so this slots into `holistic_planning/` clea
 ## Update Log
 
 - 2026-04-28 — File created. Full ideation across persistent toolbar, command palette, and search as one ecosystem. Inspirations table covers OS-level (Spotlight, Run, GNOME, Alfred, Raycast), editors (VS Code, JetBrains, Vim, Emacs), browsers (Chrome, Arc, Firefox), productivity/spatial (Notion, Linear, Slack, Figma, Obsidian, Heptabase, tldraw, Excalidraw), and mobile (iOS, iPadOS, radial menus). Opinionated recommendation lands on: keep the persistent toolbar (capped), one fused Cmd-K bar with prefix mode-switching and a scope chip, every toolbar button registered as a verb, spatial result behavior with camera animation, inline AI/encryption consent, dumb linear-scan search now and indexed search later. Phasing A→E mapped against existing roadmap. No decisions promoted to *Decisions (locked)* yet.
+- 2026-04-29 — Added the *Search: Scopes, Flows, And Logic* deep-dive. Four nested scopes (Selection / Artifact / Workspace / Global) defined with their default triggers, dataset sizes, backends, privacy postures, and speed budgets. New diagrams: scope-rings, keystroke-routing decision tree, search-pipeline data flow, open-result branching by type, scope-escalation flow on empty results. New tables: scope comparison, indexed fields per artifact type, query-modifier grammar, result-row anatomy, index lifecycle. Two visual mockups added earlier in the doc: a surfaces-relationship diagram (toolbar ↔ palette ↔ search) in *The Three Surfaces* and a Cmd-K overlay mockup in the *Recommendation*. Refinement to the original "single fused bar" recommendation: Cmd-F gets its own lightweight in-artifact overlay alongside Cmd-K, because next/prev semantics are distinct. No decisions promoted to *Decisions (locked)* yet.
+- 2026-04-29 — Added top-of-doc index for navigability. No content changes.

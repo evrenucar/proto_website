@@ -10,6 +10,28 @@ Started: 2026-04-28
 
 ---
 
+## Index
+
+- [Decisions (locked)](#decisions-locked)
+- [What The User Wants](#what-the-user-wants-paraphrased)
+- [Five Distinct Layers](#five-distinct-layers)
+- [Layer 1 — Within-session Undo](#layer-1--within-session-undo)
+- [Layer 2 — Local Rolling History](#layer-2--local-rolling-history)
+- [Layer 3 — Op log + Checkpoints + Milestones (the CRDT layer)](#layer-3--op-log--checkpoints--milestones-the-crdt-layer)
+- [Layer 4 — Disaster Backups](#layer-4--disaster-backups)
+- [Layer 5 — Account / Key Recovery](#layer-5--account--key-recovery)
+- [The Two Showpiece Features](#the-two-showpiece-features)
+- [Branching And Merging (Onshape-flavored)](#branching-and-merging-onshape-flavored)
+- [Presence (live cursors, edit awareness)](#presence-live-cursors-edit-awareness)
+- [Hybrid Sync Transport](#hybrid-sync-transport)
+- [Blob Queue Abstraction](#blob-queue-abstraction)
+- [Tech Candidates](#tech-candidates-updated)
+- [Recommended Phasing](#recommended-phasing-updated-for-crdt-first-architecture)
+- [Architectural Surface: Closed](#architectural-surface-closed-round-7)
+- [Update Log](#update-log)
+
+---
+
 ## Decisions (locked)
 
 - **L3 backbone: Yjs (browser) + Yrs (Rust on backend / Tauri / node)** *(2026-04-28).* Same wire format on both sides — devices and node speak the same protocol with no translation layer. Yjs is the most production-proven CRDT today (Linear, JupyterLab collab, Affine, BlockNote, tldraw multiplayer). Loro is on the watch list for a possible swap in ~2 years if its production hardening matures and its first-class branching becomes a hard requirement.
@@ -31,6 +53,39 @@ Started: 2026-04-28
   Node responsibilities: async device sync, encrypted backup of ops + blobs, relay when devices aren't online together, future realtime presence/collab. **The local app is always authoritative** — works offline, holds the CRDT locally, syncs opportunistically. The hosted node is never required to open or edit documents.
 
 - **GitHub is optional, not central** *(2026-04-28).* GitHub may be useful as an export target for open-source projects later, and as a personal convenience today. It is not the rendezvous, not the L3 backbone, not part of the trust model.
+
+- **Branching UI: Onshape-literal graph panel** *(2026-04-29).* A side panel renders the version graph for the current artifact. Branches as columns, milestones as nodes, merges as crossings. Familiar mental model from Onshape and Sourcetree-style tools. Faster to design and easier to explain than spatial alternatives.
+
+- **Branch unit: per-artifact only** *(2026-04-29).* A board has its own branches; a markdown file has its own branches. No workspace-level branching in v1. Matches Yjs document boundaries and the simplest mental model. Workspace-level versioning revisitable later as a separate concept.
+
+- **Op encryption: two-lane model** *(2026-04-29).*
+  - **Durable lane:** CRDT op envelopes (small batches grouped by short time window or N-op chunk), encrypted, persistable by the node, replayable, sync-safe.
+  - **Ephemeral lane:** cursors / selections / typing indicators / viewport / presence, encrypted, transient, never persisted to history.
+  
+  Node relays both, sees the content of neither. Awareness messages don't pollute the op log; document history stays clean.
+
+- **Merge conflicts: auto-merge with review flags** *(2026-04-29).* CRDT merge always succeeds without dialogs. Where two branches edit the same node in incompatible ways, both versions are kept where possible and the area is marked with a lightweight "review this" indicator. The document opens immediately. Power-users can open a resolver from the marker — keep left / keep right / keep both / edit manually. The flow is never blocked by a merge dialog.
+
+- **New-device sync: lazy history fetch** *(2026-04-29).* A new device downloads the latest usable workspace snapshot first — current CRDT state, active metadata, and visible blobs. Older ops, checkpoints, blob versions, and time-scrubber data are fetched on demand when the user opens history, restores a checkpoint, browses old versions, or explicitly chooses full offline history. Fast onboarding on phones / new devices, full history available via demand-based sync.
+
+- **Auto-checkpoint descriptions: deterministic stats only** *(2026-04-29).* Checkpoint labels are generated from structured op statistics: "edited 4 nodes," "added 1 image," "modified research.md," "deleted 2 comments," "updated board layout." No model required. No document content leaves the device. Precise, private, offline-safe, never blocks checkpoint creation. Optional local-AI summaries can be added later as a cosmetic enhancement, with deterministic stats as the permanent fallback.
+
+- **Visual canvas diff scope (v1): branch-local comparisons** *(2026-04-29).* Diffs supported in v1:
+  - current vs latest auto-checkpoint ("what did I just change?")
+  - current vs any manual milestone ("what changed since this saved point?")
+  - any two manual milestones on the same branch ("how are these two named versions different?")
+  
+  Cross-branch and 3-way merge diffs come later, once branching and conflict review are mature.
+
+- **Time scrubber granularity: checkpoints + milestones default, op-level as advanced mode** *(2026-04-29).* Default snap points are auto-checkpoints, manual milestones, and named versions. Advanced users can enable op-level scrubbing to inspect or restore exact individual changes between checkpoints. Main history UI stays clean; full op precision is preserved underneath.
+
+- **Branch lifecycle: auto-archive merged branches with pin support** *(2026-04-29).* When a branch is merged it stays visible for a short grace period, then auto-archives. Archived branches are hidden from the main branch list but remain recoverable through history, search, or an archived-branches panel. Users can **pin** important branches to keep them visible permanently. Tidy by default, safe and recoverable always.
+
+- **Export fidelity for portable tier: current state only** *(2026-04-29).* Exporting a board to plain markdown + JSON Canvas exports the current state. Milestones, branches, and op history stay inside Cosmoboard. The "open in Obsidian" line refers to the current view, not the full version graph — honest, matches how static formats actually work.
+
+- **Workspace identity: one identity per user** *(2026-04-29).* One public/private keypair acts as the user's identity across all workspaces. Pair a device once, your key unlocks any workspace you own or were granted access to. Simpler mental model, fewer keys to lose, stronger pseudonymous identity than per-workspace alternatives.
+
+- **Sync session model: per-device long-lived session + per-artifact grants** *(2026-04-29).* Devices pair once and hold long-lived session tokens with the node. The node enforces per-artifact access via the scope grants from `security_and_access.md`. Revoking access to one artifact doesn't kick the whole device offline. Matches the agent-grant model in `ai_agents_in_the_loop.md` — uniform across users, devices, and agents.
 
 ---
 
@@ -57,6 +112,20 @@ These are different problems with different solutions. Conflating them is how pr
 | **L3 — Long-term op log + checkpoints + milestones** | Days to forever | Per-op + per-checkpoint + per-milestone | CRDT op store (local + node) | Granular history, named savepoints, branches, realtime collab |
 | **L4 — Disaster backups** | Forever | Per-snapshot | Off-device (encrypted) | "My laptop died, give me my workspace back" |
 | **L5 — Account / key recovery** | Catastrophic | Per-identity | Opt-in escrow (`security_and_access.md`) | "I lost my passphrase / passkey, can I still get in?" |
+
+### Time scale flow
+
+```
+TIME SCALE              LAYER     MEDIUM                        WHAT IT RESTORES
+──────────────────      ─────     ──────────────────────────    ──────────────────────────────
+seconds → minutes  ──▶  L1   ──▶  RAM (Y.UndoManager)        ──▶  the action you just did
+minutes → days     ──▶  L2   ──▶  IndexedDB / disk snapshots ──▶  recent autosave snapshot
+days → forever     ──▶  L3   ──▶  CRDT op log + checkpoints  ──▶  any checkpoint or milestone
+                                  + named milestones
+catastrophic       ──▶  L4   ──▶  Encrypted bundle off-device──▶  whole workspace from backup
+key / identity     ──▶  L5   ──▶  Opt-in escrow              ──▶  the identity itself
+   loss
+```
 
 **Critical principle.** Each layer should be designable, shippable, and testable independently. They compose; they do not depend on each other being finished.
 
@@ -88,6 +157,36 @@ Cheap, fast, local-only "what did this look like 20 minutes ago?"
 ## Layer 3 — Op log + Checkpoints + Milestones (the CRDT layer)
 
 The replacement for git. Three sub-layers:
+
+```
+   user action
+        │
+        ▼
+   Yjs op  ──▶  op log  (Layer 3a)         every change, granular, source of truth
+                  │
+                  │  debounce ~30s
+                  │  on idle / save / day rollover
+                  ▼
+            auto-checkpoint  (Layer 3b)    "edited 4 nodes, added image, 14:32–15:01"
+                  │                         deterministic description from op stats
+                  │
+                  │  user names it from the history panel
+                  ▼
+            milestone  (Layer 3c)           "v1 of research board"
+                  │                         first-class artifact, exportable
+                  │
+                  │  user forks
+                  ▼
+            branch  (own Y.Doc seeded from milestone)
+                  │
+                  │  edits accumulate
+                  ▼
+            merge back  ──▶  CRDT auto-merges most things
+                              ambiguous overlaps get a "review this" marker
+                              user can resolve later, never blocked
+```
+
+
 
 ### Layer 3a — Ops (CRDT operation log)
 
@@ -219,6 +318,37 @@ Presence depth tiers (decide as we ship):
 
 The user's framing: "centralized servers / self-hosted servers / P2P / a hybrid of 1-2-3 depending on what is being done."
 
+```
+                           device A wants to sync
+                                    │
+                                    ▼
+                ┌──────────────────────────────────────┐
+                │   try P2P (WebRTC) first             │
+                │   are both peers online right now?   │
+                └─────────┬───────────────────┬────────┘
+                          │                   │
+                       YES│                   │NO
+                          ▼                   ▼
+                  ┌──────────────┐   ┌────────────────────────┐
+                  │   P2P sync   │   │  push to node          │
+                  │  (fastest)   │   │  node holds ciphertext │
+                  │              │   │  relays to other peer  │
+                  │  ciphertext  │   │  when they reconnect   │
+                  │  stays on    │   └─────────┬──────────────┘
+                  │  LAN if same │             │
+                  │  network     │             │ if node unreachable
+                  └──────────────┘             ▼
+                                       hold ops locally, retry
+                                       (always works offline)
+
+   ──────────────────────────────────────────────────────────────────
+   transport modes available:
+     • P2P (WebRTC)              both peers online
+     • Self-hosted node (Yrs)    async bridge + backup + future relay
+     • Cosmoboard-hosted node    same protocol, opt-in convenience deployment
+     • Direct file copy          escape hatch, always available
+```
+
 Concretely:
 - **P2P (WebRTC)** when both devices are online — fastest, no third party, ciphertext doesn't even leave the LAN if peers are on the same network.
 - **Self-hosted node (Yrs)** when one device is offline — node stores ops as ciphertext, devices fetch when they reconnect. Same node also handles backup and future realtime relay.
@@ -302,14 +432,25 @@ The metadata to lock now:
 
 ---
 
-## Hard Questions
+## Architectural Surface: Closed (Round 7)
 
-1. **Branching UX inspiration: how literal is the Onshape reference?** Onshape's version manager is a graph view embedded in the document panel. Cosmoboard could do the same (graph as a board panel) or invent something more spatial (branches as canvas regions, milestones as visible cards). The literal Onshape route is faster to design and easier to explain.
-2. **Cross-artifact branches.** Branching a single board is simple. Branching the whole workspace ("my entire research project, before and after the rewrite") is a different concept. Defer or design now?
-3. **Where ops live for shared artifacts.** A board shared with a collaborator: their ops accumulate in their local store, ours in ours, and they merge via the node. Storage budget grows on both sides. Is that fine, or do we need lazy fetching of ops we haven't seen?
-4. **Visual diff for forked branches.** Diffing two milestones on the same branch is straightforward. Diffing across branches (which is the whole point of branching) needs a 3-way diff that highlights what each branch did since the divergence point. Real but more complex.
-5. **Ops-encryption in the node.** Per `security_and_access.md`, ops in the node are ciphertext. But Yjs ops contain structural metadata (op type, target ID, etc.) that leaks shape if not also encrypted. Do we encrypt the op envelope or each op individually? Affects sync efficiency.
-6. **Conflict surface for milestone merges.** Yjs auto-merges most things. Some merges are semantically ambiguous (two branches both edited the same node's text in incompatible ways). What does the manual conflict UI look like, and what's our budget for inventing it well?
+After seven interview rounds, the v1 architectural surface for version control, recovery, and backups is locked. Remaining items are implementation details, not architectural calls:
+
+- Exact UI of the Onshape-style version graph panel.
+- Visual layout of the merge "review this" markers and the manual resolver dialog.
+- Blob queue API surface (the abstraction is locked; the API shape is implementation).
+- Node wire protocol (Yjs/Yrs sync protocol + envelope encryption + auth handshake).
+- Branch deletion semantics for *unmerged* branches (auto-archive only fires on merge; user-deleted unmerged branches need a soft-delete grace period — pattern is clear, exact UX is implementation).
+- "Pin" UI for branches.
+- Storage budget defaults and surfacing.
+
+## Things to revisit explicitly (not v1 architectural calls)
+
+- **Cross-branch 3-way diff.** Deferred to Phase 2 of the diff feature.
+- **Workspace-level milestones.** Deferred; per-artifact only in v1.
+- **Local AI model integration for checkpoint descriptions.** Cosmetic enhancement, hooks into `ai_agents_in_the_loop.md` policy.
+- **Loro as a possible CRDT swap.** Watch list, ~2-year horizon.
+- **Obsidian round-trip of milestones.** v1 exports current state only; if users start asking for milestone export as a folder of snapshots, revisit Round-6 export fidelity decision.
 
 ---
 
@@ -325,3 +466,7 @@ The metadata to lock now:
 
 - 2026-04-28 — File created. Five-layer model laid out. Two showpiece features named (visual canvas diff, time scrubber).
 - 2026-04-28 — Round 4: dropped git as L3 backbone after user input. Locked Yjs (browser) + Yrs (node/server) as the CRDT pair. Locked three-tier history (ops + auto-checkpoints + named milestones with fork/branch). Locked blob handling (Option 1 now with queue abstraction toward Option 3). Locked self-hosted node turnkey three-mode (local sidecar, Docker, hosted). Locked realtime collab as architecture goal, not retrofit. Locked visual canvas diff first, time scrubber second. New sections added: Branching/Merging, Presence, Hybrid Sync Transport, Blob Queue Abstraction. Tech Candidates updated. Phasing updated.
+- 2026-04-29 — Round 5: locked branching UI (Onshape-literal graph panel), branch unit (per-artifact only, no workspace-level branching in v1), op encryption (two-lane: durable encrypted op envelopes + ephemeral encrypted presence), merge conflicts (auto-merge with lightweight "review this" markers, no blocking dialog). Hard Questions trimmed to the four remaining open items: shared-artifact op storage strategy, cross-branch visual diff, auto-checkpoint description method, time scrubber granularity.
+- 2026-04-29 — Round 6: locked new-device sync (lazy history fetch — current state first, history on demand), auto-checkpoint descriptions (deterministic stats only, optional local-AI as later cosmetic enhancement), visual diff scope for v1 (branch-local: current vs latest auto-checkpoint, current vs milestone, milestone vs milestone on same branch), time scrubber granularity (checkpoints + milestones default with op-level as advanced toggle). Hard Questions reset to four new open items: branch lifecycle, export fidelity for portable tier, workspace identity / cross-device pairing, sync session model.
+- 2026-04-29 — Round 7 (closing round): locked branch lifecycle (auto-archive merged branches with pin support), export fidelity for portable tier (current state only — milestones and history stay inside Cosmoboard), workspace identity (one identity per user across all workspaces), sync session model (per-device long-lived session with per-artifact scope grants — uniform model with users / devices / agents). Hard Questions section retired in favor of "Architectural Surface: Closed" — remaining items are implementation, not architecture. Items explicitly deferred: cross-branch 3-way diff, workspace-level milestones, local AI for checkpoint descriptions, Loro as a possible CRDT swap, Obsidian round-trip of milestones.
+- 2026-04-29 — Format pass: added top-of-doc index. Three diagrams added — time-scale flow across the five layers, three-tier history flow (op → checkpoint → milestone → branch → merge), hybrid sync transport routing (P2P → node → local retry). No content changes; only readability scaffolding.

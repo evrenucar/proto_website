@@ -8,6 +8,28 @@ Started: 2026-04-28
 
 ---
 
+## Index
+
+- [What The User Wants](#what-the-user-wants-paraphrased)
+- [Goals (priority order)](#goals-in-priority-order)
+- [Anti-goals (explicit)](#anti-goals-explicit)
+- [Core Tensions](#core-tensions)
+  - [Local model vs hosted model](#local-model-vs-hosted-model)
+  - [Encryption vs AI](#encryption-vs-ai)
+  - [Autonomy vs control](#autonomy-vs-control)
+- [Design Directions](#design-directions)
+  - [Agents-as-identities](#agents-as-identities)
+  - [Audit-record-as-artifact](#audit-record-as-artifact)
+  - [Scope-grants-as-objects](#scope-grants-as-objects)
+  - [Labels as signals](#labels-as-signals)
+  - [Multi-agent coordination through the workspace](#multi-agent-coordination-through-the-workspace)
+- [Recommended Phasing](#recommended-phasing)
+- [Hard Questions](#hard-questions)
+- [Open Questions (specific to this layer)](#open-questions-specific-to-this-layer)
+- [Update Log](#update-log)
+
+---
+
 ## What The User Wants (paraphrased)
 
 - AI agents as collaborators that work *with* the user inside the workspace.
@@ -48,6 +70,17 @@ Started: 2026-04-28
 | Latency | Fast for small tasks, slow for big ones | Consistent network latency |
 | Setup friction | High (download model, configure runtime) | Low (API key) |
 | Best for | Sensitive data, simple tasks, offline | Complex tasks, capable reasoning |
+
+```
+                            LOCAL                  HOSTED
+                            ──────────────────     ──────────────────
+   Capability            ▓▓▓░░░░░░░ small        ▓▓▓▓▓▓▓▓▓▓ frontier
+   Privacy               ▓▓▓▓▓▓▓▓▓▓ on-device    ▓░░░░░░░░░ data leaves
+   Cost                  ▓▓▓▓▓▓▓▓▓▓ free          ▓▓▓░░░░░░░ per-token
+   Setup friction        ▓▓░░░░░░░░ install       ▓▓▓▓▓▓▓▓▓▓ API key
+   Offline               ▓▓▓▓▓▓▓▓▓▓ yes           ░░░░░░░░░░ no
+   Latency (small task)  ▓▓▓▓▓▓▓▓░░ ms            ▓▓▓▓▓▓░░░░ network round-trip
+```
 
 **Stance.** Both are first-class. The user sees, at the moment they invoke an agent, which model is being used and where it runs. No hidden defaults that send data out.
 
@@ -104,6 +137,34 @@ hash_of_output: sha256:...
 
 These are **regular files**. They live in a `_audit/` subfolder of the workspace by default. They are exportable, readable in Obsidian, replayable (rerun the same agent on the same input and compare). Tamper-evidence comes from hashing + optional signatures.
 
+#### Audit record lifecycle
+
+```
+   agent action completes
+            │
+            ▼
+   audit record created  ──▶  /_audit/<YYYY-MM-DD>/<agent>-<timestamp>.md
+            │
+            │  fields: agent, model, scope, prompt, output,
+            │          input/output hashes, duration, timestamps
+            ▼
+   audit record IS a regular workspace artifact
+            │
+   ┌────────┼────────┬──────────────┬─────────────┬───────────────┐
+   ▼        ▼        ▼              ▼             ▼               ▼
+   read     verify   export with    search via    redact /        ship in
+   in any   hash     workspace      palette       delete          backups
+   markdown chain    bundle         "> show       (becomes a      (default;
+   tool                             audit for X"  CRDT tombstone, opt-out per
+                                                  forward-only    workspace)
+                                                  revocation)
+```
+
+Two policies follow:
+
+- **Audit records are first-class data.** They count as the user's data and ship with backups by default. If a user wants ephemeral audit (no retention), it's a per-workspace opt-out.
+- **Tamper-evidence ≠ tamper-proof.** Hashes catch modification; signatures catch impersonation; without a public log there's no append-only guarantee. Acceptable for v1; revisit if a real adversary model emerges.
+
 ### Scope-grants-as-objects
 
 A scope grant is a real artifact, not a settings checkbox. Looks like:
@@ -125,6 +186,38 @@ Properties:
 - **Expirable** — most grants should be short-lived.
 - **Revocable** — kill the grant, the agent loses access on next call.
 - **Granular** — read vs write, per-path, per-time-window.
+
+### Grant + invocation flow
+
+```
+   user creates a scope grant from the palette
+                  │  ("> Grant planning-agent read access to /board/research for 1h")
+                  ▼
+   grant artifact written to /_grants/grant-<timestamp>.yaml
+                  │
+                  │  visible in the workspace
+                  │  (sidebar list of active grants)
+                  ▼
+   agent attempts an action with its keypair + scope claim
+                  │
+                  ▼
+   gate check: does any active grant cover this action?
+                  │
+        ┌─────────┴──────────┐
+        │                    │
+      YES                   NO
+        ▼                    ▼
+   action executes      action denied
+        │                no audit record
+        │                (refusal does not leak content)
+        ▼
+   audit record written  ──▶  /_audit/<date>/<id>.md
+   replayable, exportable, browsable
+        │
+        ▼
+   user can revoke any grant from the workspace
+   (next call by that agent will be denied)
+```
 
 ### Labels as signals
 
@@ -176,3 +269,4 @@ Agents leave notes for each other in shared markdown / canvas, not via hidden si
 ## Update Log
 
 - 2026-04-28 — File created. Goals, anti-goals, tensions, design directions, recommended phasing, hard questions captured. No decisions locked yet beyond the user's stated direction (granular control, clear labeling).
+- 2026-04-29 — Format pass: added top-of-doc index. Three diagrams added — local-vs-hosted comparison bars, scope-grant + invocation gate flow, audit-record lifecycle (create → read/verify/export/search/redact → backup). No content changes; only readability scaffolding.

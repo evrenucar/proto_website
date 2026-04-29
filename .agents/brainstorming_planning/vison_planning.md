@@ -12,8 +12,63 @@ Holding pen for evolving discussion. Stable decisions belong in `.agents/holisti
 Sibling docs in this folder:
 - [`security_and_access.md`](./security_and_access.md) — encryption, identity, segmented access.
 - [`ai_agents_in_the_loop.md`](./ai_agents_in_the_loop.md) — AI agents as collaborators, scope grants, audit trail.
-- [`version_control_and_backups.md`](./version_control_and_backups.md) — five-layer model (undo, rolling history, git, backups, key recovery), visual canvas diff, time scrubber.
+- [`version_control_and_backups.md`](./version_control_and_backups.md) — five-layer model (undo, rolling history, CRDT op log + checkpoints + milestones, backups, key recovery); visual canvas diff; time scrubber; Yjs+Yrs locked.
 - [`searchbar_tools.md`](./searchbar_tools.md) — toolbar, command palette, and search as one ecosystem; inspirations from OSes / editors / browsers / spatial apps; Cmd-K recommendation.
+- [`licensing.md`](./licensing.md) — license strategy: AGPL + commercial dual-license for engine and relay, Apache-2.0 SDK, trademark policy, CLA. No decisions locked yet.
+- [`landing_page_data_handling.md`](./landing_page_data_handling.md) — the "where your stuff stays" section for `cosmoboard-landing.html`: trust-boundary diagram, prose drafts, alternatives, implementation notes.
+- [`random_ideas.md`](./random_ideas.md) — catch-all for seed ideas before they earn their own doc.
+
+### How the docs relate
+
+```
+                          ┌─────────────────────────────┐
+                          │     vison_planning.md       │   north star · decisions index
+                          │      (this file)            │   single source for cross-cutting calls
+                          └──────────────┬──────────────┘
+                                         │
+       ┌──────────────┬──────────────────┼──────────────────┬─────────────┐
+       ▼              ▼                  ▼                  ▼             ▼
+ security_and_  ai_agents_in_   version_control_     searchbar_      random_
+ access.md      the_loop.md     and_backups.md       tools.md        ideas.md
+                                                                    
+ encryption     agents as       CRDT-first           toolbar +        seed ideas
+ identity       collaborators   history (ops →       Cmd-K palette    holding pen
+ segmented      scope grants    checkpoints →        unified search   any bucket
+ access         audit trail     milestones)          across surfaces  
+                                hybrid sync          
+                                self-hosted node     
+
+Read order for a new contributor:
+  1. this file (vison_planning.md)              → north star + locked decisions
+  2. security_and_access.md                     → trust model
+  3. version_control_and_backups.md             → core architecture
+  4. ai_agents_in_the_loop.md                   → AI policy
+  5. searchbar_tools.md                         → interaction-design layer
+  6. licensing.md                               → license / commercial / trademark layer
+  7. random_ideas.md                            → context only, no commitments
+```
+
+---
+
+## Index
+
+- [Decisions (locked)](#decisions-locked)
+- [Core Thesis](#core-thesis)
+- [Two-tier Artifact Model](#two-tier-artifact-model)
+- [Why This And Not X](#why-this-and-not-x)
+- [Pillars (tension only)](#pillars-tension-only--full-list-lives-in-holistic_planningmd)
+- [Performance Approach](#performance-approach)
+- [Capabilities (and how realistic each is)](#capabilities-and-how-realistic-each-is)
+- [AI Agents In The Loop (summary)](#ai-agents-in-the-loop-summary--full-doc-ai_agents_in_the_loopmd)
+- [Security And Access (summary)](#security-and-access-summary--full-doc-security_and_accessmd)
+- [Limitations And Risks](#limitations-and-risks)
+- [Platform Expansion Strategy](#platform-expansion-strategy)
+- [Naming](#naming)
+- [Near-Term Recommended Priorities](#near-term-recommended-priorities-36-months)
+- [First Five Users](#first-five-users)
+- [Open Questions](#open-questions)
+- [Notes And Future Topics To Explore](#notes-and-future-topics-to-explore)
+- [Update Log](#update-log)
 
 ---
 
@@ -58,6 +113,36 @@ Everything else (performance, embeds, app streaming, OS dreams) is a *consequenc
 ## Two-tier Artifact Model
 
 The aspirational-wedge decision (Round 2) makes this explicit. Cosmoboard has two clearly labeled tiers of content:
+
+```
+   ┌─────────────────────────────────────────────────────────────────┐
+   │                         COSMOBOARD                              │
+   │                                                                 │
+   │   ┌────────────────────────┐    ┌────────────────────────┐      │
+   │   │   PORTABLE TIER        │    │   RICH TIER            │      │
+   │   │   (the entry point)    │    │   (the depth)          │      │
+   │   │                        │    │                        │      │
+   │   │   • .md files          │    │   • Encrypted boards   │      │
+   │   │   • .canvas boards     │    │   • AI-derived content │      │
+   │   │   • Plain images       │    │   • Live app sessions  │      │
+   │   │   • Plain attachments  │    │   • CRDT shared state  │      │
+   │   │                        │    │   • Custom DB views    │      │
+   │   │   ↔  Obsidian          │    │                        │      │
+   │   │   ↔  filesystem        │    │   ↔  Cosmoboard bundle │      │
+   │   │   ↔  plain VS Code     │    │      only              │      │
+   │   │                        │    │                        │      │
+   │   │   round-trips          │    │   does NOT round-trip  │      │
+   │   │   losslessly           │    │   to outside tools     │      │
+   │   └────────────┬───────────┘    └────────────┬───────────┘      │
+   │                │                             │                  │
+   │                └─────────  one folder ───────┘                  │
+   │              tiers can be mixed; each is labeled visibly        │
+   └─────────────────────────────────────────────────────────────────┘
+
+   Marketing line "open in Obsidian" → refers to the PORTABLE TIER.
+   Rich tier unlocks as users want it; the boundary is a feature.
+```
+
 
 | Tier | What's in it | Portability promise | Examples |
 | --- | --- | --- | --- |
@@ -291,6 +376,7 @@ Bare-bones list. When a topic earns more than a line, give it its own `.md` file
 - **Encryption story** — see [`security_and_access.md`](./security_and_access.md).
 - **Version control, recovery, and backups** — see [`version_control_and_backups.md`](./version_control_and_backups.md).
 - **Toolbar, command palette, and search** — see [`searchbar_tools.md`](./searchbar_tools.md).
+- **Licensing, commercialization, and trademark** — see [`licensing.md`](./licensing.md).
 - Plugin / extension system. What is the smallest API surface that does not lock us in?
 - Real-time collab without a backend. Possible with WebRTC + Yjs; what is the discovery story?
 - The "stream apps" idea — what is the smallest demo that proves it (e.g. embedded VS Code Web with persistent state)?
@@ -306,3 +392,5 @@ Bare-bones list. When a topic earns more than a line, give it its own `.md` file
 - 2026-04-28 — File created. Vision discussion captured. Round 1 decisions locked: Obsidian round-trip is top priority for the next 3 months, and `Cosmoboard` stays as working name.
 - 2026-04-28 — Round 2 added: security/access (sibling doc) and AI agents in the loop. Four new decisions locked (commitment = startup intent, wedge = aspirational, validation = 5 weekly outside users, recovery = optional opt-in escrow). New sections added: Two-tier Artifact Model, First Five Users, AI Agents summary, Security summary. Open questions re-numbered.
 - 2026-04-28 — Round 3: created `version_control_and_backups.md`. Five-layer model (undo, rolling history, git, backups, key recovery), visual canvas diff and time scrubber as showpiece features. Linked from sibling docs list and Notes section. No new decisions locked yet — remaining open questions about plaintext-vs-encrypted git default, auto-commit cadence, and multi-device sync rendezvous.
+- 2026-04-29 — Format pass: added top-of-doc index, sibling-doc relationship diagram, and a visual for the Two-tier Artifact Model. No content changes; only readability scaffolding. Same pass applied to the other brainstorming docs (each got an index + a few diagrams where they help).
+- 2026-04-29 — Added sibling doc `licensing.md`: AGPLv3 + commercial dual-license direction for engine and P2P relay, Apache-2.0 SDK/addons, trademark policy, CLA, Linux interfacing notes. No new decisions locked — execution deferred until repo split. ASCII relationship diagram intentionally not rebuilt for the 6th sibling — read-order list and sibling-list are the canonical link surface.

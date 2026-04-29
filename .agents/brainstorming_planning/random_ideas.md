@@ -1,0 +1,6 @@
+# Random Ideas
+
+- **Rich markdown**: Add code blocks, formulas, mermaid graphs and tables to markdown.
+- **Cursor emotes**: Cursor with emotes. With certain shortcuts or while doing certain things cursors should be able to do emotes, cool movements, animations, etc.
+- **Project metadata as a separate branch**: Project metadata is stored in a separate branch so you can easily move it to any instance and can be even terminal accessible (ssh). Reference: https://youtu.be/9YjWGXi5tDw?si=KvKJhgY_VpzHN0CA
+- **photo cropping**: If you double click on a photo it will go into crop mode. Should be able to move all 4 corners to be able to crop the image either by clicking away or pressing enter. The parts being cropped should be still visible but less dim. ESC results in cancelled crop. Crop only becomes the view side. The original image is stored uncropped. This might result in privacy issues if it was cropped intentionally. for a cropped image if you double click you should be able to get the same overlay again that you saw during cropping and save in the same way. Now sure what is the best way to store the cropping information

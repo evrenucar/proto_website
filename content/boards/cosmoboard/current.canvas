@@ -1,7 +1,7 @@
 {
   "canvasId": "bfca6ad2-3592-424a-a463-533da7c29720",
   "createdAt": "2026-04-28T15:42:09.615Z",
-  "updatedAt": "2026-04-28T20:38:09.478Z",
+  "updatedAt": "2026-04-29T01:20:00.880Z",
   "nodes": [
     {
       "id": "cosmo-title",
@@ -70,8 +70,8 @@
       "id": "cosmo-embeds",
       "x": 1020,
       "y": 570,
-      "width": 260,
-      "height": 180,
+      "width": 292.69496551056045,
+      "height": 174.55083908157332,
       "type": "text",
       "text": "Embeds\nEmbeds default to previews before live mode.\nUse live views only when the extra motion earns its place."
     },
@@ -80,7 +80,7 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 270,
+      "height": 260,
       "type": "board-preview",
       "boardSlug": "braindump",
       "boardSource": "boards/cosmo-braindump_current.canvas",
@@ -114,8 +114,8 @@
     },
     {
       "id": "cosmo-direction-md",
-      "x": 1428.057489342024,
-      "y": 167.48523221979485,
+      "x": 1382.3880542428217,
+      "y": 86.68546242889701,
       "width": 380,
       "height": 680,
       "type": "markdown",
@@ -253,8 +253,8 @@
   ],
   "edges": [],
   "viewport": {
-    "x": 678.9066608933342,
-    "y": 58.07139426073002,
-    "z": 0.1948099204382503
+    "x": 160.51233120760935,
+    "y": -160.9610498182193,
+    "z": 0.1316561190801615
   }
 }

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmoboard — a local-first thinking tool</title>
+    <meta name="description" content="Cosmoboard is a local-first spatial workspace where canvases, markdown, files, and embeds can live together. A slowly growing prototype by Evren Ucar.">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="theme-color" content="#222222">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
+    <link rel="stylesheet" href="CSS/braindump.css?v=30">
+    <script src="JavaScript/braindump.js?v=58" defer></script>
+    <style>
+      :root {
+        --bg: #222222;
+        --bg-card: #1a1919;
+        --bg-card-2: #1f1f1f;
+        --text: #fafafa;
+        --text-dim: #9b9b9b;
+        --text-faint: #707070;
+        --accent: #3fdaca;
+        --border: #2d2c2c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        max-width: 100%;
+        overflow-x: hidden;
+        overflow-x: clip;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 120ms ease;
+      }
+
+      a:hover {
+        border-bottom-color: var(--accent);
+      }
+
+      .page {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 64px 24px 96px;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        font-size: clamp(36px, 6vw, 56px);
+        line-height: 1.1;
+        margin: 0 0 16px;
+        font-weight: 600;
+      }
+
+      .lede {
+        font-size: 18px;
+        color: var(--text-dim);
+        max-width: 560px;
+        margin: 0 0 40px;
+      }
+
+      h2 {
+        font-size: 20px;
+        margin: 48px 0 16px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      h2 .marker {
+        color: var(--accent);
+        margin-right: 8px;
+      }
+
+      p {
+        margin: 0 0 14px;
+        color: var(--text);
+      }
+
+      .muted {
+        color: var(--text-dim);
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 24px 0 0;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        font-size: 13px;
+      }
+
+      .pill.active {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .rings {
+        position: relative;
+        margin: 32px auto 0;
+        width: 100%;
+        max-width: 520px;
+        aspect-ratio: 1 / 1;
+      }
+
+      .ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 14px;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+      }
+
+      .ring-1 { inset: 0; border-color: var(--text-faint); }
+      .ring-2 { inset: 14%; border-color: #4a4a4a; }
+      .ring-3 { inset: 30%; border-color: #6c6c6c; }
+      .ring-4 {
+        inset: 46%;
+        border-color: var(--accent);
+        background: rgba(63, 218, 202, 0.08);
+        color: var(--accent);
+        align-items: center;
+        padding-top: 0;
+        font-weight: 600;
+      }
+
+      .rings-legend {
+        margin-top: 24px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .rings-legend-row {
+        display: grid;
+        grid-template-columns: 12px 64px 1fr;
+        gap: 12px;
+        align-items: baseline;
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .rings-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--text-faint);
+        align-self: center;
+      }
+
+      .rings-legend-dot.core { background: var(--accent); box-shadow: 0 0 0 3px rgba(63, 218, 202, 0.18); }
+      .rings-legend-dot.now { background: var(--accent); }
+      .rings-legend-dot.soon { background: #c9b25a; }
+      .rings-legend-dot.later { background: var(--text-faint); }
+
+      .rings-legend-row strong {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+
+      .rings-legend-row.core strong { color: var(--accent); }
+
+      .rings-legend-row span.body {
+        color: var(--text);
+      }
+
+      .footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+        color: var(--text-dim);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+      }
+
+      .signature {
+        font-size: 13px;
+        color: var(--text-faint);
+      }
+
+      .cta {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 10px 18px;
+        border: 1px solid var(--accent);
+        border-radius: 999px;
+        color: var(--accent);
+        font-size: 14px;
+      }
+
+      .cta:hover {
+        background: rgba(63, 218, 202, 0.08);
+        border-bottom-color: var(--accent);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .card h3 {
+        margin: 0 0 6px;
+        font-size: 14px;
+        color: var(--accent);
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text-dim);
+      }
+
+      @media (max-width: 560px) {
+        .grid-2 { grid-template-columns: 1fr; }
+        .page { padding: 40px 20px 64px; }
+      }
+
+      .migration-graph {
+        margin: 24px 0 16px;
+      }
+
+      .migration-graph svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .mg-source rect {
+        transition: stroke 150ms ease, fill 150ms ease;
+      }
+
+      .mg-source:hover rect {
+        stroke: var(--accent);
+        fill: var(--bg-card-2);
+      }
+
+      .mg-source:hover text {
+        fill: var(--accent);
+      }
+
+      @media (max-width: 560px) {
+        .migration-graph svg text { font-size: 18px; }
+      }
+
+      .embed-frame {
+        margin-top: 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #151515;
+      }
+
+      .embed-frame .braindump-viewport {
+        height: 460px;
+      }
+
+      .embed-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 12px;
+        font-size: 13px;
+        color: var(--text-faint);
+      }
+
+      .embed-meta a {
+        font-size: 13px;
+      }
+
+      .page-bottom-ticker {
+        position: relative;
+        left: 50%;
+        width: 100vw;
+        width: 100dvw;
+        margin-top: 64px;
+        transform: translateX(-50%);
+        max-width: 100vw;
+        max-width: 100dvw;
+        overflow: hidden;
+        background: var(--accent);
+      }
+
+      .page-bottom-ticker-track {
+        display: flex;
+        align-items: center;
+        width: max-content;
+        white-space: nowrap;
+        color: #242424;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        will-change: transform;
+        animation: bottom-ticker-scroll 30s linear infinite;
+      }
+
+      .page-bottom-ticker-track span {
+        flex: 0 0 auto;
+        padding: 7px 2.5rem 7px 0;
+      }
+
+      @keyframes bottom-ticker-scroll {
+        from { transform: translateX(0); }
+        to { transform: translateX(-33.3333%); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .page-bottom-ticker-track { animation-duration: 45s; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="eyebrow">Cosmoboard</div>
+      <h1>A local-first place for canvases, notes, and files to live together.</h1>
+      <p class="lede">
+        Cosmoboard is a project I have been working on for the past 10 years. Initially I was just exploring and taking notes on what my ideal workspace and PKMS would be, after being disappointed in existing tools.
+      </p>
+      <p class="lede">
+        Currently I use a mix of Miro, Obsidian, a small notebook, loose pieces of paper, Notion, and VS Code for all my projects. It works but it ain't pretty. I hope to get this repository to a state where the static version becomes something you go back to and use on a daily basis.
+      </p>
+      <p class="lede">
+        Let me know if it is not there, how it could get there, and what you would like for it to be there.
+      </p>
+
+      <a class="cta" href="cosmoboard.html">Try the live prototype →</a>
+
+      <h2><span class="marker">●</span>What it is</h2>
+      <p>
+        It is one big canvas where you can pan around, zoom in, drop images and PDFs onto it, jot markdown notes, and embed other boards inside it. Every board is a plain file on disk. The idea is that the work is mine and yours, not stuck inside someone else's database somewhere.
+      </p>
+
+      <h2><span class="marker">●</span>What it is not</h2>
+      <p>
+        It is not a cloud-only workspace. It is not me trying to clone Notion or Miro or Obsidian. It is not finished, and it probably will not be for a while. I am building it piece by piece, in public, inside my personal site, on the days I have the energy for it.
+      </p>
+
+      <h2><span class="marker">●</span>Scope and roadmap</h2>
+      <p class="muted">Four rings. The middle is what has to work without thinking. Each ring outward is further from done.</p>
+      <div class="rings" aria-hidden="true">
+        <div class="ring ring-1">Later</div>
+        <div class="ring ring-2">Soon</div>
+        <div class="ring ring-3">Now</div>
+        <div class="ring ring-4">Core</div>
+      </div>
+
+      <div class="rings-legend">
+        <div class="rings-legend-row core">
+          <span class="rings-legend-dot core" aria-hidden="true"></span>
+          <strong>Core</strong>
+          <span class="body">Pan and zoom, markdown nodes, image and PDF drops, autosave to the browser. The thing has to do these without thinking.</span>
+        </div>
+        <div class="rings-legend-row now">
+          <span class="rings-legend-dot now" aria-hidden="true"></span>
+          <strong>Now</strong>
+          <span class="body">Multiple boards per page, embedded board previews, shared entities, export as Git-friendly `.canvas` or as a portable bundle, GitHub recommendation flow.</span>
+        </div>
+        <div class="rings-legend-row soon">
+          <span class="rings-legend-dot soon" aria-hidden="true"></span>
+          <strong>Soon</strong>
+          <span class="body">Markdown to canvas sync, generic file cards, inline image paste in markdown, bases and database views over notes, boards, and assets.</span>
+        </div>
+        <div class="rings-legend-row later">
+          <span class="rings-legend-dot later" aria-hidden="true"></span>
+          <strong>Later</strong>
+          <span class="body">Website embed cards, app container embeds, realtime co-editing with presence, mobile-first board UX, plugin or local API layer.</span>
+        </div>
+      </div>
+
+      <h2><span class="marker">●</span>Principles</h2>
+      <p class="muted">These are the rules I keep coming back to when I have to make a call on something.</p>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Local-first</h3>
+          <p>Works offline. Saves locally first. Happy to live on a static site without a backend.</p>
+        </div>
+        <div class="card">
+          <h3>Portable</h3>
+          <p>Markdown and JSON Canvas underneath. If I leave, my notes and boards leave with me.</p>
+        </div>
+        <div class="card">
+          <h3>File-first</h3>
+          <p>Every board is just a file on disk. The filesystem stays the boss, not a hidden database.</p>
+        </div>
+        <div class="card">
+          <h3>Embeddable</h3>
+          <p>Boards inside markdown. Markdown inside boards. Files inside both.</p>
+        </div>
+        <div class="card">
+          <h3>Safe by default</h3>
+          <p>Sandboxed embeds. No silent file crawling. Permissions stay explicit, even when it is annoying.</p>
+        </div>
+        <div class="card">
+          <h3>Gradual collaboration</h3>
+          <p>Solo for now. GitHub recommendations next. Realtime co-editing once the rest is solid.</p>
+        </div>
+      </div>
+
+      <h2><span class="marker">●</span>Where your stuff stays</h2>
+      <p>By default, your boards, notes, and dropped files autosave to your browser, so editing works fully offline. If you are also running the local dev-server, the same edits sync to plain .canvas and .md files in your project folder.</p>
+      <p>Nothing leaves your machine unless you click <strong>Recommend</strong>, which opens a GitHub issue with the canvas attached.</p>
+      <p class="muted">There is no telemetry. No analytics. No silent cloud sync either.</p>
+      <div class="migration-graph" role="img" aria-label="Trust-boundary diagram. A box labeled 'Your device' contains 'You edit a board or note', 'Browser storage (IndexedDB autosave)', and 'Your disk: .canvas and .md files'. A single outbound arrow leaves the box and points to a 'GitHub issue' node, labeled 'only when you click Recommend'.">
+        <svg viewBox="0 0 800 540" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <marker id="dh-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#3fdaca"></path>
+            </marker>
+          </defs>
+
+          <rect x="40" y="40" width="720" height="360" rx="14" fill="rgba(63,218,202,0.04)" stroke="#3fdaca" stroke-width="2"></rect>
+          <text x="400" y="74" text-anchor="middle" fill="#3fdaca" font-size="13" font-weight="700" letter-spacing="3">YOUR DEVICE</text>
+
+          <rect x="80" y="120" width="200" height="60" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+          <text x="180" y="155" text-anchor="middle" dominant-baseline="central" fill="#fafafa" font-size="15" font-weight="600">You edit a board / note</text>
+
+          <rect x="320" y="120" width="400" height="60" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+          <text x="520" y="146" text-anchor="middle" dominant-baseline="central" fill="#fafafa" font-size="15" font-weight="600">Browser storage</text>
+          <text x="520" y="166" text-anchor="middle" dominant-baseline="central" fill="#9b9b9b" font-size="12">IndexedDB · autosave · works offline</text>
+
+          <line x1="280" y1="150" x2="320" y2="150" stroke="#3fdaca" stroke-width="1.5" stroke-opacity="0.55" marker-end="url(#dh-arrow)"></line>
+
+          <line x1="180" y1="180" x2="180" y2="280" stroke="#3fdaca" stroke-width="1.5" stroke-opacity="0.55" marker-end="url(#dh-arrow)"></line>
+          <text x="200" y="232" fill="#707070" font-size="12" font-style="italic">if local dev-server runs</text>
+
+          <rect x="80" y="290" width="640" height="60" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+          <text x="400" y="316" text-anchor="middle" dominant-baseline="central" fill="#fafafa" font-size="15" font-weight="600">Your disk</text>
+          <text x="400" y="336" text-anchor="middle" dominant-baseline="central" fill="#9b9b9b" font-size="12">.canvas + .md files in your project folder</text>
+
+          <line x1="400" y1="400" x2="400" y2="468" stroke="#3fdaca" stroke-width="1.8" marker-end="url(#dh-arrow)"></line>
+          <text x="412" y="438" fill="#3fdaca" font-size="12" font-weight="600">only when YOU click Recommend</text>
+          <g transform="translate(602, 425) scale(0.6)" fill="none" stroke="#3fdaca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+          </g>
+
+          <rect x="240" y="470" width="320" height="60" rx="10" fill="#1a1919" stroke="#3fdaca"></rect>
+          <text x="400" y="496" text-anchor="middle" dominant-baseline="central" fill="#fafafa" font-size="15" font-weight="600">GitHub issue</text>
+          <text x="400" y="516" text-anchor="middle" dominant-baseline="central" fill="#9b9b9b" font-size="12">visibility per your repo</text>
+        </svg>
+      </div>
+      <p class="muted">Encryption, portable encrypted shares, and self-hosted sync are part of the plan but not shipped yet. <span class="muted" style="font-size: 13px; letter-spacing: 0.12em; font-weight: 600;">(PLANNED)</span></p>
+
+      <h2><span class="marker">●</span>Bringing your stuff in <span class="muted" style="font-size: 13px; letter-spacing: 0.12em; font-weight: 600;">(PLANNED)</span></h2>
+      <p class="muted">The whole point of local-first is that your notes are already yours. If they live somewhere else right now, here is how I plan to walk them in without making you redo years of work. Most of these are not built yet — this is the plan.</p>
+      <div class="migration-graph" role="img" aria-label="Cosmoboard sits at the center with two-way migration arrows pointing to and from Obsidian, Notion, Miro, Google Docs, Apple Notes, A4 paper, and notebooks.">
+        <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <marker id="mg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#3fdaca"></path>
+            </marker>
+          </defs>
+
+          <g class="mg-lines" stroke="#3fdaca" stroke-width="1.5" stroke-opacity="0.55" fill="none" stroke-linecap="round" marker-start="url(#mg-arrow)" marker-end="url(#mg-arrow)">
+            <line x1="400" y1="220" x2="400" y2="72"></line>
+            <line x1="462.5" y1="250.0" x2="567.5" y2="166.0"></line>
+            <line x1="478.0" y1="317.9" x2="572.0" y2="339.5"></line>
+            <line x1="434.6" y1="372.1" x2="497.4" y2="503.0"></line>
+            <line x1="365.4" y1="372.1" x2="302.6" y2="503.0"></line>
+            <line x1="322.0" y1="317.9" x2="228.0" y2="339.5"></line>
+            <line x1="337.5" y1="250.0" x2="232.5" y2="166.0"></line>
+          </g>
+
+          <g class="mg-hub">
+            <circle cx="400" cy="300" r="80" fill="rgba(63,218,202,0.12)" stroke="#3fdaca" stroke-width="2"></circle>
+            <text x="400" y="294" text-anchor="middle" dominant-baseline="central" fill="#3fdaca" font-size="20" font-weight="700">Cosmoboard</text>
+            <text x="400" y="318" text-anchor="middle" dominant-baseline="central" fill="#9b9b9b" font-size="10" letter-spacing="2">LOCAL FILES</text>
+          </g>
+
+          <g class="mg-nodes" font-size="15" font-weight="600">
+            <g class="mg-source">
+              <rect x="328" y="28" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="400" y="50" text-anchor="middle" dominant-baseline="central" fill="#fafafa">Obsidian</text>
+            </g>
+            <g class="mg-source">
+              <rect x="523" y="122" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="595" y="144" text-anchor="middle" dominant-baseline="central" fill="#fafafa">Notion</text>
+            </g>
+            <g class="mg-source">
+              <rect x="572" y="334" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="644" y="356" text-anchor="middle" dominant-baseline="central" fill="#fafafa">Miro</text>
+            </g>
+            <g class="mg-source">
+              <rect x="436" y="503" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="508" y="525" text-anchor="middle" dominant-baseline="central" fill="#fafafa">Google Docs</text>
+            </g>
+            <g class="mg-source">
+              <rect x="220" y="503" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="292" y="525" text-anchor="middle" dominant-baseline="central" fill="#fafafa">Apple Notes</text>
+            </g>
+            <g class="mg-source">
+              <rect x="84" y="334" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="156" y="356" text-anchor="middle" dominant-baseline="central" fill="#fafafa">A4 + loose paper</text>
+            </g>
+            <g class="mg-source">
+              <rect x="133" y="122" width="144" height="44" rx="10" fill="#1a1919" stroke="#2d2c2c"></rect>
+              <text x="205" y="144" text-anchor="middle" dominant-baseline="central" fill="#fafafa">Notebooks</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <p class="muted">Two-way: import once, then keep working in the original tool if you want. Cosmoboard stays in sync with the files it already understands. None of this is about migrating once and forgetting.</p>
+
+      <h2><span class="marker">●</span>Where it lives</h2>
+      <p>
+        Right now Cosmoboard lives inside <a href="https://evrenucar.com">evrenucar.com</a>, my personal site. It is the easiest place for me to keep working on it without spinning up a whole separate project around it. Once it grows up a bit, it will probably move to its own home. For now, the personal site is its host and its first real test surface.
+      </p>
+
+      <h2><span class="marker">●</span>Live preview</h2>
+      <p class="muted">
+        This is the actual Cosmoboard, sitting right inside this page in read-only mode. Pan with the hand tool, zoom with the wheel, have a look around. To actually edit anything, open it in its own page.
+      </p>
+      <div class="embed-frame">
+        <div
+          class="braindump-viewport"
+          data-board-app="true"
+          data-board-mode="preview"
+          data-board-slug="cosmoboard"
+          data-board-title="Cosmoboard"
+          data-board-source="content/boards/cosmoboard/current.canvas"
+          data-board-source-version=""
+          data-board-legacy-source=""
+          data-board-repo-path="content/boards/cosmoboard/current.canvas"
+          data-board-index="[]"
+          data-board-storage-key="board:cosmoboard:landing-preview"
+          data-board-legacy-storage-key=""
+          data-board-full-href="cosmoboard.html"
+        >
+          <div class="braindump-canvas" data-board-role="canvas">
+            <svg class="braindump-grid" aria-hidden="true" viewBox="-120000 -120000 240000 240000">
+              <defs>
+                <pattern id="braindump-grid-pattern-cosmoboard-landing" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+                  <circle class="braindump-grid-dot" cx="1" cy="1" r="1"></circle>
+                </pattern>
+              </defs>
+              <rect x="-120000" y="-120000" width="240000" height="240000" fill="url(#braindump-grid-pattern-cosmoboard-landing)"></rect>
+            </svg>
+            <svg data-board-role="svg-layer"></svg>
+          </div>
+          <div class="braindump-toolbar-shell" data-board-ui="toolbar-shell">
+            <div class="braindump-toolbar" data-board-ui="toolbar">
+              <button type="button" data-tool="pan" aria-label="Pan" title="Pan">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heroicon-hand"><path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
+              </button>
+            </div>
+            <div class="braindump-toolbar-toast" data-board-ui="toolbar-toast" role="status" aria-live="polite" hidden></div>
+          </div>
+        </div>
+      </div>
+      <div class="embed-meta">
+        <span>Read-only · pan and zoom only</span>
+        <a href="cosmoboard.html">Open the full board →</a>
+      </div>
+
+      <h2><span class="marker">●</span>What I'm working on right now</h2>
+      <p>The focus right now is making markdown and .canvas files round-trip cleanly with Obsidian, so the same folder opens in both places without any drama. Drag-and-drop imports for images, PDFs, and text files just landed. Next up are a proper onboarding board, a real performance baseline so a couple hundred nodes still pan at 60fps on a 2020 laptop, and the first slice of opt-in encryption so you can share boards privately without needing an account.</p>
+      <p class="muted">It is being built piece by piece, in public, in a single repo.</p>
+
+      <h2><span class="marker">●</span>How you can help</h2>
+      <p>The most useful thing you can do is try it, push it until something breaks, and tell me what happened.</p>
+      <p>The board has buttons for that built in:</p>
+      <ul style="margin: 0 0 14px; padding-left: 20px; color: var(--text);">
+        <li><strong>Recommend</strong> sends a board you would like to see live, with the canvas attached.</li>
+        <li><strong>Feature request</strong> is for something you want.</li>
+        <li><strong>Bug report</strong> is for something that broke.</li>
+      </ul>
+      <p>All three open prefilled GitHub issues. No sign-up beyond GitHub itself.</p>
+      <p>If you want to look under the hood, the repo is open. Issues, pull requests, and stars all work the way you would expect.</p>
+
+      <p>One thing I keep getting stuck on: people should be able to share boards with each other. I have not figured out the right way to do that yet, somewhere between capability links, encrypted shares, and a self-hosted node. If you have ideas about how sharing should feel, I want to hear them.</p>
+
+      <p>My inbox is open. If something here sparked an idea, write to me.</p>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; align-items: center;">
+        <a class="cta" href="https://github.com/evrenucar/proto_website" target="_blank" rel="noreferrer" style="font-size: 16px; padding: 14px 28px; font-weight: 600;">View the GitHub repo →</a>
+        <button type="button" class="cta" data-cosmo-copy-email style="cursor: pointer; background: transparent; font-family: inherit; font-size: 14px; padding: 12px 22px;">Copy email</button>
+      </div>
+
+      <script>
+        (function() {
+          var btn = document.querySelector('[data-cosmo-copy-email]');
+          if (!btn) return;
+          var user = '9991racunerve';
+          var domain = 'moc.liamg';
+          var email = user.split('').reverse().join('') + '@' + domain.split('').reverse().join('');
+          btn.addEventListener('click', async function() {
+            var original = btn.textContent;
+            try {
+              await navigator.clipboard.writeText(email);
+              btn.textContent = 'Email copied';
+            } catch (err) {
+              window.location.href = 'mailto:' + email;
+              return;
+            }
+            setTimeout(function() { btn.textContent = original; }, 1800);
+          });
+        })();
+      </script>
+
+      <div class="pill-row">
+        <span class="pill active">prototype</span>
+        <span class="pill">local-first</span>
+        <span class="pill">spatial</span>
+        <span class="pill">markdown</span>
+        <span class="pill">canvas</span>
+        <span class="pill">slowly built</span>
+      </div>
+
+      <div class="footer">
+        <div>
+          <a href="cosmoboard.html">Open the live board</a>
+          <span class="muted"> · </span>
+          <a href="braindump.html">Open the original Braindump</a>
+          <span class="muted"> · </span>
+          <a href="index.html">Back to evrenucar.com</a>
+        </div>
+        <div class="signature">Still being built, slowly, by Evren Ucar.</div>
+      </div>
+    </main>
+
+    <div class="page-bottom-ticker" aria-label="Scrolling Cosmoboard banner">
+      <div class="page-bottom-ticker-track">
+        <span>If you scrolled this far you have already seen more concentric circles than most product pages, lived through a roadmap that calls itself slow on purpose, and met a tool that mostly just wants to be a folder you can pan around. Somewhere in here a board is autosaving while you read this, a markdown file is quietly waiting to be dropped onto a canvas, a PDF is pretending to be a node, a feature labeled later is politely refusing to be soon, a shared entity is being reused without anyone making a fuss, and a small voice keeps reminding everyone that the filesystem is, in fact, allowed to stay the boss. | </span>
+        <span aria-hidden="true">If you scrolled this far you have already seen more concentric circles than most product pages, lived through a roadmap that calls itself slow on purpose, and met a tool that mostly just wants to be a folder you can pan around. Somewhere in here a board is autosaving while you read this, a markdown file is quietly waiting to be dropped onto a canvas, a PDF is pretending to be a node, a feature labeled later is politely refusing to be soon, a shared entity is being reused without anyone making a fuss, and a small voice keeps reminding everyone that the filesystem is, in fact, allowed to stay the boss. | </span>
+        <span aria-hidden="true">If you scrolled this far you have already seen more concentric circles than most product pages, lived through a roadmap that calls itself slow on purpose, and met a tool that mostly just wants to be a folder you can pan around. Somewhere in here a board is autosaving while you read this, a markdown file is quietly waiting to be dropped onto a canvas, a PDF is pretending to be a node, a feature labeled later is politely refusing to be soon, a shared entity is being reused without anyone making a fuss, and a small voice keeps reminding everyone that the filesystem is, in fact, allowed to stay the boss. | </span>
+      </div>
+    </div>
+  </body>
+</html>
