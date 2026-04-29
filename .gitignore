@@ -10,13 +10,15 @@ agents/
 
 # Temp / dev artefacts
 .tmp/
+.tmp_*
 .build-preserve/
 
 # Dev server logs
 *.log
 
-# Test / scratch code (contains plaintext email)
-testCode/
+# Windows null-device strays (created by stray `> nul` redirects in bash on Windows)
+nul
+NUL
 
 # OS junk
 .DS_Store

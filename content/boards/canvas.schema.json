@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evrenucar.com/schemas/canvas.schema.json",
+  "title": "Cosmoboard .canvas file",
+  "description": "Schema for Cosmoboard board files (.canvas). Schema treated as v1, not final.",
+  "type": "object",
+  "required": ["nodes", "edges", "viewport"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Schema version integer. Defaults to 1 when absent.",
+      "default": 1,
+      "minimum": 1
+    },
+    "nodes": {
+      "type": "array",
+      "description": "All items placed on the board. Render order matches array order (later items paint on top).",
+      "items": {
+        "$ref": "#/$defs/Node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Connections between nodes. May be empty.",
+      "items": {
+        "$ref": "#/$defs/Edge"
+      }
+    },
+    "viewport": {
+      "$ref": "#/$defs/Viewport"
+    }
+  },
+  "$defs": {
+    "Viewport": {
+      "type": "object",
+      "description": "Last-saved camera position.",
+      "required": ["x", "y", "z"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "Horizontal pan offset in canvas coordinates."
+        },
+        "y": {
+          "type": "number",
+          "description": "Vertical pan offset in canvas coordinates."
+        },
+        "z": {
+          "type": "number",
+          "description": "Zoom scale factor. 1.0 = 100%. Values less than 1.0 zoom out.",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "Edge": {
+      "type": "object",
+      "description": "A connection between two nodes. Stored but not actively rendered in the current engine.",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique edge identifier."
+        },
+        "fromNode": {
+          "type": "string",
+          "description": "ID of the source node."
+        },
+        "toNode": {
+          "type": "string",
+          "description": "ID of the destination node."
+        },
+        "label": {
+          "type": "string",
+          "description": "Optional display label."
+        }
+      }
+    },
+    "NodeBase": {
+      "type": "object",
+      "description": "Geometry envelope shared by all node types.",
+      "required": ["id", "x", "y", "width", "height", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this node within this board."
+        },
+        "x": {
+          "type": "number",
+          "description": "Left edge of the node in canvas coordinates."
+        },
+        "y": {
+          "type": "number",
+          "description": "Top edge of the node in canvas coordinates."
+        },
+        "width": {
+          "type": "number",
+          "description": "Width of the node in canvas coordinates.",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "description": "Height of the node in canvas coordinates.",
+          "exclusiveMinimum": 0
+        },
+        "type": {
+          "type": "string",
+          "description": "Item type discriminator.",
+          "enum": ["text", "link", "markdown", "board-preview", "base", "app", "file"]
+        }
+      }
+    },
+    "TextNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "Plain-text note or inline-SVG freehand drawing stroke.",
+          "required": ["text"],
+          "properties": {
+            "type": { "const": "text" },
+            "text": {
+              "type": "string",
+              "description": "Content. Plain text for notes; an inline <svg> string for drawing strokes."
+            }
+          }
+        }
+      ]
+    },
+    "LinkNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "URL bookmark card with optional rich-preview metadata.",
+          "required": ["url"],
+          "properties": {
+            "type": { "const": "link" },
+            "url": {
+              "type": "string",
+              "description": "The target URL. May be empty string while the user is editing."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title."
+            },
+            "description": {
+              "type": "string",
+              "description": "Short description or OG description."
+            },
+            "image": {
+              "type": "string",
+              "description": "Preview image URL or data: URI."
+            },
+            "embedMode": {
+              "type": "string",
+              "enum": ["preview", "live"],
+              "description": "preview renders a card; live mounts an interactive iframe. Defaults to preview.",
+              "default": "preview"
+            },
+            "hasAdjustedRatio": {
+              "type": "boolean",
+              "description": "Whether the node aspect ratio has been manually adjusted."
+            },
+            "embedRatio": {
+              "type": "number",
+              "description": "Stored aspect ratio for iframe embeds (width / height).",
+              "exclusiveMinimum": 0
+            },
+            "isEditingUrl": {
+              "type": "boolean",
+              "description": "Ephemeral flag indicating the URL input is open. Should be false or absent in saved files."
+            }
+          }
+        }
+      ]
+    },
+    "MarkdownNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "Inline render of a .md file referenced by path.",
+          "required": ["file"],
+          "properties": {
+            "type": { "const": "markdown" },
+            "file": {
+              "type": "string",
+              "description": "Path to the source markdown file."
+            },
+            "href": {
+              "type": "string",
+              "description": "Navigation href for opening the file."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title shown when the file is collapsed or loading."
+            },
+            "_rawMarkdown": {
+              "type": "string",
+              "description": "Cached raw markdown content. Treated as a cache — the file is authoritative."
+            }
+          }
+        }
+      ]
+    },
+    "BoardPreviewNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "Read-only embedded preview of another board.",
+          "required": ["boardSlug", "boardSource", "boardHref"],
+          "properties": {
+            "type": { "const": "board-preview" },
+            "boardSlug": {
+              "type": "string",
+              "description": "Slug identifier of the linked board."
+            },
+            "boardSource": {
+              "type": "string",
+              "description": "Relative path to the linked board's .canvas file."
+            },
+            "boardHref": {
+              "type": "string",
+              "description": "Navigation href for opening the linked board in its full-page view."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title for the preview card."
+            },
+            "description": {
+              "type": "string",
+              "description": "Short description shown in the card footer."
+            }
+          }
+        }
+      ]
+    },
+    "BaseNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "Live data table sourced from a JSON collection.",
+          "required": ["source"],
+          "properties": {
+            "type": { "const": "base" },
+            "source": {
+              "type": "string",
+              "description": "Path to the source JSON file."
+            },
+            "collection": {
+              "type": "string",
+              "description": "Optional sub-collection name within the source file."
+            },
+            "filter": {
+              "type": "string",
+              "description": "Filter expression string (e.g. 'section=projects')."
+            },
+            "columns": {
+              "type": "array",
+              "description": "Ordered list of column names to display.",
+              "items": { "type": "string" }
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title for the base card header."
+            }
+          }
+        }
+      ]
+    },
+    "FileNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "Embedded image or binary asset stored as a data: URI or file path.",
+          "required": ["file"],
+          "properties": {
+            "type": { "const": "file" },
+            "file": {
+              "type": "string",
+              "description": "data: URI containing the file content, or a path to the source asset."
+            },
+            "hasAdjustedRatio": {
+              "type": "boolean",
+              "description": "Whether the node aspect ratio has been manually adjusted."
+            }
+          }
+        }
+      ]
+    },
+    "AppNode": {
+      "allOf": [
+        { "$ref": "#/$defs/NodeBase" },
+        {
+          "type": "object",
+          "description": "Embedded application card backed by an app configuration record.",
+          "required": ["source"],
+          "properties": {
+            "type": { "const": "app" },
+            "source": {
+              "type": "string",
+              "description": "Path to the app configuration JSON file."
+            },
+            "embedMode": {
+              "type": "string",
+              "enum": ["preview", "live"],
+              "description": "Render mode. Defaults to preview.",
+              "default": "preview"
+            },
+            "appConfig": {
+              "type": "object",
+              "description": "Inline snapshot of the app config. Treated as a cache — the source file is authoritative.",
+              "properties": {
+                "slug": { "type": "string" },
+                "appName": { "type": "string" },
+                "description": { "type": "string" },
+                "url": { "type": "string" },
+                "icon": { "type": "string" },
+                "tags": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "Node": {
+      "description": "Any board item. Discriminated by the 'type' field.",
+      "oneOf": [
+        { "$ref": "#/$defs/TextNode" },
+        { "$ref": "#/$defs/LinkNode" },
+        { "$ref": "#/$defs/MarkdownNode" },
+        { "$ref": "#/$defs/BoardPreviewNode" },
+        { "$ref": "#/$defs/BaseNode" },
+        { "$ref": "#/$defs/FileNode" },
+        { "$ref": "#/$defs/AppNode" }
+      ]
+    }
+  }
+}

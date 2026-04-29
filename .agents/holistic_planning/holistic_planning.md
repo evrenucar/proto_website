@@ -30,6 +30,7 @@ Product north star, product pillars, phased roadmap, skeleton decisions, confirm
 | [online_save_plan.md](../whiteboard/online_save_plan.md) | Static-site-friendly recommendation and export flow |
 | [online_save_backend_plan.md](../whiteboard/online_save_backend_plan.md) | Later GitHub OAuth and PR-based collaboration path |
 | [page_database_plan.md](../page_database/page_database_plan.md) | Collection, page, and database-like content model for the rest of the site |
+| [extension_seams.md](./extension_seams.md) | Catalog of extension surfaces: entity types, canvas-item renderers, toolbar commands, keyboard/wheel routes |
 
 ## Product North Star
 

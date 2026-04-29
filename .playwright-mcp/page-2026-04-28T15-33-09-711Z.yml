@@ -1,0 +1,51 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - complementary "Primary" [ref=e3]:
+    - generic [ref=e4]:
+      - link "About Me" [ref=e5] [cursor=pointer]:
+        - /url: ../../index.html
+      - link "Projects" [ref=e6] [cursor=pointer]:
+        - /url: ../../projects.html
+      - link "Things i do" [ref=e7] [cursor=pointer]:
+        - /url: ../../things_i_do.html
+      - link "Photography" [ref=e8] [cursor=pointer]:
+        - /url: ../../photography.html
+      - link "Open-Quests" [ref=e9] [cursor=pointer]:
+        - /url: ../../open-quests.html
+      - link "Cool bookmarks" [ref=e10] [cursor=pointer]:
+        - /url: ../../cool-bookmarks.html
+      - link "Braindump" [ref=e11] [cursor=pointer]:
+        - /url: ../../braindump.html
+      - link "Cosmoboard" [ref=e12] [cursor=pointer]:
+        - /url: ../../cosmoboard.html
+    - generic [ref=e13]:
+      - button "Copy Evren Ucar email address" [ref=e14] [cursor=pointer]:
+        - img "Email icon" [ref=e15]
+      - link "LinkedIn" [ref=e16] [cursor=pointer]:
+        - /url: https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/
+        - img "LinkedIn icon" [ref=e17]
+      - link "YouTube" [ref=e18] [cursor=pointer]:
+        - /url: https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw
+        - img "YouTube icon" [ref=e19]
+  - generic [ref=e20]:
+    - button "Toggle navigation" [ref=e21] [cursor=pointer]:
+      - generic [ref=e25]: Toggle navigation
+    - main [ref=e26]:
+      - generic [ref=e27]:
+        - generic:
+          - img
+          - img
+        - generic [ref=e29]:
+          - button "Select (V)" [ref=e30] [cursor=pointer]:
+            - img [ref=e31]
+          - button "Pan (Space)" [ref=e33] [cursor=pointer]:
+            - img [ref=e34]
+          - button "Add Text (T)" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+          - button "Draw (P)" [ref=e39] [cursor=pointer]:
+            - img [ref=e40]
+          - button "Add Bookmark (L)" [ref=e43] [cursor=pointer]:
+            - img [ref=e44]
+          - button "More board actions" [ref=e47] [cursor=pointer]:
+            - img [ref=e48]

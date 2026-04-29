@@ -1,0 +1,756 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - complementary "Primary" [ref=e3]:
+    - generic [ref=e4]:
+      - link "About Me" [ref=e5] [cursor=pointer]:
+        - /url: index.html
+      - link "Projects" [ref=e6] [cursor=pointer]:
+        - /url: projects.html
+      - link "Things i do" [ref=e7] [cursor=pointer]:
+        - /url: things_i_do.html
+      - link "Photography" [ref=e8] [cursor=pointer]:
+        - /url: photography.html
+      - link "Open-Quests" [ref=e9] [cursor=pointer]:
+        - /url: open-quests.html
+      - link "Cool bookmarks" [ref=e10] [cursor=pointer]:
+        - /url: cool-bookmarks.html
+      - link "Braindump" [ref=e11] [cursor=pointer]:
+        - /url: braindump.html
+      - link "Cosmoboard" [ref=e12] [cursor=pointer]:
+        - /url: cosmoboard.html
+    - generic [ref=e13]:
+      - button "Copy Evren Ucar email address" [ref=e14] [cursor=pointer]:
+        - img "Email icon" [ref=e15]
+      - link "LinkedIn" [ref=e16] [cursor=pointer]:
+        - /url: https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/
+        - img "LinkedIn icon" [ref=e17]
+      - link "YouTube" [ref=e18] [cursor=pointer]:
+        - /url: https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw
+        - img "YouTube icon" [ref=e19]
+  - generic [ref=e20]:
+    - button "Toggle navigation" [ref=e21] [cursor=pointer]:
+      - generic [ref=e25]: Toggle navigation
+    - main [ref=e26]:
+      - generic [ref=e27]:
+        - generic:
+          - img
+          - img
+          - img [ref=e29]
+          - img [ref=e32]
+          - generic [ref=e34]:
+            - img "I Made $1.5M From An App You’ve Never Heard Of" [ref=e35]
+            - button "View live embed" [ref=e36] [cursor=pointer]:
+              - img [ref=e37]
+            - generic [ref=e39]:
+              - heading "I Made $1.5M From An App You’ve Never Heard Of" [level=3] [ref=e40]
+              - paragraph [ref=e41]: Video recommendation
+              - link "https://www.youtube.com/watch?v=bq3-qH-CpYQ" [ref=e42] [cursor=pointer]:
+                - /url: https://www.youtube.com/watch?v=bq3-qH-CpYQ
+          - generic [ref=e44]:
+            - 'img "Digi-Key: Winkelwagen" [ref=e45]'
+            - button "View live embed" [ref=e46] [cursor=pointer]:
+              - img [ref=e47]
+            - generic [ref=e49]:
+              - 'heading "Digi-Key: Winkelwagen" [level=3] [ref=e50]'
+              - paragraph [ref=e51]: Plaats een online bestelling bij DigiKey. DigiKey biedt duizenden elektronische onderdelen uit voorraad, klaar om dezelfde dag nog te worden verzonden.
+              - link "https://www.digikey.nl/ordering/submit?submit=yes" [ref=e52] [cursor=pointer]:
+                - /url: https://www.digikey.nl/ordering/submit?submit=yes
+          - generic [ref=e54]:
+            - img "www.asda.com" [ref=e55]
+            - button "View live embed" [ref=e56] [cursor=pointer]:
+              - img [ref=e57]
+            - generic [ref=e59]:
+              - heading "www.asda.com" [level=3] [ref=e60]
+              - paragraph [ref=e61]: This website uses security tools to protect against online attacks. Something you did triggered a block - this could be due to certain words, commands, or incorrect data.
+              - link "https://www.asda.com/" [ref=e62] [cursor=pointer]:
+                - /url: https://www.asda.com/
+          - generic [ref=e64]:
+            - img "I Built 10 Tilting Trikes So You Don’t Have To" [ref=e65]
+            - button "View live embed" [ref=e66] [cursor=pointer]:
+              - img [ref=e67]
+            - generic [ref=e69]:
+              - heading "I Built 10 Tilting Trikes So You Don’t Have To" [level=3] [ref=e70]
+              - paragraph [ref=e71]: Video recommendation
+              - link "https://youtu.be/46j_ZCB8j4s?si=KRnZiWkYzPTyRuFv&t=600" [ref=e72] [cursor=pointer]:
+                - /url: https://youtu.be/46j_ZCB8j4s?si=KRnZiWkYzPTyRuFv&t=600
+          - generic [ref=e74]:
+            - img "How I Built My Own Bike Frame" [ref=e75]
+            - button "View live embed" [ref=e76] [cursor=pointer]:
+              - img [ref=e77]
+            - generic [ref=e79]:
+              - heading "How I Built My Own Bike Frame" [level=3] [ref=e80]
+              - paragraph [ref=e81]: Video recommendation
+              - link "https://www.youtube.com/watch?v=qDsZQwlgqjY" [ref=e82] [cursor=pointer]:
+                - /url: https://www.youtube.com/watch?v=qDsZQwlgqjY
+          - img [ref=e84]
+          - img [ref=e87]
+          - img [ref=e89]
+          - img [ref=e91]
+          - img [ref=e93]
+          - img [ref=e95]
+          - img [ref=e97]
+          - img [ref=e100]
+          - img [ref=e103]
+          - img [ref=e106]
+          - generic [ref=e109]:
+            - text: testing here.
+            - text: stes
+            - text: asda
+            - text: da
+            - text: asda
+            - text: da
+            - text: asd
+            - text: asdsa
+            - text: dsa
+            - text: da
+            - text: sd
+            - text: a
+            - text: dasd
+            - text: sad
+            - text: asd
+            - text: as
+            - text: das
+            - text: das
+            - text: da
+            - text: da
+            - text: sd
+            - text: as
+            - text: s
+            - text: s
+            - text: s
+            - text: s
+            - text: s
+            - text: sssssssssssssssssssssssss
+          - generic [ref=e111]: this is a bit of text I WANTED TO ADD HERE
+          - generic [ref=e113]: Type here...
+          - img [ref=e115]
+          - img [ref=e118]
+          - img [ref=e121]
+          - img [ref=e124]
+          - img [ref=e126]
+          - generic [ref=e128]:
+            - button "View live embed" [ref=e129] [cursor=pointer]:
+              - img [ref=e130]
+            - generic [ref=e132]:
+              - heading "en" [level=3] [ref=e133]
+              - paragraph
+              - link "https://frame.work/nl/en" [ref=e134] [cursor=pointer]:
+                - /url: https://frame.work/nl/en
+          - generic [ref=e137]:
+            - generic [ref=e138]:
+              - generic [ref=e139]: Link
+              - textbox "Link" [ref=e140]:
+                - /placeholder: Paste a link
+            - paragraph [ref=e141]: Tap and hold to paste, then press Enter.
+          - generic [ref=e144]:
+            - generic [ref=e145]:
+              - generic [ref=e146]: Link
+              - textbox "Link" [ref=e147]:
+                - /placeholder: Paste a link
+            - paragraph [ref=e148]: Tap and hold to paste, then press Enter.
+          - generic [ref=e150]:
+            - button "View live embed" [ref=e151] [cursor=pointer]:
+              - img [ref=e152]
+            - generic [ref=e154]:
+              - heading "en" [level=3] [ref=e155]
+              - paragraph
+              - link "https://frame.work/nl/en" [ref=e156] [cursor=pointer]:
+                - /url: https://frame.work/nl/en
+          - generic [ref=e158]:
+            - img "YouTube video" [ref=e159]
+            - button "View live embed" [ref=e160] [cursor=pointer]:
+              - img [ref=e161]
+            - generic [ref=e163]:
+              - heading "YouTube video" [level=3] [ref=e164]
+              - paragraph [ref=e165]: Video recommendation
+              - link "https://www.youtube.com/watch?v=7c983z3VTj0" [ref=e166] [cursor=pointer]:
+                - /url: https://www.youtube.com/watch?v=7c983z3VTj0
+          - img [ref=e168]
+          - img [ref=e171]
+          - img [ref=e174]
+          - img [ref=e177]
+          - img [ref=e180]
+          - img [ref=e183]
+          - img [ref=e186]
+          - img [ref=e189]
+          - img [ref=e192]
+          - img [ref=e195]
+          - img [ref=e198]
+          - img [ref=e201]
+          - img [ref=e204]
+          - img [ref=e206]
+          - img [ref=e208]
+          - img [ref=e210]
+          - img [ref=e213]
+          - img [ref=e216]
+          - img [ref=e218]
+          - img [ref=e220]
+          - img [ref=e222]
+          - img [ref=e224]
+          - img [ref=e226]
+          - img [ref=e228]
+          - img [ref=e230]
+          - img [ref=e232]
+          - img [ref=e235]
+          - img [ref=e238]
+          - img [ref=e241]
+          - img [ref=e244]
+          - img [ref=e247]
+          - img [ref=e250]
+          - img [ref=e253]
+          - img [ref=e256]
+          - img [ref=e259]
+          - img [ref=e262]
+          - img [ref=e265]
+          - img [ref=e268]
+          - img [ref=e271]
+          - img [ref=e274]
+          - img [ref=e277]
+          - img [ref=e280]
+          - img [ref=e283]
+          - img [ref=e286]
+          - img [ref=e289]
+          - img [ref=e292]
+          - img [ref=e295]
+          - img [ref=e298]
+          - img [ref=e301]
+          - img [ref=e304]
+          - img [ref=e307]
+          - img [ref=e310]
+          - img [ref=e313]
+          - img [ref=e316]
+          - img [ref=e319]
+          - img [ref=e322]
+          - img [ref=e325]
+          - img [ref=e328]
+          - img [ref=e331]
+          - img [ref=e334]
+          - img [ref=e337]
+          - img [ref=e340]
+          - img [ref=e343]
+          - img [ref=e346]
+          - img [ref=e349]
+          - img [ref=e352]
+          - img [ref=e355]
+          - generic [ref=e358]:
+            - generic [ref=e359]:
+              - img [ref=e360]
+              - generic "Double-click to rename" [ref=e363]: Test Note
+              - button "Open markdown" [ref=e364] [cursor=pointer]:
+                - img [ref=e365]
+            - generic [ref=e370]:
+              - generic [ref=e371]:
+                - generic [ref=e372]: •
+                - text: test
+              - generic [ref=e373]: "-"
+              - generic [ref=e374]: "-"
+              - generic [ref=e375]:
+                - generic [ref=e376]: •
+                - text: another test
+              - generic [ref=e377]:
+                - generic [ref=e378]: •
+                - text: test- test
+              - generic [ref=e379]:
+                - generic [ref=e380]: •
+                - text: test
+              - generic [ref=e381]:
+                - generic [ref=e382]: •
+                - text: test
+              - generic [ref=e383]: "-"
+              - generic [ref=e384]:
+                - generic [ref=e385]: •
+                - text: rwar
+              - generic [ref=e386]: "-"
+              - generic [ref=e387]:
+                - text: t
+                - strong [ref=e388]: bold-line
+              - emphasis [ref=e390]: italic-line
+              - code [ref=e392]: code-line
+              - generic [ref=e393]: est
+              - emphasis [ref=e395]: meow
+              - generic [ref=e396]: good
+              - generic [ref=e398]:
+                - generic [ref=e399]: •
+                - text: testing
+              - generic [ref=e400]:
+                - generic [ref=e401]: •
+                - text: nice
+              - generic [ref=e402]:
+                - generic [ref=e403]: •
+                - text: yeah
+              - generic [ref=e404]:
+                - generic [ref=e405]: •
+                - text: yeah
+              - generic [ref=e406]:
+                - generic [ref=e407]: •
+                - text: test
+              - generic [ref=e408]: "-"
+              - generic [ref=e411]: meowa
+              - generic [ref=e413]:
+                - text: Here is the compressible
+                - strong [ref=e414]: Navier-Stokes equation
+                - text: for a viscous fluid. It is a fundamental partial differential equation in fluid mechanics that describes the motion of viscous fluid substances, from ocean currents and weather patterns to blood flow and aerodynamics.
+              - generic [ref=e416]: "$$\\rho \\left( \\frac{\\partial \\mathbf{u}}{\\partial t} + \\mathbf{u} \\cdot \\nabla \\mathbf{u} \\right) = -\\nabla p + \\nabla \\cdot \\left[ \\mu \\left( \\nabla \\mathbf{u} + (\\nabla \\mathbf{u})^T - \\frac{2}{3}(\\nabla \\cdot \\mathbf{u})\\mathbf{I} \\right) \\right] + \\rho \\mathbf{g}$$"
+              - generic [ref=e420]: "Breakdown of the Variables:"
+              - generic [ref=e422]:
+                - generic [ref=e423]: •
+                - text: $\rho$ represents the fluid density.
+              - generic [ref=e424]:
+                - generic [ref=e425]: •
+                - text: "$\\mathbf{u}$ is the flow velocity vector field."
+              - generic [ref=e426]:
+                - generic [ref=e427]: •
+                - text: "$\\frac{\\partial \\mathbf{u}}{\\partial t}$ is the unsteady acceleration (how velocity changes over time at a fixed point)."
+              - generic [ref=e428]:
+                - generic [ref=e429]: •
+                - text: "$\\mathbf{u} \\cdot \\nabla \\mathbf{u}$ is the convective acceleration (acceleration as the fluid moves through space)."
+              - generic [ref=e430]:
+                - generic [ref=e431]: •
+                - text: $\nabla p$ is the pressure gradient (fluid flows from high to low pressure).
+              - generic [ref=e432]:
+                - generic [ref=e433]: •
+                - text: $\mu$ is the dynamic viscosity of the fluid.
+              - generic [ref=e434]:
+                - generic [ref=e435]: •
+                - text: $\nabla \cdot [ \dots ]$ represents the divergence of the viscous stress tensor, which accounts for the internal friction forces between adjacent layers of fluid that are in relative motion.
+              - generic [ref=e436]:
+                - generic [ref=e437]: •
+                - text: "$\\mathbf{I}$ is the identity tensor."
+              - generic [ref=e438]:
+                - generic [ref=e439]: •
+                - text: "$\\rho \\mathbf{g}$ represents external body forces acting on the fluid, such as gravity ($\\mathbf{g}$)."
+              - generic [ref=e441]: "This equation essentially applies Newton's Second Law of Motion ($F = ma$) to fluid dynamics, balancing the inertial forces on the left side with the pressure, viscous, and external forces on the right side. Because of its mathematical complexity (particularly the nonlinear convective term $\\mathbf{u} \\cdot \\nabla \\mathbf{u}$), proving whether smooth solutions always exist in three dimensions remains one of the unsolved Millennium Prize Problems in mathematics."
+              - generic [ref=e444]: gtesting
+              - generic [ref=e445]: test
+              - generic [ref=e446]:
+                - generic [ref=e447]: •
+                - text: test
+              - generic [ref=e448]:
+                - generic [ref=e449]: •
+                - text: again
+              - generic [ref=e450]: "-"
+              - generic [ref=e451]: asdsadsadsa
+              - generic [ref=e452]:
+                - generic [ref=e453]: •
+                - text: "- another test"
+              - generic [ref=e454]:
+                - generic [ref=e455]: •
+                - text: test
+              - generic [ref=e456]: "-"
+              - generic [ref=e457]:
+                - generic [ref=e458]: •
+                - text: test
+              - generic [ref=e459]:
+                - generic [ref=e460]: •
+                - text: tests
+              - generic [ref=e461]:
+                - generic [ref=e462]: •
+                - text: trest
+              - generic [ref=e463]:
+                - generic [ref=e464]: •
+                - text: test
+              - generic [ref=e465]:
+                - generic [ref=e466]: •
+                - text: test
+              - generic [ref=e467]:
+                - generic [ref=e468]: •
+                - text: gooood
+              - generic [ref=e469]: "-"
+              - generic [ref=e470]: "-"
+              - generic [ref=e471]:
+                - generic [ref=e472]: •
+                - text: test
+              - generic [ref=e473]:
+                - generic [ref=e474]: •
+                - text: testing
+              - generic [ref=e475]:
+                - strong [ref=e476]: hsad
+                - text: dıash __ıoasdhı__ oashdıasıh dashıd ashoıdash odasıohd ısahıd ashıdhsaı hdıas
+              - generic [ref=e477]: "Here are some direct links to find these clear drop-front boxes, ranging from the premium options to budget-friendly multipacks:"
+              - generic [ref=e479]: aaaa
+              - generic [ref=e480]: The Container Store (The Gold Standard)
+              - generic [ref=e481]: ates
+              - generic [ref=e482]:
+                - text: a
+                - emphasis [ref=e483]:
+                  - strong [ref=e484]: "Large Drop-Front Shoe Box Case:"
+                  - link "The Container Store - Drop-Front Shoe Boxes" [ref=e485] [cursor=pointer]:
+                    - /url: https://www.containerstore.com/s/closet/shoe-storage/large-drop-front-shoe-box-case-of-6/12d?productId=11006294
+                - text: (These are the most popular among collectors for their durability and clarity).*
+              - generic [ref=e486]: Amazon (Best for Bulk & Budget)
+              - generic [ref=e487]:
+                - generic [ref=e488]: •
+                - strong [ref=e489]: "SEE SPRING Large Clear Shoe Boxes (12-Pack):"
+                - link "Amazon - SEE SPRING Shoe Boxes" [ref=e490] [cursor=pointer]:
+                  - /url: https://www.amazon.com/SEE-SPRING-Shoe-Box-Clear/dp/B08P2R9Y6G
+                - emphasis [ref=e491]: (A very popular, highly-rated budget option).
+              - generic [ref=e492]:
+                - generic [ref=e493]: •
+                - strong [ref=e494]: "Attelite Drop Front Shoe Boxes (6-Pack):"
+                - link "Amazon - Attelite Acrylic Shoe Boxes" [ref=e495] [cursor=pointer]:
+                  - /url: https://www.amazon.com/Attelite-Stackable-Plastic-Clear-Door-Assembled/dp/B08ZS25CWD
+                - emphasis [ref=e496]: (These use harder acrylic for the door, giving a premium look similar to the one in your photo).
+                - text: a
+              - generic [ref=e497]:
+                - generic [ref=e498]: •
+                - strong [ref=e499]: "General Search:"
+                - link "Amazon - \"Clear Stackable Drop Front Shoe Box\"" [ref=e500] [cursor=pointer]:
+                  - /url: https://www.amazon.com/s?k=clear+stackable+drop+front+shoe+box
+                - emphasis [ref=e501]: (To browse different sizes and materials).
+              - generic [ref=e503]: Sneaker-Specific Brands (Premium/Heavy Duty)
+              - generic [ref=e504]:
+                - generic [ref=e505]: •
+                - strong [ref=e506]: "Crep Protect Cates:"
+                - link "Crep Protect - Crates" [ref=e507] [cursor=pointer]:
+                  - /url: https://us.crepprotect.com/products/crep-protect-crates
+                - emphasis [ref=e508]: (Very heavy-duty, designed specifically to be stacked high without warping).
+              - generic [ref=e509]:
+                - generic [ref=e510]: •
+                - strong [ref=e511]: "Sneaker Throne:"
+                - link "Sneaker Throne - Drop Front Boxes" [ref=e512] [cursor=pointer]:
+                  - /url: https://sneakerthrone.com/collections/sneaker-displays
+                - emphasis [ref=e513]: (Often feature LED lighting options if you want to turn it into a true display).
+              - generic [ref=e515]:
+                - strong [ref=e516]: "Note:"
+                - text: If you are shopping from the Netherlands (or anywhere outside the US), European Amazons (like Amazon.nl or Amazon.de) carry almost identical products. Just search for
+                - strong [ref=e517]: "\"Schoenendozen transparant stapelbaar\""
+                - text: or
+                - strong [ref=e518]: "\"Drop front shoe box\""
+                - text: on your local Amazon to avoid high international shipping fees.
+              - generic [ref=e519]: "#test"
+              - generic [ref=e520]: test
+              - generic [ref=e521]: "-- gtest"
+              - generic [ref=e522]: meow
+              - generic [ref=e523]: this is pretty nice actually
+              - generic [ref=e524]: asda
+              - generic [ref=e525]: das
+              - generic [ref=e526]: dsa
+              - generic [ref=e527]: das
+              - generic [ref=e528]: das
+              - generic [ref=e529]: dsa
+              - generic [ref=e530]: dsa
+              - generic [ref=e531]: dsa
+              - generic [ref=e532]: das
+              - generic [ref=e533]: dsa
+              - generic [ref=e534]: d
+              - generic [ref=e535]: as
+              - generic [ref=e536]: "Here are some direct links to find these clear drop-front boxes, ranging from the premium options to budget-friendly multipacks:"
+              - generic [ref=e538]: The Container Store (The Gold Standard)
+              - generic [ref=e539]:
+                - generic [ref=e540]: •
+                - strong [ref=e541]: "Large Drop-Front Shoe Box Case:"
+                - link "The Container Store - Drop-Front Shoe Boxes" [ref=e542] [cursor=pointer]:
+                  - /url: https://www.containerstore.com/s/closet/shoe-storage/large-drop-front-shoe-box-case-of-6/12d?productId=11006294
+                - emphasis [ref=e543]: (These are the most popular among collectors for their durability and clarity).
+              - generic [ref=e545]: Amazon (Best for Bulk & Budget)
+              - generic [ref=e546]:
+                - generic [ref=e547]: •
+                - strong [ref=e548]: "SEE SPRING Large Clear Shoe Boxes (12-Pack):"
+                - link "Amazon - SEE SPRING Shoe Boxes" [ref=e549] [cursor=pointer]:
+                  - /url: https://www.amazon.com/SEE-SPRING-Shoe-Box-Clear/dp/B08P2R9Y6G
+                - emphasis [ref=e550]: (A very popular, highly-rated budget option).
+              - generic [ref=e551]:
+                - generic [ref=e552]: •
+                - strong [ref=e553]: "Attelite Drop Front Shoe Boxes (6-Pack):"
+                - link "Amazon - Attelite Acrylic Shoe Boxes" [ref=e554] [cursor=pointer]:
+                  - /url: https://www.amazon.com/Attelite-Stackable-Plastic-Clear-Door-Assembled/dp/B08ZS25CWD
+                - emphasis [ref=e555]: (These use harder acrylic for the door, giving a premium look similar to the one in your photo).
+              - generic [ref=e556]:
+                - generic [ref=e557]: •
+                - strong [ref=e558]: "General Search:"
+                - link "Amazon - \"Clear Stackable Drop Front Shoe Box\"" [ref=e559] [cursor=pointer]:
+                  - /url: https://www.amazon.com/s?k=clear+stackable+drop+front+shoe+box
+                - emphasis [ref=e560]: (To browse different sizes and materials).
+              - generic [ref=e562]: Sneaker-Specific Brands (Premium/Heavy Duty)
+              - generic [ref=e563]:
+                - generic [ref=e564]: •
+                - strong [ref=e565]: "Crep Protect Cates:"
+                - link "Crep Protect - Crates" [ref=e566] [cursor=pointer]:
+                  - /url: https://us.crepprotect.com/products/crep-protect-crates
+                - emphasis [ref=e567]: (Very heavy-duty, designed specifically to be stacked high without warping).
+              - generic [ref=e568]:
+                - generic [ref=e569]: •
+                - strong [ref=e570]: "Sneaker Throne:"
+                - link "Sneaker Throne - Drop Front Boxes" [ref=e571] [cursor=pointer]:
+                  - /url: https://sneakerthrone.com/collections/sneaker-displays
+                - emphasis [ref=e572]: (Often feature LED lighting options if you want to turn it into a true display).
+              - generic [ref=e574]:
+                - strong [ref=e575]: "Note:"
+                - text: If you are shopping from the Netherlands (or anywhere outside the US), European Amazons (like Amazon.nl or Amazon.de) carry almost identical products. Just search for
+                - strong [ref=e576]: "\"Schoenendozen transparant stapelbaar\""
+                - text: or
+                - strong [ref=e577]: "\"Drop front shoe box\""
+                - text: on your local Amazon to avoid high international shipping fees.
+          - generic [ref=e580]:
+            - text: Use **Pei De Shi**.
+            - text: "* It keeps the rhythm of **Peter Scriol** without turning into a fake accent joke."
+            - text: "* **Pei / De / Shi** all look plausible in pinyin to English speakers."
+            - text: "* A cleaner full-name version is **Shi Peide**, which reads more like an actual Chinese name format."
+          - generic [ref=e581]:
+            - img "file preview"
+          - generic [ref=e583]:
+            - generic [ref=e584]:
+              - img [ref=e585]
+              - generic "Double-click to rename" [ref=e588]: test
+              - button "Open markdown" [ref=e589] [cursor=pointer]:
+                - img [ref=e590]
+            - generic [ref=e595]:
+              - generic [ref=e597]:
+                - generic [ref=e598]: •
+                - text: now
+              - generic [ref=e599]:
+                - generic [ref=e600]: •
+                - text: Clean oma
+              - generic [ref=e601]:
+                - generic [ref=e602]: •
+                - text: pack
+              - generic [ref=e603]:
+                - generic [ref=e604]: •
+                - text: go home
+              - generic [ref=e605]:
+                - generic [ref=e606]: •
+                - text: at oma
+              - generic [ref=e607]:
+                - generic [ref=e608]: •
+                - text: tes
+          - generic [ref=e611]:
+            - generic [ref=e612]:
+              - img [ref=e613]
+              - generic "Double-click to rename" [ref=e616]: note-20260427-010956
+              - button "Open markdown" [ref=e617] [cursor=pointer]:
+                - img [ref=e618]
+            - generic [ref=e623]:
+              - generic [ref=e624]:
+                - generic [ref=e625]: •
+                - text: testing
+              - generic [ref=e626]:
+                - generic [ref=e627]: •
+                - text: works wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks wellworks well
+              - generic [ref=e628]:
+                - generic [ref=e629]: •
+                - text: indent
+              - generic [ref=e630]:
+                - generic [ref=e631]: •
+                - text: work
+              - generic [ref=e632]:
+                - generic [ref=e633]: •
+                - text: nicee
+              - generic [ref=e634]:
+                - generic [ref=e635]: •
+                - text: test
+              - generic [ref=e636]: "-"
+              - generic [ref=e637]: "-"
+              - generic [ref=e638]: http://localhost:4173/cosmoboard.html
+          - img [ref=e641]
+          - generic [ref=e644]:
+            - generic [ref=e645]:
+              - img [ref=e646]
+              - generic "Double-click to rename" [ref=e649]: Controls for canvas
+              - button "Open markdown" [ref=e650] [cursor=pointer]:
+                - img [ref=e651]
+            - generic [ref=e656]:
+              - generic [ref=e658]:
+                - generic [ref=e659]: •
+                - text: you can actually go back and forth with two finger sweep left or right
+              - generic [ref=e660]: http://googleusercontent.com/map_content/0
+              - generic [ref=e661]:
+                - text: Finding small quantities of chromoly steel (often referred to as 4130 steel or
+                - emphasis [ref=e662]: chroommolybdeen staal
+                - text: in Dutch) tubing locally can be tricky, as general hardware stores do not carry it. You will generally need to go to specialized metal suppliers that cater to individuals and hobbyists, or order from specialist webshops.
+              - link "google" [ref=e664] [cursor=pointer]:
+                - /url: www.google.com
+              - generic [ref=e665]: "Here are the best local and regional options near Delft:"
+              - generic [ref=e667]: http://googleusercontent.com/map_location_reference/1
+              - strong [ref=e669]:
+                - link "Metaalcenter" [ref=e670] [cursor=pointer]:
+                  - /url: http://googleusercontent.com/map_location_reference/0
+              - generic [ref=e671]: Located in Den Hoorn, which is essentially right next to Delft. They are an online supplier with a physical location and they cater to both B2B and individuals.
+              - generic [ref=e672]:
+                - generic [ref=e673]: •
+                - strong [ref=e674]: "Convenience:"
+                - text: Very close to Delft for easy pickup (Sionsdreef 5, Den Hoorn).
+              - generic [ref=e675]:
+                - generic [ref=e676]: •
+                - strong [ref=e677]: "Selection:"
+                - text: They offer a wide variety of steel tubes, though you should call ahead to confirm if they have exact 4130 chromoly in stock or if they can source small pieces for you.
+              - generic [ref=e679]: http://googleusercontent.com/map_location_reference/3
+              - strong [ref=e681]:
+                - link "Metaalwinkel" [ref=e682] [cursor=pointer]:
+                  - /url: http://googleusercontent.com/map_location_reference/2
+                - text: (Barendrecht Branch)
+              - generic [ref=e683]: While a bit further away near Rotterdam, Metaalwinkel is one of the most well-known shops in the region for buying metals in small quantities.
+              - generic [ref=e684]:
+                - generic [ref=e685]: •
+                - strong [ref=e686]: "Retail focus:"
+                - text: They are literally a "metal shop" designed for custom sizes, small quantities, and walk-in customers.
+              - generic [ref=e687]:
+                - generic [ref=e688]: •
+                - strong [ref=e689]: "Services:"
+                - text: They can cut tubing to the exact lengths you need while you wait.
+              - strong [ref=e692]: "Alternative: Specialized Online Suppliers"
+              - generic [ref=e693]:
+                - text: Because chromoly 4130 is highly specialized (commonly used in custom bicycles, motorsport roll cages, and aerospace), many local metal shops only stock standard structural steel (like S235 or S355). If you specifically need 4130 chromoly tubes for a project, you might have the best luck ordering from specialist European suppliers who ship small quantities to the Netherlands, such as
+                - strong [ref=e694]: 25crmo4.com
+                - text: (a Dutch specialist in chromoly tubing) or
+                - strong [ref=e695]: Online Metals
+                - text: .
+              - generic [ref=e697]: Would you like me to look up contact information for any specific custom tubing fabricators or bicycle builders in the area who might be willing to sell you an off-cut?
+              - generic [ref=e698]: "-"
+          - generic [ref=e701]:
+            - generic [ref=e702]:
+              - img [ref=e703]
+              - generic "Double-click to rename" [ref=e706]: note-2026-04-28_14-32-43
+              - button "Open markdown" [ref=e707] [cursor=pointer]:
+                - img [ref=e708]
+            - generic [ref=e713]:
+              - generic [ref=e715]: testing
+              - generic [ref=e716]: this is prettu nice
+          - generic [ref=e718]:
+            - generic [ref=e719]:
+              - img [ref=e720]
+              - generic "Double-click to rename" [ref=e723]: direction
+              - button "Open markdown" [ref=e724] [cursor=pointer]:
+                - img [ref=e725]
+            - generic [ref=e730]:
+              - generic [ref=e731]: Cosmoboard direction
+              - generic [ref=e733]: The Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.
+              - generic [ref=e735]: Core principles
+              - generic [ref=e737]:
+                - generic [ref=e738]: •
+                - strong [ref=e739]: File-first
+                - text: — every board is a
+                - code [ref=e740]: .canvas
+                - text: JSON file on disk
+              - generic [ref=e741]:
+                - generic [ref=e742]: •
+                - strong [ref=e743]: Local-first
+                - text: — changes save to localStorage before attempting a server sync
+              - generic [ref=e744]:
+                - generic [ref=e745]: •
+                - strong [ref=e746]: Spatial by nature
+                - text: — content lives on a 2D canvas, not in a document stream
+              - generic [ref=e748]: Node types
+              - generic [ref=e750]: "| Type | Purpose |"
+              - generic [ref=e751]: "|------|---------|"
+              - generic [ref=e752]:
+                - text: "|"
+                - code [ref=e753]: text
+                - text: "| Free-form note or label |"
+              - generic [ref=e754]:
+                - text: "|"
+                - code [ref=e755]: link
+                - text: "| Bookmark with live preview |"
+              - generic [ref=e756]:
+                - text: "|"
+                - code [ref=e757]: image
+                - text: /
+                - code [ref=e758]: file
+                - text: "| Embedded asset |"
+              - generic [ref=e759]:
+                - text: "|"
+                - code [ref=e760]: board-preview
+                - text: "| Minimap reference to another board |"
+              - generic [ref=e761]:
+                - text: "|"
+                - code [ref=e762]: markdown
+                - text: "| Rendered"
+                - code [ref=e763]: .md
+                - text: file inline on the canvas |
+              - generic [ref=e765]: Status
+              - generic [ref=e767]:
+                - text: The engine is generalized. Multiple boards can mount on the same page via
+                - code [ref=e768]: mountCosmoboard(hostElement)
+                - text: . Preview mode embeds boards read-only inside project detail pages.
+              - generic [ref=e770]: "Next steps: markdown-to-canvas sync, filesystem content registry, base/database layer."
+          - generic [ref=e774]:
+            - img [ref=e775]
+            - generic "Double-click to rename" [ref=e778]: note-2026-04-28_14-58-03
+            - button "Open markdown" [ref=e779] [cursor=pointer]:
+              - img [ref=e780]
+          - generic [ref=e790]:
+            - img [ref=e791]
+            - generic "Double-click to rename" [ref=e794]: note-2026-04-28_14-58-05
+            - button "Open markdown" [ref=e795] [cursor=pointer]:
+              - img [ref=e796]
+          - generic [ref=e806]:
+            - img [ref=e807]
+            - generic "Double-click to rename" [ref=e810]: note-2026-04-28_14-58-11
+            - button "Open markdown" [ref=e811] [cursor=pointer]:
+              - img [ref=e812]
+          - generic [ref=e820]:
+            - img "file preview"
+          - generic [ref=e822]: Hello plain text dropped!
+          - generic [ref=e824]:
+            - generic [ref=e825]:
+              - button "Back to preview" [ref=e826] [cursor=pointer]:
+                - img [ref=e827]
+                - text: Preview
+              - generic: 127.0.0.1
+              - link "Open in new tab" [ref=e829] [cursor=pointer]:
+                - /url: http://127.0.0.1:4180/content/boards/braindump/drop-test.pdf
+                - text: Open
+                - img [ref=e830]
+            - iframe [ref=e834]:
+              - generic [ref=f6e3]:
+                - strong [ref=f6e4]: 127.0.0.1
+                - text: refused to connect.
+          - generic [ref=e836]:
+            - generic [ref=e837]:
+              - button "Back to preview" [ref=e838] [cursor=pointer]:
+                - img [ref=e839]
+                - text: Preview
+              - generic: 127.0.0.1
+              - link "Open in new tab" [ref=e841] [cursor=pointer]:
+                - /url: http://127.0.0.1:4181/content/boards/braindump/real-test.pdf
+                - text: Open
+                - img [ref=e842]
+            - iframe [ref=e846]:
+              - generic [ref=f7e3]:
+                - strong [ref=f7e4]: 127.0.0.1
+                - text: refused to connect.
+          - generic [ref=e848]:
+            - generic [ref=e849]:
+              - button "Back to preview" [ref=e850] [cursor=pointer]:
+                - img [ref=e851]
+                - text: Preview
+              - generic: 127.0.0.1
+              - link "Open in new tab" [ref=e853] [cursor=pointer]:
+                - /url: http://127.0.0.1:4181/content/boards/braindump/drop-real.pdf
+                - text: Open
+                - img [ref=e854]
+            - iframe [ref=e858]:
+              - generic [ref=f8e3]:
+                - strong [ref=f8e4]: 127.0.0.1
+                - text: refused to connect.
+          - generic [ref=e860]:
+            - generic [ref=e861]:
+              - button "Back to preview" [ref=e862] [cursor=pointer]:
+                - img [ref=e863]
+                - text: Preview
+              - generic: 127.0.0.1
+              - link "Open in new tab" [ref=e865] [cursor=pointer]:
+                - /url: http://127.0.0.1:4181/content/boards/braindump/ui-test.pdf
+                - text: Open
+                - img [ref=e866]
+            - iframe [ref=e870]:
+              - generic [ref=f9e3]:
+                - strong [ref=f9e4]: 127.0.0.1
+                - text: refused to connect.
+        - generic [ref=e872]:
+          - button "Select (V)" [ref=e873] [cursor=pointer]:
+            - img [ref=e874]
+          - button "Pan (Space)" [ref=e876] [cursor=pointer]:
+            - img [ref=e877]
+          - button "Add Text (T)" [ref=e879] [cursor=pointer]:
+            - img [ref=e880]
+          - button "Draw (P)" [ref=e882] [cursor=pointer]:
+            - img [ref=e883]
+          - button "Add Bookmark (L)" [ref=e886] [cursor=pointer]:
+            - img [ref=e887]
+          - button "Save Board (Ctrl+S)" [ref=e890] [cursor=pointer]:
+            - img [ref=e891]
+          - button "Send recommendation" [ref=e895] [cursor=pointer]:
+            - img [ref=e896]
+          - button "More board actions" [ref=e901] [cursor=pointer]:
+            - img [ref=e902]

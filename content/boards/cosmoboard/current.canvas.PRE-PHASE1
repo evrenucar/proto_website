@@ -1,0 +1,211 @@
+{
+  "nodes": [
+    {
+      "id": "cosmo-title",
+      "x": 120,
+      "y": 80,
+      "width": 1220,
+      "height": 170,
+      "type": "text",
+      "text": "Cosmoboard\nA first onboarding board inside the current site\nFile-first. Local-first. Oriented, not just captured."
+    },
+    {
+      "id": "cosmo-origin",
+      "x": 120,
+      "y": 290,
+      "width": 420,
+      "height": 240,
+      "type": "text",
+      "text": "This is the first concrete slice of the broader Cosmoboard direction. It stays inside evrenucar.com and uses the same board surface as Braindump, but shifts the focus from freeform capture toward orientation."
+    },
+    {
+      "id": "cosmo-structure",
+      "x": 580,
+      "y": 290,
+      "width": 420,
+      "height": 240,
+      "type": "text",
+      "text": "The board introduces how boards, markdown, bases, and embeds should work together. Boards stay spatial, markdown stays durable, bases organize files and metadata, and GitHub remains the near-term collaboration bridge."
+    },
+    {
+      "id": "cosmo-next",
+      "x": 1040,
+      "y": 290,
+      "width": 300,
+      "height": 240,
+      "type": "text",
+      "text": "Near term\nGitHub handles async review and versioning for now.\nPreview-first embeds, multiple boards per page, markdown references, and deeper base views are the next layers after this starter board."
+    },
+    {
+      "id": "cosmo-boards",
+      "x": 120,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "type": "text",
+      "text": "Boards\nBoards map a topic or project spatially.\nUse the canvas for orientation, grouping, and navigation."
+    },
+    {
+      "id": "cosmo-markdown",
+      "x": 420,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "type": "text",
+      "text": "Markdown\nMarkdown holds notes, specs, and durable writing.\nKeep the longer thinking in files, not only on the board."
+    },
+    {
+      "id": "cosmo-bases",
+      "x": 720,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "type": "text",
+      "text": "Bases\nBases query and sort files, notes, and projects.\nTreat them as stable anchors behind the board."
+    },
+    {
+      "id": "cosmo-embeds",
+      "x": 1020,
+      "y": 570,
+      "width": 260,
+      "height": 180,
+      "type": "text",
+      "text": "Embeds\nEmbeds default to previews before live mode.\nUse live views only when the extra motion earns its place."
+    },
+    {
+      "id": "cosmo-braindump",
+      "x": 120.87614896828896,
+      "y": 789.1238510317111,
+      "width": 320,
+      "height": 260,
+      "type": "board-preview",
+      "boardSlug": "braindump",
+      "boardSource": "boards/cosmo-braindump_current.canvas",
+      "boardHref": "braindump.html",
+      "title": "Braindump",
+      "description": "A linked board preview. Open the broader freeform board when you want the wider working surface."
+    },
+    {
+      "id": "cosmo-board-file",
+      "x": 480,
+      "y": 790,
+      "width": 320,
+      "height": 180,
+      "type": "link",
+      "url": "content/boards/cosmoboard/current.canvas",
+      "title": "Open Board File",
+      "description": "The canvas file is the board. Edit it locally first, then rebuild and ship.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "cosmo-github",
+      "x": 840,
+      "y": 790,
+      "width": 440,
+      "height": 180,
+      "type": "link",
+      "url": "https://github.com/evrenucar/proto_website",
+      "title": "View Repo",
+      "description": "Remote review and publish layer. Keep the working copy here on disk, then push the board file when it is ready.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "cosmo-direction-md",
+      "x": 1428.057489342024,
+      "y": 167.48523221979485,
+      "width": 380,
+      "height": 680,
+      "type": "markdown",
+      "file": "markdown/cosmo-direction-md_direction.md",
+      "title": "Cosmoboard direction",
+      "href": "content/boards/cosmoboard/direction.md"
+    },
+    {
+      "id": "cosmo-projects-base",
+      "x": 120,
+      "y": 1140,
+      "width": 700,
+      "height": 380,
+      "type": "base",
+      "source": "content/base-data/items.json",
+      "collection": "",
+      "filter": "section=projects",
+      "columns": [
+        "title",
+        "publishingStatus",
+        "year",
+        "effort"
+      ],
+      "title": "Projects"
+    },
+    {
+      "id": "cosmo-embed-test-1",
+      "x": 860,
+      "y": 1140,
+      "width": 380,
+      "height": 340,
+      "type": "link",
+      "url": "https://en.wikipedia.org/wiki/Infinite_canvas",
+      "embedMode": "preview",
+      "title": "Infinite canvas - Wikipedia",
+      "description": "From Wikipedia, the free encyclopedia",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/4/4a/Infinite_Canvas_trails.PNG",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "cosmo-embed-test-2",
+      "x": 1843.057579383727,
+      "y": 1082.3349646763363,
+      "width": 380,
+      "height": 340,
+      "type": "link",
+      "url": "https://github.com",
+      "embedMode": "preview",
+      "title": "GitHub · Change is constant. GitHub keeps you ahead.",
+      "description": "Join the world’s most widely adopted, AI-powered developer platform where millions of developers, businesses, and the largest open source community build software that advances humanity.",
+      "image": "https://images.ctfassets.net/8aevphvgewt8/4pe4eOtUJ0ARpZRE4fNekf/f52b1f9c52f059a33170229883731ed0/GH-Homepage-Universe-img.png",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "cosmo-app-test-1",
+      "x": 860,
+      "y": 1380,
+      "width": 380,
+      "height": 220,
+      "type": "app",
+      "source": "content/apps/excalidraw-proto.json",
+      "embedMode": "preview",
+      "appConfig": {
+        "slug": "excalidraw-proto",
+        "appName": "Excalidraw",
+        "description": "A quick scratchpad session for wireframes.",
+        "url": "https://excalidraw.com/#room=aa8b4c2b9213123b320d,4RkR000000000000000000",
+        "icon": "✏️",
+        "tags": [
+          "sketch",
+          "ui"
+        ]
+      }
+    },
+    {
+      "id": "cosmo-yt-test-1",
+      "x": 1260,
+      "y": 1380,
+      "width": 600,
+      "height": 400,
+      "type": "link",
+      "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "embedMode": "preview",
+      "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+      "description": "Video recommendation",
+      "image": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+      "hasAdjustedRatio": true
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 584.6351275603744,
+    "y": 128.7513698107467,
+    "z": 0.4587085360404233
+  }
+}

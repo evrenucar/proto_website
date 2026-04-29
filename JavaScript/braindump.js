@@ -298,6 +298,9 @@ const toolbarMoreButton =
 const fileInput =
   queryBoard('[data-board-ui="import-input"]') ||
   queryBoard("#braindump-import");
+const openCanvasInput =
+  queryBoard('[data-board-ui="open-canvas-input"]') ||
+  queryBoard("#braindump-open-canvas");
 const toolbarToast =
   queryBoard('[data-board-ui="toolbar-toast"]') ||
   queryBoard("#braindump-toolbar-toast");
@@ -318,6 +321,7 @@ const settingsAutosaveSecondsInput = queryBoard("#braindump-setting-autosave-sec
 const settingsResetButton = queryBoard("#braindump-settings-reset");
 const recommendationSummaryInput = queryBoard("#braindump-recommend-summary");
 const recommendationSubmitButton = queryBoard("#braindump-recommend-submit");
+const recommendationFullCanvasInput = queryBoard("#braindump-recommend-full-canvas");
 const featureRequestSummaryInput = queryBoard("#braindump-feature-summary");
 const featureRequestSubmitButton = queryBoard("#braindump-feature-submit");
 const bugReportSummaryInput = queryBoard("#braindump-bug-summary");
@@ -882,6 +886,13 @@ function getYouTubeEmbedUrl(url) {
   if (!videoId) return "";
 
   const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+  // Enable the IFrame Player API so the parent can send postMessage commands
+  // (play/pause/seek) when a YouTube embed is the selected node and the user
+  // presses Space / arrow keys without first clicking inside the iframe.
+  embedUrl.searchParams.set("enablejsapi", "1");
+  if (typeof location !== "undefined" && location.origin && location.origin !== "null") {
+    embedUrl.searchParams.set("origin", location.origin);
+  }
   try {
     const parsed = new URL(url);
     const start = parseYouTubeStartSeconds(parsed.searchParams.get("start") || parsed.searchParams.get("t"));
@@ -1157,7 +1168,7 @@ function buildBugReportIssueUrl(summary, details) {
   return url.toString();
 }
 
-function beginRecommendationFlow() {
+async function beginRecommendationFlow() {
   if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
     showToolbarToast("Recommendations are not set up for this board.", "error");
     return;
@@ -1170,9 +1181,42 @@ function beginRecommendationFlow() {
     return;
   }
 
-  const recommendationFilename = buildRecommendationFilename();
+  // Default: diff-only export against the on-disk base. Falls back to a full
+  // canvas when the toggle is checked, when no on-disk base exists, or when
+  // canvasIds don't match (e.g. base predates the canvasId backfill).
+  const wantsFull = !!recommendationFullCanvasInput?.checked;
+  const currentState = serializeState();
+  let baseState = null;
+  if (!wantsFull && boardConfig.sourcePath) {
+    try { baseState = await fetchBoardState(boardConfig.sourcePath); }
+    catch { baseState = null; }
+  }
+
+  let recommendationFilename;
+  let blobContent;
+  if (!wantsFull && baseState && baseState.canvasId && baseState.canvasId === currentState.canvasId) {
+    const diff = createCanvasDiff(baseState, currentState);
+    diff.baseVersion.hash = await canonicalCanvasHash(baseState);
+    const slugSeg = sanitizeFileSegment(boardConfig.slug || boardConfig.title || document.title);
+    recommendationFilename = `${slugSeg}_${formatTimestamp()}.canvas.diff`;
+    blobContent = JSON.stringify(diff, null, 2);
+  } else {
+    recommendationFilename = buildRecommendationFilename();
+    blobContent = JSON.stringify(currentState, null, 2);
+  }
+
   const issueUrl = buildRecommendationIssueUrl(summary, "", recommendationFilename);
-  downloadStateFile(recommendationFilename, "application/json");
+
+  const blob = new Blob([blobContent], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = recommendationFilename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  setTimeout(() => { document.body.removeChild(anchor); URL.revokeObjectURL(url); }, 200);
+
   setRecommendationPanelOpen(false);
   if (shouldSkipRecommendationModal()) {
     if (recommendationSummaryInput) {
@@ -1247,8 +1291,29 @@ function downloadStateFile(filename, mimeType = "application/octet-stream") {
   return { filename, jsonStr };
 }
 
+const TRANSIENT_NODE_FIELDS = ["isCropping", "_cropDraft", "_cropEnterCrop", "_cropEnterSize", "_cropEnterPos"];
+
+function stripTransientNodeFields(node) {
+  let copy = null;
+  for (const k of TRANSIENT_NODE_FIELDS) {
+    if (k in node) {
+      if (!copy) copy = { ...node };
+      delete copy[k];
+    }
+  }
+  return copy || node;
+}
+
 function serializeState() {
-  return { nodes, edges, viewport: { x: camera.x, y: camera.y, z: camera.z } };
+  ensureCanvasId();
+  return {
+    canvasId: boardMeta.canvasId,
+    createdAt: boardMeta.createdAt,
+    updatedAt: boardMeta.updatedAt,
+    nodes: nodes.map(stripTransientNodeFields),
+    edges,
+    viewport: { x: camera.x, y: camera.y, z: camera.z }
+  };
 }
 
 function persistLocalState(state) {
@@ -1376,6 +1441,19 @@ const touchPlacementState = {
 
 let nodes = [];
 let edges = [];
+let boardMeta = { canvasId: null, createdAt: null, updatedAt: null };
+
+function ensureCanvasId() {
+  if (!boardMeta.canvasId) {
+    boardMeta.canvasId = (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `canvas-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  if (!boardMeta.createdAt) {
+    boardMeta.createdAt = new Date().toISOString();
+  }
+  return boardMeta.canvasId;
+}
 
 // Undo/Redo history
 let undoHistory = [];
@@ -1895,6 +1973,51 @@ function applyReverse(action) {
       const ta = el.querySelector(".bd-text-editor");
       if (ta) syncTextEditorValue(ta, action.oldText || "");
     }
+  } else if (action.type === 'crop') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      if (action.fromCrop) node.crop = { ...action.fromCrop };
+      else delete node.crop;
+      if (action.fromSize) {
+        node.width = action.fromSize.w;
+        node.height = action.fromSize.h;
+      }
+      if (action.fromPos) {
+        node.x = action.fromPos.x;
+        node.y = action.fromPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
+    }
+  } else if (action.type === 'bake') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      node.file = action.fromFile;
+      if (action.fromCrop) node.crop = { ...action.fromCrop };
+      else delete node.crop;
+      if (action.fromSize) {
+        node.width = action.fromSize.w;
+        node.height = action.fromSize.h;
+      }
+      if (action.fromPos) {
+        node.x = action.fromPos.x;
+        node.y = action.fromPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
+    }
   } else if (action.type === 'batch') {
     for (let i = action.actions.length - 1; i >= 0; i--) applyReverse(action.actions[i]);
   }
@@ -1932,6 +2055,50 @@ function applyForward(action) {
       node.text = action.newText;
       const ta = el.querySelector(".bd-text-editor");
       if (ta) syncTextEditorValue(ta, action.newText || "");
+    }
+  } else if (action.type === 'crop') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      if (action.toCrop) node.crop = { ...action.toCrop };
+      else delete node.crop;
+      if (action.toSize) {
+        node.width = action.toSize.w;
+        node.height = action.toSize.h;
+      }
+      if (action.toPos) {
+        node.x = action.toPos.x;
+        node.y = action.toPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
+    }
+  } else if (action.type === 'bake') {
+    const node = nodes.find(n => n.id === action.nodeId);
+    if (node) {
+      node.file = action.toFile;
+      delete node.crop;
+      if (action.toSize) {
+        node.width = action.toSize.w;
+        node.height = action.toSize.h;
+      }
+      if (action.toPos) {
+        node.x = action.toPos.x;
+        node.y = action.toPos.y;
+      }
+      const el = getBoardElementById(action.nodeId);
+      if (el) {
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+        el.style.width = `${node.width}px`;
+        el.style.height = `${node.height}px`;
+      }
+      renderNode(node);
     }
   } else if (action.type === 'batch') {
     action.actions.forEach(a => applyForward(a));
@@ -2014,17 +2181,18 @@ function getDrawCursor() {
   return `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="%233fdaca" stroke-width="1.5"/><circle cx="${cx}" cy="${cx}" r="1" fill="%233fdaca"/></svg>') ${cx} ${cx}, crosshair`;
 }
 
-function placeToolNodeAt(clientX, clientY, tool = activeTool) {
+function placeToolNodeAt(clientX, clientY, tool = activeTool, options = {}) {
   if (isPreviewMode) return;
+  const useTouchPlacement = options.useTouchPlacement ?? shouldUseTouchSelectBehavior();
   if (tool === "text") {
     const dimensions = { width: 250, height: 150 };
-    const position = shouldUseTouchSelectBehavior()
+    const position = useTouchPlacement
       ? getCenteredNodeCanvasPosition(dimensions.width, dimensions.height)
       : screenToCanvas(clientX, clientY);
     const newNode = createNode("text", position.x, position.y, { text: "", ...dimensions });
     focusTextEditor(newNode.id, {
       placeCaretAtEnd: true,
-      centerInView: shouldUseTouchSelectBehavior()
+      centerInView: useTouchPlacement
     });
 
     // Mobile browsers are stricter about focus timing; retry once if the editor
@@ -2033,7 +2201,7 @@ function placeToolNodeAt(clientX, clientY, tool = activeTool) {
     if (editor?.contentEditable !== "true") {
       window.setTimeout(() => focusTextEditor(newNode.id, {
         placeCaretAtEnd: true,
-        centerInView: shouldUseTouchSelectBehavior()
+        centerInView: useTouchPlacement
       }), 0);
     }
 
@@ -2242,7 +2410,7 @@ viewport.addEventListener("touchmove", (e) => {
 
     if (isDrawing) {
       e.preventDefault();
-      draw(touch.clientX, touch.clientY);
+      draw(touch.clientX, touch.clientY, e.shiftKey);
     } else if (dragRect.active) {
       e.preventDefault();
       updateSelectionRect(touch.clientX, touch.clientY);
@@ -2312,7 +2480,8 @@ viewport.addEventListener("touchend", (e) => {
     placeToolNodeAt(
       touchPlacementState.startX,
       touchPlacementState.startY,
-      touchPlacementState.pendingTool
+      touchPlacementState.pendingTool,
+      { useTouchPlacement: true }
     );
   }
 
@@ -2360,7 +2529,11 @@ viewport.addEventListener("contextmenu", (e) => {
 
 viewport.addEventListener("mousedown", (e) => {
   if (e.target.closest?.(".resize-handle")) return;
-  if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
+  // Draw tool wins over the Shift+drag pan shortcut so Shift can start a
+  // straight-line stroke instead of hijacking the click as a pan.
+  if (e.button === 0 && activeTool === "draw") {
+    startDrawing(e.clientX, e.clientY);
+  } else if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
     isPanning = true;
     startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
     viewport.style.cursor = "grabbing";
@@ -2368,9 +2541,7 @@ viewport.addEventListener("mousedown", (e) => {
   } else if (e.button === 0 && isPanning) {
     // handled by window mousedown
   } else if (e.button === 0) {
-    if (activeTool === "draw") {
-      startDrawing(e.clientX, e.clientY);
-    } else if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !isBoardToolbarTarget(e.target)) {
+    if (activeTool === "select" && e.target.closest && !e.target.closest(".bd-item") && !isBoardToolbarTarget(e.target)) {
       startSelectionRect(e.clientX, e.clientY, e.shiftKey);
     }
   }
@@ -2384,9 +2555,9 @@ viewport.addEventListener("click", (e) => {
   if (e.target.closest(".bd-item") || isBoardToolbarTarget(e.target)) return;
 
   if (activeTool === "text") {
-    placeToolNodeAt(e.clientX, e.clientY, "text");
+    placeToolNodeAt(e.clientX, e.clientY, "text", { useTouchPlacement: false });
   } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "draw") {
-    placeToolNodeAt(e.clientX, e.clientY, activeTool);
+    placeToolNodeAt(e.clientX, e.clientY, activeTool, { useTouchPlacement: false });
   }
 });
 
@@ -2409,7 +2580,7 @@ window.addEventListener("pointermove", (e) => {
     camera.y = e.clientY - startPan.y;
     updateTransform();
   } else if (isDrawing) {
-    draw(e.clientX, e.clientY);
+    draw(e.clientX, e.clientY, e.shiftKey);
   } else if (dragRect.active) {
     updateSelectionRect(e.clientX, e.clientY);
   }
@@ -2446,6 +2617,48 @@ window.addEventListener("pointerup", (e) => {
   _activeBoardViewport = null;
 });
 
+// YouTube IFrame Player API integration: when a YouTube embed is the only
+// selected node, forward Space / Left / Right to its iframe so users don't have
+// to click into the video first to use keyboard controls.
+function getSingleSelectedYouTubeIframe() {
+  const selected = canvas.querySelectorAll(".bd-item.selected");
+  if (selected.length !== 1) return null;
+  const iframe = selected[0].querySelector(".bd-embed-iframe");
+  if (!iframe) return null;
+  if (!/^https:\/\/www\.youtube\.com\/embed\//.test(iframe.src || "")) return null;
+  return iframe;
+}
+
+function postYouTubeCommand(iframe, func, args = []) {
+  try {
+    iframe.contentWindow?.postMessage(
+      JSON.stringify({ event: "command", func, args }),
+      "*"
+    );
+  } catch (e) {}
+}
+
+window.addEventListener("message", (e) => {
+  if (typeof e.data !== "string" || !e.data.startsWith("{")) return;
+  let data;
+  try { data = JSON.parse(e.data); } catch { return; }
+  if (!data || (data.event !== "infoDelivery" && data.event !== "onStateChange")) return;
+  const iframes = canvas.querySelectorAll(".bd-embed-iframe");
+  for (const ifr of iframes) {
+    if (ifr.contentWindow !== e.source) continue;
+    const st = ifr.__ytState;
+    if (!st) break;
+    if (data.event === "infoDelivery" && data.info) {
+      if (typeof data.info.currentTime === "number") st.currentTime = data.info.currentTime;
+      if (typeof data.info.duration === "number") st.duration = data.info.duration;
+      if (typeof data.info.playerState === "number") st.playing = data.info.playerState === 1;
+    } else if (data.event === "onStateChange") {
+      st.playing = data.info === 1;
+    }
+    break;
+  }
+});
+
 // Shortcuts
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
@@ -2453,10 +2666,36 @@ window.addEventListener("keydown", (e) => {
     if (_activeBoardViewport && _activeBoardViewport !== viewport) return;
     if (!_activeBoardViewport && !viewport.matches(":focus-within")) return;
   }
+  // YouTube playback control on the selected embed (Space / Left / Right).
+  // Plain modifiers only; ctrl/cmd combos still go to the regular shortcuts.
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    const ytIframe = getSingleSelectedYouTubeIframe();
+    if (ytIframe) {
+      const st = ytIframe.__ytState || (ytIframe.__ytState = { currentTime: 0, duration: 0, playing: false });
+      if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        const func = st.playing ? "pauseVideo" : "playVideo";
+        postYouTubeCommand(ytIframe, func);
+        st.playing = !st.playing;
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        postYouTubeCommand(ytIframe, "seekTo", [Math.max(0, (st.currentTime || 0) - 5), true]);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        postYouTubeCommand(ytIframe, "seekTo", [(st.currentTime || 0) + 5, true]);
+        return;
+      }
+    }
+  }
   // Undo/Redo/Cut/Copy/Delete
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) { e.preventDefault(); saveLocalFile(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && e.shiftKey) { e.preventDefault(); saveLocalFileAs(); return; }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); openLocalFile(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); openCanvasPicker(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); importContentPicker(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') { e.preventDefault(); cutSelected(); return; }
@@ -2493,6 +2732,11 @@ window.addEventListener("keyup", (e) => {
       if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
       else if (activeTool !== "pan") viewport.style.cursor = "default";
     }
+  }
+  // Bake the active straight segment so a second Shift press during the same
+  // stroke starts a fresh anchor at the line's endpoint.
+  if (e.key === "Shift" && isDrawing && wasShiftHeld) {
+    bakeShiftSegment();
   }
 });
 
@@ -2568,7 +2812,7 @@ function handleToolbarAction(btn) {
     setBugReportPanelOpen(shouldOpen);
     return;
   }
-  if (btn.dataset.tool === "open") return openLocalFile();
+  if (btn.dataset.tool === "open") return openCanvasPicker();
   if (btn.dataset.tool === "save") return saveLocalFile();
   if (btn.dataset.tool === "export") return openExportModal();
   if (btn.dataset.tool === "new-markdown") return openMarkdownPanel();
@@ -2799,7 +3043,15 @@ async function readProjectBundleFile(file) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
-  const unzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
+  const rawUnzipped = fflate.unzipSync(new Uint8Array(arrayBuffer));
+  // Normalize zip entry keys to forward-slash form. Different zip tools use
+  // different separators (PowerShell Compress-Archive uses backslashes, the
+  // JS exporter and most others use forward slashes). Normalizing here lets
+  // `node.file` lookups work regardless of how the bundle was produced.
+  const unzipped = {};
+  for (const key in rawUnzipped) {
+    unzipped[key.replaceAll("\\", "/")] = rawUnzipped[key];
+  }
 
   let jsonStr = null;
   let boardFileKey = null;
@@ -2824,13 +3076,56 @@ async function readProjectBundleFile(file) {
     }
   }
 
+  // Phase 2: persist markdown sidecars from the bundle to disk via the
+  // /api/save-markdown endpoint, so they survive page reloads regardless of
+  // whether the canvas has been saved yet. Map records bundle-key -> repo-
+  // absolute path so node `file` references can point at on-disk locations
+  // (instead of throwaway blob URLs) when persistence succeeded.
+  const canvasDir = (boardConfig.sourcePath || `content/boards/${boardConfig.slug}/current.canvas`)
+    .split("/").slice(0, -1).join("/");
+  const persistedSidecars = new Map();
+  for (const key in unzipped) {
+    if (key === boardFileKey || key.endsWith("/")) continue;
+    if (!key.toLowerCase().endsWith(".md")) continue;
+    const content = new TextDecoder().decode(unzipped[key]).replace(/\r\n?/g, "\n");
+    const targetRepoPath = `${canvasDir}/${key}`;
+    const filename = key.split("/").pop() || "note.md";
+    try {
+      const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename, path: targetRepoPath, content })
+      });
+      if (response.ok) {
+        persistedSidecars.set(key, `/${targetRepoPath}`);
+      }
+    } catch {
+      // Sidecar persist failed; _rawMarkdown inline below is the safety net.
+    }
+  }
+
   for (const node of importedState.nodes || []) {
     if (node.type === "file" && node.file && blobUrlMap[node.file]) {
       node.file = blobUrlMap[node.file];
     } else if (node.type === "board-preview" && node.boardSource && blobUrlMap[node.boardSource]) {
       node.boardSource = blobUrlMap[node.boardSource];
     } else if (node.type === "markdown" && node.file && blobUrlMap[node.file]) {
-      node.file = blobUrlMap[node.file];
+      // Inline markdown content into _rawMarkdown so it survives page reloads.
+      // Blob URLs evaporate on reload; the inline copy is the durable one.
+      const originalKey = node.file;
+      const bundleEntry = unzipped[originalKey];
+      if (bundleEntry) {
+        node._rawMarkdown = new TextDecoder().decode(bundleEntry).replace(/\r\n?/g, "\n");
+      }
+      // Prefer the on-disk repo-absolute path when the sidecar was persisted —
+      // matches the renderer's fetch model and survives reloads. Fall back to
+      // the in-memory blob URL when persistence didn't succeed (renderer's
+      // _rawMarkdown branch will still render either way).
+      if (persistedSidecars.has(originalKey)) {
+        node.file = persistedSidecars.get(originalKey);
+      } else {
+        node.file = blobUrlMap[originalKey];
+      }
     }
   }
 
@@ -2871,6 +3166,28 @@ window.addEventListener("pointerdown", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  // Crop mode owns ESC and Enter while active.
+  const cropping = findCroppingNode();
+  if (cropping) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelCrop(cropping);
+      return;
+    }
+    if (event.key === "Enter") {
+      const active = document.activeElement;
+      const isInEditor = active && (active.classList?.contains("bd-text-editor") ||
+                                    active.classList?.contains("bd-markdown-editor") ||
+                                    active.tagName === "INPUT" || active.tagName === "TEXTAREA" ||
+                                    active.isContentEditable);
+      if (!isInEditor) {
+        event.preventDefault();
+        commitCrop(cropping);
+        return;
+      }
+    }
+  }
+
   if (event.key === "Escape" && recommendationPanel && !recommendationPanel.hidden) {
     event.preventDefault();
     setRecommendationPanelOpen(false);
@@ -2934,54 +3251,10 @@ window.addEventListener("keydown", (event) => {
 
 if (fileInput) {
   fileInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.name.endsWith(".zip")) {
-      if (!window.fflate) {
-        showToolbarToast("Bundler library not loaded.", "error");
-        return;
-      }
-      try {
-        const importedState = await readProjectBundleFile(file);
-        loadState(importedState);
-        persistLocalState(serializeState());
-        setComparisonBaseline(serializeState());
-        autosaveRepositorySupported = true;
-        markBoardDirty({ scheduleLocalSave: false });
-        setToolbarActionsOpen(false);
-        setRecommendationPanelOpen(false);
-        setFeatureRequestPanelOpen(false);
-        setBugReportPanelOpen(false);
-        setSettingsPanelOpen(false);
-        showToolbarToast(`Imported bundle ${file.name}`, "success");
-      } catch(err) {
-        showToolbarToast(err.message === "No board file found in bundle." ? err.message : "Failed to import bundle.", "error");
-      }
-      fileInput.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        loadState(data);
-        persistLocalState(serializeState());
-        setComparisonBaseline(serializeState());
-        autosaveRepositorySupported = true;
-        markBoardDirty({ scheduleLocalSave: false });
-        setToolbarActionsOpen(false);
-        setRecommendationPanelOpen(false);
-        setFeatureRequestPanelOpen(false);
-        setBugReportPanelOpen(false);
-        setSettingsPanelOpen(false);
-        showToolbarToast(`Imported ${file.name}`, "success");
-      } catch(err) {
-        showToolbarToast("Import failed. Use .canvas, .canvas.json, .json or .zip.", "error");
-      }
-    };
-    reader.readAsText(file);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setToolbarActionsOpen(false);
+    await importContentFiles(files);
     fileInput.value = "";
   });
 }
@@ -3013,55 +3286,6 @@ if (settingsResetButton) {
     boardSettings = { ...DEFAULT_BOARD_SETTINGS };
     applyBoardSettings({ announce: true });
   });
-}
-
-async function openLocalFile() {
-  if (supportsFileSystemAccessAPI) {
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{
-          description: 'Canvas or Bundle Files',
-          accept: { 
-            'application/json': ['.canvas', '.json', '.canvas.json'],
-            'application/zip': ['.zip']
-          }
-        }],
-        multiple: false
-      });
-      const file = await handle.getFile();
-      
-      if (file.name.endsWith(".zip")) {
-        if (!window.fflate) {
-          showToolbarToast("Bundler library not loaded.", "error");
-          return;
-        }
-        const importedState = await readProjectBundleFile(file);
-        loadState(importedState);
-        currentFileHandle = handle;
-        showToolbarToast(`Opened bundle ${file.name}`, "success");
-        return;
-      }
-
-      const text = await file.text();
-      const importedState = JSON.parse(text);
-      if (typeof importedState === "object" && Array.isArray(importedState.nodes)) {
-        loadState(importedState);
-        currentFileHandle = handle;
-        showToolbarToast(`Opened ${file.name}`, "success");
-      } else {
-        showToolbarToast("Invalid canvas format.", "error");
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.error("Open file failed:", err);
-        showToolbarToast("Failed to open file.", "error");
-      }
-    }
-  } else {
-    // Fallback for unsupported browsers (Safari/Firefox)
-    const input = document.getElementById("braindump-import");
-    if (input) input.click();
-  }
 }
 
 async function verifyFilePermission(handle, mode) {
@@ -3251,34 +3475,65 @@ function exportCanvas() {
   return result;
 }
 
-function submitRecommendation() {
-  if (!boardConfig.allowRecommendations || recommendationConfig.type !== "issue" || !recommendationConfig.owner || !recommendationConfig.repo) {
-    showToolbarToast("Recommendations are not set up for this board.", "error");
-    return;
-  }
-
-  const summary = normalizeIssueSummary(recommendationSummaryInput?.value);
-  if (!summary) {
-    showToolbarToast("Add a short description for the recommendation.", "error");
-    recommendationSummaryInput?.focus();
-    return;
-  }
-  const recommendationFilename = buildRecommendationFilename();
-  downloadStateFile(recommendationFilename, "application/json");
-  const issueUrl = buildRecommendationIssueUrl(summary, "", recommendationFilename);
-  window.open(issueUrl, "_blank", "noopener,noreferrer");
-  setRecommendationPanelOpen(false);
-  if (recommendationSummaryInput) recommendationSummaryInput.value = "";
-  showToolbarToast(`Recommendation opened. Attach ${recommendationFilename} to the GitHub form.`, "success");
-}
-
 // Drawing logic
 let lastDrawPoint = { x: 0, y: 0 };
+
+// Shift-snap state for straight-line drawing.
+// Active only while a stroke is in progress, the draw tool is selected, and Shift is held.
+let preservedPathData = "";
+let lineStartPoint = null;
+let lineEndPoint = null;
+let wasShiftHeld = false;
+
+/* @export-for-test:snapStraightLine */
+function snapStraightLine(start, cursor) {
+  const dx = cursor.x - start.x;
+  const dy = cursor.y - start.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  if (distance < 0.001) {
+    return { x: start.x, y: start.y };
+  }
+  const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+  const targets = [0, 45, 90, 135, 180, -45, -90, -135, -180];
+  const tolerance = 3;
+  let snapped = null;
+  for (const target of targets) {
+    let diff = Math.abs(angleDeg - target);
+    if (diff > 180) diff = 360 - diff;
+    if (diff <= tolerance) {
+      snapped = target;
+      break;
+    }
+  }
+  if (snapped === null) {
+    return { x: cursor.x, y: cursor.y };
+  }
+  const radians = snapped * Math.PI / 180;
+  return {
+    x: start.x + distance * Math.cos(radians),
+    y: start.y + distance * Math.sin(radians),
+  };
+}
+
+function bakeShiftSegment() {
+  if (lineEndPoint) {
+    lastDrawPoint = { x: lineEndPoint.x, y: lineEndPoint.y };
+  }
+  preservedPathData = "";
+  lineStartPoint = null;
+  lineEndPoint = null;
+  wasShiftHeld = false;
+}
+
 function startDrawing(x, y) {
   if (isPreviewMode) return;
   isDrawing = true;
   let pos = screenToCanvas(x, y);
   lastDrawPoint = pos;
+  preservedPathData = "";
+  lineStartPoint = null;
+  lineEndPoint = null;
+  wasShiftHeld = false;
   minX = pos.x; maxX = pos.x;
   minY = pos.y; maxY = pos.y;
   currentPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -3292,10 +3547,34 @@ function startDrawing(x, y) {
   svgLayer.appendChild(currentPath);
 }
 
-function draw(x, y) {
+function draw(x, y, shiftKey = false) {
   if (!isDrawing || !currentPath) return;
   let pos = screenToCanvas(x, y);
-  
+
+  // Shift-snap branch: replace the active tail with a single straight segment.
+  // Only runs while Shift is held and the draw tool is active. The freehand
+  // path below must stay untouched so non-Shift drawing performance is unchanged.
+  if (shiftKey && activeTool === "draw") {
+    if (!wasShiftHeld) {
+      preservedPathData = currentPathData;
+      lineStartPoint = { x: lastDrawPoint.x, y: lastDrawPoint.y };
+      wasShiftHeld = true;
+    }
+    const end = snapStraightLine(lineStartPoint, pos);
+    lineEndPoint = end;
+    currentPathData = `${preservedPathData} L ${end.x} ${end.y}`;
+    currentPath.setAttribute("d", currentPathData);
+    minX = Math.min(minX, end.x); maxX = Math.max(maxX, end.x);
+    minY = Math.min(minY, end.y); maxY = Math.max(maxY, end.y);
+    return;
+  }
+
+  // Shift was released mid-stroke without firing keyup yet (pointer arrived first).
+  // Bake the line so subsequent freehand points start from the segment end.
+  if (wasShiftHeld) {
+    bakeShiftSegment();
+  }
+
   // Throttle points to reduce DOM repaints and lag
   let dist = Math.hypot(pos.x - lastDrawPoint.x, pos.y - lastDrawPoint.y);
   if (dist < 4 / camera.z) return;
@@ -3310,6 +3589,7 @@ function draw(x, y) {
 function stopDrawing() {
   if (!isDrawing) return;
   isDrawing = false;
+  bakeShiftSegment();
   if (currentPath) {
     const isSinglePoint = !currentPathData.includes(" L ");
     let w = Math.max(maxX - minX, 10);
@@ -3389,8 +3669,22 @@ function createNode(type, x, y, data = {}) {
     if (data.file && !data.id && data.width === undefined) {
         let img = new Image();
         img.onload = () => {
-            nodeObj.width = img.width;
-            nodeObj.height = img.height;
+            // Race guard: skip if the user has already cropped, or if the
+            // cropbox-img onload already sized the node. Both this preload and
+            // the cropbox-img onload write to nodeObj.width/height; without a
+            // shared guard, a fast crop+commit on a freshly dropped image can
+            // race and reset dimensions back to the source's natural size.
+            if (nodeObj.crop) return;
+            if (nodeObj.hasAdjustedRatio) return;
+            // Match the cropbox-img onload's clamping behavior so both writers
+            // produce the same displayed size regardless of which fires first.
+            // Without this clamp, a 4000-pixel-wide source would render at
+            // full width and any crop of it would inherit that oversized
+            // displayed width — perceived as a horizontal stretch / squish.
+            const naturalRatio = img.width / img.height;
+            nodeObj.width = Math.min(img.width, 400);
+            nodeObj.height = nodeObj.width / naturalRatio;
+            nodeObj.hasAdjustedRatio = true;
             let el = getBoardElementById(nodeObj.id);
             if (el) {
                 el.style.width = `${nodeObj.width}px`;
@@ -3493,7 +3787,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           Preview
         </button>
-        <div class="bd-embed-domain">${escapeHtml(new URL(nodeObj.url || "http://localhost").hostname)}</div>
+        <div class="bd-embed-domain">${escapeHtml(new URL(nodeObj.url || "http://localhost", typeof location !== "undefined" ? location.origin : "http://localhost").hostname)}</div>
         <a class="bd-embed-open-btn" href="${escapeHtml(nodeObj.url)}" target="_blank" rel="noreferrer" draggable="false" aria-label="Open in new tab" title="Open in new tab">
           Open
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
@@ -3513,6 +3807,27 @@ function renderLinkNode(nodeObj, el) {
     });
 
     if (isYouTube) {
+      // Subscribe to YouTube IFrame Player API events so keyboard shortcuts
+      // (Space / Left / Right when this node is the only selected one) know
+      // the current playback state and timestamp without round-tripping.
+      const ytIframe = shell.querySelector(".bd-embed-iframe");
+      if (ytIframe) {
+        ytIframe.__ytState = ytIframe.__ytState || { currentTime: 0, duration: 0, playing: false };
+        const subscribe = () => {
+          try {
+            ytIframe.contentWindow?.postMessage(
+              JSON.stringify({ event: "listening", id: nodeObj.id }),
+              "*"
+            );
+          } catch (e) {}
+        };
+        ytIframe.addEventListener("load", subscribe);
+        // Iframe may already be loaded (e.g. cached) by the time we get here.
+        setTimeout(subscribe, 200);
+      }
+    }
+
+    if (isYouTube) {
       // Wheel-shield over YouTube iframe: YouTube has no scrollable content, so
       // hovering over it should keep canvas zoom working instead of being
       // swallowed by the iframe. The shield catches wheel and forwards it to
@@ -3527,16 +3842,40 @@ function renderLinkNode(nodeObj, el) {
         }, { passive: false });
 
         shield.addEventListener("pointerdown", (e) => {
-          // Don't let this initiate an item drag.
+          // Middle-click, right-click, and left-click-with-pan-tool should pan
+          // the canvas (matching the global pointerdown pan handler). Let those
+          // bubble through unchanged.
+          const shouldPan = e.button === 1 || e.button === 2 ||
+            (e.button === 0 && activeTool === "pan");
+          if (shouldPan) return;
+          // Plain left-click: don't let this start an item drag, and don't hand
+          // the gesture off to the iframe — once the iframe owned pointer
+          // events, middle/right-click pan stopped working over a playing
+          // video. Instead the click handler below forwards play/pause to
+          // YouTube via the JS API, so the shield stays in front forever and
+          // pan / wheel-zoom keep working.
           e.stopPropagation();
-          shield.classList.add("is-passthrough");
-          const reactivate = (ev) => {
-            if (!el.contains(ev.target)) {
-              shield.classList.remove("is-passthrough");
-              window.removeEventListener("pointerdown", reactivate, true);
-            }
-          };
-          window.addEventListener("pointerdown", reactivate, true);
+        });
+
+        // The .bd-item drag handler listens for `mousedown`, not `pointerdown`,
+        // so stopping pointerdown above isn't enough. Without these, Chrome
+        // would start an item drag on click and never receive the matching
+        // mouseup, leaving the node stuck to the cursor. Stop for every button
+        // so middle/right-click panning doesn't also kick off a node drag.
+        shield.addEventListener("mousedown", (e) => e.stopPropagation());
+        shield.addEventListener("mouseup", (e) => e.stopPropagation());
+
+        // Forward plain left-clicks to the iframe as a play/pause toggle via
+        // the YouTube IFrame Player API. We stay on top, so pan/zoom always
+        // route through us.
+        shield.addEventListener("click", (e) => {
+          if (e.button !== 0) return;
+          if (activeTool === "pan") return;
+          const iframe = shell.querySelector(".bd-embed-iframe");
+          if (!iframe) return;
+          const st = iframe.__ytState || (iframe.__ytState = { currentTime: 0, duration: 0, playing: false });
+          postYouTubeCommand(iframe, st.playing ? "pauseVideo" : "playVideo");
+          st.playing = !st.playing;
         });
       }
     }
@@ -4046,12 +4385,20 @@ function scheduleMarkdownSave(nodeObj, body) {
 }
 
 async function saveMarkdownNodeFile(nodeObj, body) {
-  const filePath = String(nodeObj?.file || "");
-  if (!filePath) return;
-  const filename = filePath.split("/").pop() || "note.md";
-  const sourcePath = filePath.replace(/^\//, "");
+  // _rawMarkdown is the canonical inline store — always update it so the
+  // canvas-level save captures the latest content even when no file sidecar
+  // path is set (or when the sidecar write below fails).
   const content = readMarkdownEditorContent(body);
   nodeObj._rawMarkdown = content;
+  if (typeof markBoardDirty === "function") markBoardDirty();
+
+  const filePath = String(nodeObj?.file || "");
+  if (!filePath) return;
+  // Skip blob: / data: / external URLs — only repo-relative paths are persisted.
+  if (/^(?:blob:|data:|https?:|file:)/i.test(filePath)) return;
+
+  const filename = filePath.split("/").pop() || "note.md";
+  const sourcePath = filePath.replace(/^\//, "");
   try {
     const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
       method: "POST",
@@ -4059,9 +4406,10 @@ async function saveMarkdownNodeFile(nodeObj, body) {
       body: JSON.stringify({ filename, path: sourcePath, content })
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    if (typeof markBoardDirty === "function") markBoardDirty();
   } catch (error) {
-    showToolbarToast(`Save failed: ${error.message}`, "error");
+    // Sidecar disk write failed — content is still saved inline via the
+    // canvas-level save. Show a toast so the user knows the sidecar is stale.
+    showToolbarToast(`Sidecar save failed: ${error.message}`, "error");
   }
 }
 
@@ -4763,27 +5111,40 @@ function renderMarkdownNode(nodeObj, el) {
     const lines = text.split("\n");
     if (lines.length === 0) lines.push("");
     lines.forEach((line) => body.appendChild(buildMarkdownLineEl(line)));
-    if (!isPreviewMode && filePath) attachMarkdownEditor(nodeObj, body);
+    // Editor attaches regardless of filePath — _rawMarkdown is the canonical
+    // store; the file sidecar is an optional convenience for git/external edits.
+    if (!isPreviewMode) attachMarkdownEditor(nodeObj, body);
   };
 
-  if (!filePath) {
-    body.innerHTML = `<p class="bd-markdown-empty">No file path set.</p>`;
+  // Prefer inline content when present — string of any length, including "".
+  // Handles canvases where `file` is a stale path, transient blob: URL, or
+  // missing on disk. Inline _rawMarkdown is the canonical, portable store.
+  if (typeof nodeObj._rawMarkdown === "string") {
+    renderEditorBody(nodeObj._rawMarkdown);
     return;
   }
 
-  body.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
+  // No inline content; try fetching from file path if any.
+  if (filePath) {
+    body.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
+    fetch(filePath)
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.text();
+      })
+      .then((text) => {
+        renderEditorBody(text.replace(/\r\n?/g, "\n"));
+      })
+      .catch(() => {
+        // Sidecar missing or unreachable — start a fresh editor so the user
+        // can fill it in. Save will persist the new content inline.
+        renderEditorBody("");
+      });
+    return;
+  }
 
-  fetch(filePath)
-    .then((r) => {
-      if (!r.ok) throw new Error(`${r.status}`);
-      return r.text();
-    })
-    .then((text) => {
-      renderEditorBody(text.replace(/\r\n?/g, "\n"));
-    })
-    .catch((err) => {
-      body.innerHTML = `<p class="bd-markdown-error">Could not load <code>${escapeHtml(filePath)}</code> (${escapeHtml(err.message)}).</p>`;
-    });
+  // No file path and no inline content — start a fresh editor.
+  renderEditorBody("");
 }
 
 // ---------------------------------------------------------------------------
@@ -5166,15 +5527,56 @@ async function saveMarkdownFromPanel() {
   }
 }
 
+function ensureDropOverlay() {
+  let overlay = document.getElementById("bd-drop-overlay");
+  if (overlay) return overlay;
+  overlay = document.createElement("div");
+  overlay.id = "bd-drop-overlay";
+  overlay.className = "bd-drop-overlay";
+  overlay.innerHTML = `
+    <div class="bd-drop-overlay-card">
+      <div class="bd-drop-overlay-title">Drop to add to board</div>
+      <div class="bd-drop-overlay-hint">Markdown · Images · PDF · Text</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function setDropTargetActive(active) {
+  if (!viewport) return;
+  const overlay = ensureDropOverlay();
+  if (active) {
+    viewport.classList.add("bd-md-drop-target");
+    overlay.classList.add("is-active");
+  } else {
+    viewport.classList.remove("bd-md-drop-target");
+    overlay.classList.remove("is-active");
+  }
+}
+
 function attachMarkdownDropHandler() {
   if (!viewport || isPreviewMode) return;
   let dragDepth = 0;
+
+  // Swallow file drops on the window so the browser doesn't navigate to the
+  // file when a drop lands outside the viewport.
+  window.addEventListener("dragover", (e) => {
+    if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+  });
+  window.addEventListener("drop", (e) => {
+    if (e.dataTransfer?.types?.includes("Files") && e.target !== viewport && !viewport.contains(e.target)) {
+      e.preventDefault();
+      dragDepth = 0;
+      setDropTargetActive(false);
+    }
+  });
 
   viewport.addEventListener("dragenter", (e) => {
     if (!e.dataTransfer?.types?.includes("Files")) return;
     e.preventDefault();
     dragDepth += 1;
-    viewport.classList.add("bd-md-drop-target");
+    setDropTargetActive(true);
   });
 
   viewport.addEventListener("dragover", (e) => {
@@ -5185,44 +5587,601 @@ function attachMarkdownDropHandler() {
 
   viewport.addEventListener("dragleave", () => {
     dragDepth = Math.max(0, dragDepth - 1);
-    if (dragDepth === 0) viewport.classList.remove("bd-md-drop-target");
+    if (dragDepth === 0) setDropTargetActive(false);
   });
 
   viewport.addEventListener("drop", async (e) => {
     const files = e.dataTransfer?.files;
     if (!files || files.length === 0) return;
-    const mdFiles = Array.from(files).filter((f) => f.name.toLowerCase().endsWith(".md"));
-    if (mdFiles.length === 0) return;
     e.preventDefault();
     e.stopPropagation();
     dragDepth = 0;
-    viewport.classList.remove("bd-md-drop-target");
+    setDropTargetActive(false);
 
     const dropPos = screenToCanvas(e.clientX, e.clientY);
-    for (let i = 0; i < mdFiles.length; i++) {
-      const file = mdFiles[i];
+    const all = Array.from(files);
+    const boardFiles = all.filter((f) => isCanvasKind(classifyDroppedFile(f)));
+    const contentFiles = all.filter((f) => !isCanvasKind(classifyDroppedFile(f)));
+
+    // Board files route through openCanvasFlow individually (each handles its
+    // own reconcile / nested-page branching). Stagger drop positions slightly
+    // so multiple board-preview embeds don't stack at the same spot.
+    for (let i = 0; i < boardFiles.length; i++) {
+      const file = boardFiles[i];
+      const pos = { x: dropPos.x + i * 32, y: dropPos.y + i * 32 };
       try {
-        const text = await file.text();
-        const filename = sanitizeMarkdownFilename(file.name);
-        const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename, path: "", content: text })
-        });
-        const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
-        createNode("markdown", dropPos.x + i * 24, dropPos.y + i * 24, {
-          file: result.url,
-          href: result.url,
-          title: filename.replace(/\.md$/i, ""),
-          width: 380,
-          height: 420
-        });
+        await openCanvasFlow(file, pos);
       } catch (error) {
-        showToolbarToast(`Failed to import ${file.name}: ${error.message}`, "error");
+        showToolbarToast(`Failed to open ${file.name}: ${error.message}`, "error");
       }
     }
-    showToolbarToast(`Imported ${mdFiles.length} markdown file${mdFiles.length === 1 ? "" : "s"}`, "success");
+
+    if (contentFiles.length > 0) {
+      await importContentFiles(contentFiles, dropPos);
+    }
+  });
+}
+
+function classifyDroppedFile(file) {
+  const name = (file?.name || "").toLowerCase();
+  if (name.endsWith(".canvas.diff") || name.endsWith(".diff")) return "canvas-diff";
+  if (name.endsWith(".canvas.json") || name.endsWith(".canvas")) return "canvas-file";
+  if (name.endsWith(".zip")) return "canvas-bundle";
+  if (name.endsWith(".md")) return "markdown";
+  if (/\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return "image";
+  if (name.endsWith(".pdf")) return "pdf";
+  if (name.endsWith(".txt")) return "text";
+  return "unknown";
+}
+
+function isCanvasKind(kind) {
+  return kind === "canvas-file" || kind === "canvas-bundle" || kind === "canvas-diff";
+}
+
+async function uploadAsset(file) {
+  const params = new URLSearchParams({
+    slug: boardConfig.slug || "",
+    filename: file.name
+  });
+  const response = await fetch(`/api/save-asset?${params.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+  return result;
+}
+
+async function importDroppedFile(file, x, y) {
+  const kind = classifyDroppedFile(file);
+  if (kind === "markdown") {
+    const text = await file.text();
+    const filename = sanitizeMarkdownFilename(file.name);
+    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, path: "", content: text })
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+    createNode("markdown", x, y, {
+      file: result.url,
+      href: result.url,
+      title: filename.replace(/\.md$/i, ""),
+      width: 380,
+      height: 420
+    });
+    return true;
+  }
+
+  if (kind === "image") {
+    const result = await uploadAsset(file);
+    createNode("image", x, y, { file: result.url });
+    return true;
+  }
+
+  if (kind === "pdf") {
+    const result = await uploadAsset(file);
+    const absoluteUrl = new URL(result.url, location.origin).href;
+    createNode("bookmark", x, y, {
+      url: absoluteUrl,
+      title: file.name.replace(/\.pdf$/i, ""),
+      embedMode: "live",
+      width: 600,
+      height: 760
+    });
+    return true;
+  }
+
+  if (kind === "text") {
+    const text = await file.text();
+    createNode("text", x, y, {
+      text,
+      width: 360,
+      height: 240
+    });
+    return true;
+  }
+
+  if (kind === "unknown") {
+    const result = await uploadAsset(file);
+    const absoluteUrl = new URL(result.url, location.origin).href;
+    const ext = (file.name.match(/\.[^.]+$/) || [""])[0];
+    createNode("bookmark", x, y, {
+      url: absoluteUrl,
+      title: file.name,
+      embedMode: "preview",
+      width: 320,
+      height: 140,
+      _genericFileExtension: ext
+    });
+    return true;
+  }
+
+  return false;
+}
+
+// =====================================================================
+// Canvas import / open / diff flows
+// =====================================================================
+
+async function sha1Hex(input) {
+  const bytes = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest("SHA-1", bytes);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function canonicalCanvasJson(state) {
+  const { canvasId, createdAt, updatedAt, viewport, ...rest } = state || {};
+  return stableStringify(rest);
+}
+
+async function canonicalCanvasHash(state) {
+  return sha1Hex(canonicalCanvasJson(state));
+}
+
+async function uploadFileAsAsset(file) {
+  const params = new URLSearchParams({
+    slug: boardConfig.slug || "",
+    filename: file.name
+  });
+  const response = await fetch(`/api/save-asset?${params.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.url) throw new Error(result?.error || `HTTP ${response.status}`);
+  return result;
+}
+
+async function parseCanvasFile(file) {
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".zip")) {
+    if (!window.fflate) throw new Error("Bundler library not loaded.");
+    const importedState = await readProjectBundleFile(file);
+    return { kind: "bundle", canvasData: importedState, file };
+  }
+  const text = await file.text();
+  const data = JSON.parse(text);
+  if (data && data.type === "canvas-diff") {
+    return { kind: "diff", diff: data, file };
+  }
+  if (!data || !Array.isArray(data.nodes)) {
+    throw new Error("Not a valid canvas file (missing nodes array).");
+  }
+  return { kind: "canvas", canvasData: data, file };
+}
+
+function extractCanvasMetadata(canvasData) {
+  const nodesArr = Array.isArray(canvasData?.nodes) ? canvasData.nodes : [];
+  const edgesArr = Array.isArray(canvasData?.edges) ? canvasData.edges : [];
+  let sidecarCount = 0;
+  let assetCount = 0;
+  let boardPreviewCount = 0;
+  for (const n of nodesArr) {
+    if (!n) continue;
+    if (n.type === "markdown") sidecarCount += 1;
+    else if (n.type === "image" || (n.type === "link" && /\.(pdf|png|jpe?g|gif|webp)(\?|$)/i.test(n.url || ""))) assetCount += 1;
+    else if (n.type === "board-preview") boardPreviewCount += 1;
+  }
+  return {
+    canvasId: typeof canvasData?.canvasId === "string" ? canvasData.canvasId : null,
+    createdAt: canvasData?.createdAt || null,
+    updatedAt: canvasData?.updatedAt || null,
+    nodeCount: nodesArr.length,
+    edgeCount: edgesArr.length,
+    sidecarCount,
+    assetCount,
+    boardPreviewCount,
+    sizeBytes: JSON.stringify(canvasData).length
+  };
+}
+
+function getCurrentBoardMetadata() {
+  return {
+    canvasId: boardMeta.canvasId,
+    createdAt: boardMeta.createdAt,
+    updatedAt: boardMeta.updatedAt,
+    nodeCount: nodes.length,
+    edgeCount: edges.length,
+    sidecarCount: nodes.filter((n) => n.type === "markdown").length,
+    assetCount: nodes.filter((n) => n.type === "image" || (n.type === "link" && /\.(pdf|png|jpe?g|gif|webp)(\?|$)/i.test(n.url || ""))).length,
+    boardPreviewCount: nodes.filter((n) => n.type === "board-preview").length,
+    sizeBytes: JSON.stringify(serializeState()).length
+  };
+}
+
+function formatBytes(n) {
+  if (!Number.isFinite(n)) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function formatTimestampDisplay(ts) {
+  if (!ts) return "—";
+  try { return new Date(ts).toLocaleString(); } catch { return String(ts); }
+}
+
+async function openCanvasFlow(file, dropPos) {
+  let parsed;
+  try {
+    parsed = await parseCanvasFile(file);
+  } catch (err) {
+    showToolbarToast(`Cannot open ${file.name}: ${err.message}`, "error");
+    return;
+  }
+
+  if (parsed.kind === "diff") {
+    return applyDiffFlow(parsed.diff);
+  }
+
+  const incomingMeta = extractCanvasMetadata(parsed.canvasData);
+  const localMeta = getCurrentBoardMetadata();
+
+  if (incomingMeta.canvasId && incomingMeta.canvasId === localMeta.canvasId) {
+    const choice = await reconcilePrompt({ local: localMeta, incoming: incomingMeta });
+    if (choice !== "apply") return;
+    loadState(parsed.canvasData);
+    persistLocalState(serializeState());
+    setComparisonBaseline(serializeState());
+    markBoardDirty({ scheduleLocalSave: false });
+    saveBoard({ showFeedback: false }).catch(() => {});
+    const isNewer = new Date(incomingMeta.updatedAt || 0).getTime() >= new Date(localMeta.updatedAt || 0).getTime();
+    showToolbarToast(isNewer ? `Updated to ${file.name}` : `Restored from ${file.name}`, "success");
+    return;
+  }
+
+  await embedCanvasAsBoardPreview(file, parsed.canvasData, incomingMeta, dropPos);
+}
+
+async function embedCanvasAsBoardPreview(file, canvasData, incomingMeta, dropPos) {
+  let url;
+  try {
+    const result = await uploadFileAsAsset(file);
+    url = result.url;
+  } catch (err) {
+    showToolbarToast(`Could not stage ${file.name} as a sub-page: ${err.message}`, "error");
+    return;
+  }
+  const pos = dropPos || screenToCanvas(window.innerWidth / 2, window.innerHeight / 2);
+  const titleBase = file.name
+    .replace(/\.(zip|canvas\.json|canvas|json)$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim() || "Imported board";
+  createNode("board-preview", pos.x, pos.y, {
+    boardSource: url,
+    boardSlug: incomingMeta.canvasId ? incomingMeta.canvasId.slice(0, 8) : "",
+    boardHref: url,
+    title: titleBase,
+    description: `${incomingMeta.nodeCount} node${incomingMeta.nodeCount === 1 ? "" : "s"}, ${incomingMeta.edgeCount} edge${incomingMeta.edgeCount === 1 ? "" : "s"}`,
+    width: 320,
+    height: 220
+  });
+  markBoardDirty();
+  showToolbarToast(`Embedded ${file.name} as a sub-page`, "success");
+}
+
+// --- Diff format: export + apply ---
+
+function createCanvasDiff(baseState, currentState) {
+  if (!baseState || !currentState) throw new Error("createCanvasDiff requires both states.");
+  if (!baseState.canvasId) throw new Error("Base canvas has no canvasId; cannot diff.");
+  const baseNodes = new Map((baseState.nodes || []).map((n) => [n.id, n]));
+  const currentNodes = new Map((currentState.nodes || []).map((n) => [n.id, n]));
+  const added = [];
+  const modified = [];
+  const removed = [];
+  for (const [id, n] of currentNodes) {
+    if (!baseNodes.has(id)) added.push(n);
+    else if (stableStringify(baseNodes.get(id)) !== stableStringify(n)) {
+      modified.push({ id, fields: n });
+    }
+  }
+  for (const id of baseNodes.keys()) {
+    if (!currentNodes.has(id)) removed.push(id);
+  }
+  const baseEdges = new Map((baseState.edges || []).map((e, i) => [e.id || `__i${i}`, e]));
+  const currentEdges = new Map((currentState.edges || []).map((e, i) => [e.id || `__i${i}`, e]));
+  const edgesAdded = [];
+  const edgesRemoved = [];
+  for (const [id, e] of currentEdges) {
+    if (!baseEdges.has(id) || stableStringify(baseEdges.get(id)) !== stableStringify(e)) edgesAdded.push(e);
+  }
+  for (const id of baseEdges.keys()) {
+    if (!currentEdges.has(id)) edgesRemoved.push(id);
+  }
+  return {
+    type: "canvas-diff",
+    baseCanvasId: baseState.canvasId,
+    baseVersion: {
+      timestamp: baseState.updatedAt || null,
+      hash: null
+    },
+    createdAt: new Date().toISOString(),
+    changes: { added, modified, removed, edges: { added: edgesAdded, removed: edgesRemoved } }
+  };
+}
+
+async function applyDiffFlow(diff) {
+  if (!diff || diff.type !== "canvas-diff" || !diff.baseCanvasId) {
+    showToolbarToast("Not a valid canvas diff file.", "error");
+    return;
+  }
+  if (diff.baseCanvasId !== boardMeta.canvasId) {
+    showToolbarToast(`This diff is for a different board (${String(diff.baseCanvasId).slice(0, 8)}…).`, "error");
+    return;
+  }
+  const localHash = await canonicalCanvasHash(serializeState());
+  const expectedHash = diff.baseVersion?.hash || null;
+  const diverged = expectedHash && expectedHash !== localHash;
+  const summary = {
+    added: diff.changes?.added?.length || 0,
+    modified: diff.changes?.modified?.length || 0,
+    removed: diff.changes?.removed?.length || 0,
+    edgesAdded: diff.changes?.edges?.added?.length || 0,
+    edgesRemoved: diff.changes?.edges?.removed?.length || 0
+  };
+  const choice = await applyDiffPrompt({ diff, diverged, summary });
+  if (choice !== "apply") return;
+  applyDiffToState(diff);
+  persistLocalState(serializeState());
+  setComparisonBaseline(serializeState());
+  markBoardDirty({ scheduleLocalSave: false });
+  saveBoard({ showFeedback: false }).catch(() => {});
+  showToolbarToast(`Applied diff (+${summary.added} ~${summary.modified} -${summary.removed})`, "success");
+}
+
+function applyDiffToState(diff) {
+  const removeIds = new Set(diff.changes?.removed || []);
+  const modifiedMap = new Map((diff.changes?.modified || []).map((m) => [m.id, m.fields]));
+  // Drop removed nodes; replace modified nodes.
+  const remainingNodes = nodes.filter((n) => !removeIds.has(n.id)).map((n) => {
+    if (modifiedMap.has(n.id)) return { ...n, ...modifiedMap.get(n.id) };
+    return n;
+  });
+  const addedNodes = (diff.changes?.added || []).filter((n) => n && n.id);
+  const nextNodes = [...remainingNodes, ...addedNodes];
+  const removedEdgeIds = new Set(diff.changes?.edges?.removed || []);
+  const remainingEdges = edges.filter((e) => !removedEdgeIds.has(e.id || ""));
+  const addedEdges = diff.changes?.edges?.added || [];
+  const nextEdges = [...remainingEdges, ...addedEdges];
+  loadState({
+    canvasId: boardMeta.canvasId,
+    createdAt: boardMeta.createdAt,
+    updatedAt: new Date().toISOString(),
+    nodes: nextNodes,
+    edges: nextEdges,
+    viewport: { x: camera.x, y: camera.y, z: camera.z }
+  });
+}
+
+// --- Prompt overlays (reconcile + diff apply) ---
+
+function buildPromptOverlay(html) {
+  const overlay = document.createElement("div");
+  overlay.className = "braindump-modal is-open";
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.zIndex = "10000";
+  overlay.style.background = "rgba(0,0,0,0.5)";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.innerHTML = `<div class="braindump-modal-panel" style="max-width: 680px; max-height: 80vh; overflow:auto;">${html}</div>`;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function reconcilePrompt({ local, incoming }) {
+  return new Promise((resolve) => {
+    const incomingNewer = new Date(incoming.updatedAt || 0).getTime() >= new Date(local.updatedAt || 0).getTime();
+    const verb = incomingNewer ? "Update" : "Restore";
+    const projected = {
+      nodeCount: incoming.nodeCount,
+      edgeCount: incoming.edgeCount,
+      sidecarCount: incoming.sidecarCount,
+      assetCount: incoming.assetCount,
+      boardPreviewCount: incoming.boardPreviewCount,
+      sizeBytes: incoming.sizeBytes,
+      updatedAt: incoming.updatedAt
+    };
+    const row = (label, l, i, p) => `
+      <tr>
+        <th style="text-align:left;padding:4px 12px 4px 0;font-weight:500;color:#666;">${label}</th>
+        <td style="padding:4px 12px;">${l}</td>
+        <td style="padding:4px 12px;">${i}</td>
+        <td style="padding:4px 12px;color:#0a0;">${p}</td>
+      </tr>`;
+    const html = `
+      <h2 class="braindump-modal-title">${verb} this board?</h2>
+      <p class="braindump-modal-description">Same canvas ID. Choose ${verb.toLowerCase()} to replace local with incoming, or cancel to keep local as-is.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:0.5rem 0 1rem;">
+        <thead>
+          <tr>
+            <th></th>
+            <th style="text-align:left;padding:4px 12px;">Local now</th>
+            <th style="text-align:left;padding:4px 12px;">Incoming</th>
+            <th style="text-align:left;padding:4px 12px;color:#0a0;">After</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${row("File size", formatBytes(local.sizeBytes), formatBytes(incoming.sizeBytes), formatBytes(projected.sizeBytes))}
+          ${row("Last updated", formatTimestampDisplay(local.updatedAt), formatTimestampDisplay(incoming.updatedAt), formatTimestampDisplay(projected.updatedAt))}
+          ${row("Nodes", local.nodeCount, incoming.nodeCount, projected.nodeCount)}
+          ${row("Edges", local.edgeCount, incoming.edgeCount, projected.edgeCount)}
+          ${row("Markdown sidecars", local.sidecarCount, incoming.sidecarCount, projected.sidecarCount)}
+          ${row("Image / PDF assets", local.assetCount, incoming.assetCount, projected.assetCount)}
+          ${row("Board-preview links", local.boardPreviewCount, incoming.boardPreviewCount, projected.boardPreviewCount)}
+        </tbody>
+      </table>
+      <div class="braindump-modal-actions">
+        <button type="button" data-action="cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+        <button type="button" data-action="apply" class="braindump-modal-button braindump-modal-button-primary">${verb}</button>
+      </div>
+    `;
+    const overlay = buildPromptOverlay(html);
+    const finish = (choice) => {
+      overlay.remove();
+      resolve(choice);
+    };
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target.closest("[data-action]");
+      if (!target && ev.target === overlay) return finish("cancel");
+      if (!target) return;
+      finish(target.dataset.action);
+    });
+    overlay.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") finish("cancel");
+    });
+    overlay.tabIndex = -1;
+    overlay.focus();
+  });
+}
+
+function applyDiffPrompt({ diff, diverged, summary }) {
+  return new Promise((resolve) => {
+    const html = `
+      <h2 class="braindump-modal-title">Apply diff?</h2>
+      <p class="braindump-modal-description">
+        Diff base: <code>${String(diff.baseCanvasId || "").slice(0, 8)}…</code>
+        ${diff.baseVersion?.timestamp ? `(from ${formatTimestampDisplay(diff.baseVersion.timestamp)})` : ""}
+      </p>
+      <ul style="margin:0.5rem 0 1rem;padding-left:1.5rem;font-size:13px;">
+        <li>+${summary.added} added · ~${summary.modified} modified · -${summary.removed} removed</li>
+        <li>Edges: +${summary.edgesAdded} / -${summary.edgesRemoved}</li>
+      </ul>
+      ${diverged ? `<p style="color:#a40;background:#fff8e8;padding:8px;border-radius:6px;font-size:13px;">⚠ Local board has diverged from the diff's base. Applying anyway: incoming wins on conflicts.</p>` : ""}
+      <div class="braindump-modal-actions">
+        <button type="button" data-action="cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+        <button type="button" data-action="apply" class="braindump-modal-button braindump-modal-button-primary">Apply diff</button>
+      </div>
+    `;
+    const overlay = buildPromptOverlay(html);
+    const finish = (choice) => { overlay.remove(); resolve(choice); };
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target.closest("[data-action]");
+      if (!target && ev.target === overlay) return finish("cancel");
+      if (!target) return;
+      finish(target.dataset.action);
+    });
+    overlay.tabIndex = -1;
+    overlay.focus();
+  });
+}
+
+// --- Multi-file content import (grid layout) ---
+
+async function importContentFiles(files, basePos) {
+  if (!files || !files.length) return 0;
+  const start = basePos || screenToCanvas(window.innerWidth / 2, window.innerHeight / 2);
+  const cols = files.length === 1 ? 1 : Math.min(3, files.length);
+  const cellW = 360;
+  const cellH = 280;
+  let imported = 0;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = start.x + col * cellW;
+    const y = start.y + row * cellH;
+    try {
+      const ok = await importDroppedFile(file, x, y);
+      if (ok) imported += 1;
+    } catch (err) {
+      showToolbarToast(`Failed to import ${file.name}: ${err.message}`, "error");
+    }
+  }
+  if (imported > 0) {
+    showToolbarToast(`Imported ${imported} file${imported === 1 ? "" : "s"}`, "success");
+  }
+  return imported;
+}
+
+// --- File pickers ---
+
+async function openCanvasPicker() {
+  if (supportsFileSystemAccessAPI && window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          { description: "Canvas files", accept: { "application/json": [".canvas", ".canvas.json", ".json"] } },
+          { description: "Canvas bundle", accept: { "application/zip": [".zip"] } },
+          { description: "Canvas diff", accept: { "application/json": [".canvas.diff", ".diff"] } }
+        ],
+        multiple: false
+      });
+      const file = await handle.getFile();
+      currentFileHandle = handle;
+      await openCanvasFlow(file);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Open canvas failed:", err);
+        showToolbarToast("Failed to open canvas.", "error");
+      }
+    }
+  } else if (openCanvasInput) {
+    openCanvasInput.click();
+  }
+}
+
+async function importContentPicker() {
+  if (supportsFileSystemAccessAPI && window.showOpenFilePicker) {
+    try {
+      const handles = await window.showOpenFilePicker({
+        types: [
+          { description: "Content files", accept: {
+            "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"],
+            "application/pdf": [".pdf"],
+            "text/markdown": [".md"],
+            "text/plain": [".txt"]
+          } }
+        ],
+        multiple: true
+      });
+      const files = await Promise.all(handles.map((h) => h.getFile()));
+      await importContentFiles(files);
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Import failed:", err);
+        showToolbarToast("Failed to import.", "error");
+      }
+    }
+  } else if (fileInput) {
+    fileInput.click();
+  }
+}
+
+// --- File-input change handlers ---
+
+if (openCanvasInput) {
+  openCanvasInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await openCanvasFlow(file);
+    openCanvasInput.value = "";
   });
 }
 
@@ -5366,6 +6325,582 @@ function renderBaseNode(nodeObj, el) {
     .catch((err) => {
       body.innerHTML = `<p class="bd-base-error">Could not load data (${err.message}).</p>`;
     });
+}
+
+// ----- Image cropping -----
+
+function applyCropTransform(img, crop) {
+  if (!crop) {
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.left = "0";
+    img.style.top = "0";
+    return;
+  }
+  const w = crop.right - crop.left;
+  const h = crop.bottom - crop.top;
+  if (w <= 0 || h <= 0) return;
+  img.style.width = `${(100 / w).toFixed(4)}%`;
+  img.style.height = `${(100 / h).toFixed(4)}%`;
+  img.style.left = `${(-(crop.left / w) * 100).toFixed(4)}%`;
+  img.style.top = `${(-(crop.top / h) * 100).toFixed(4)}%`;
+}
+
+function renderImageCropbox(nodeObj, el) {
+  const existingOv = el.querySelector(".bd-crop-overlay");
+  if (existingOv && typeof existingOv._cropCleanup === "function") existingOv._cropCleanup();
+  el.querySelectorAll(".bd-file-cropbox, .bd-crop-overlay").forEach(n => n.remove());
+
+  const wrap = document.createElement("div");
+  wrap.className = "bd-file-cropbox";
+  wrap.dataset.fileSrc = nodeObj.file;
+  el.insertBefore(wrap, el.firstChild);
+
+  const img = document.createElement("img");
+  img.draggable = false;
+  img.alt = "file preview";
+  img.src = nodeObj.file;
+  wrap.appendChild(img);
+
+  applyCropTransform(img, nodeObj.crop);
+
+  img.onload = () => {
+    // Skip auto-aspect adjustment when the node already has a crop (the crop
+    // dictates the displayed size) or when the ratio was already measured.
+    // Without these guards a fresh <img> mounted after a commit re-fires the
+    // adjuster and clobbers the cropped width/height.
+    if (nodeObj.crop) {
+      nodeObj.hasAdjustedRatio = true;
+      return;
+    }
+    if (nodeObj.hasAdjustedRatio) return;
+    const naturalRatio = img.naturalWidth / img.naturalHeight;
+    nodeObj.width = Math.min(img.naturalWidth, 400);
+    nodeObj.height = nodeObj.width / naturalRatio;
+    nodeObj.hasAdjustedRatio = true;
+    el.style.width = `${nodeObj.width}px`;
+    el.style.height = `${nodeObj.height}px`;
+    markBoardDirty();
+  };
+}
+
+function renderImageCropOverlay(nodeObj, el) {
+  el.querySelectorAll(".bd-file-cropbox, .bd-crop-overlay").forEach(n => n.remove());
+
+  const ov = document.createElement("div");
+  ov.className = "bd-crop-overlay";
+  el.insertBefore(ov, el.firstChild);
+
+  const img = document.createElement("img");
+  img.draggable = false;
+  img.alt = "crop preview";
+  img.src = nodeObj.file;
+  ov.appendChild(img);
+
+  const dimTop = document.createElement("div");
+  dimTop.className = "bd-crop-dim top";
+  ov.appendChild(dimTop);
+  const dimBottom = document.createElement("div");
+  dimBottom.className = "bd-crop-dim bottom";
+  ov.appendChild(dimBottom);
+  const dimLeft = document.createElement("div");
+  dimLeft.className = "bd-crop-dim left";
+  ov.appendChild(dimLeft);
+  const dimRight = document.createElement("div");
+  dimRight.className = "bd-crop-dim right";
+  ov.appendChild(dimRight);
+
+  const win = document.createElement("div");
+  win.className = "bd-crop-window";
+  ov.appendChild(win);
+
+  const handles = {};
+  ["tl", "tr", "bl", "br", "t", "r", "b", "l"].forEach(corner => {
+    const h = document.createElement("div");
+    h.className = `bd-crop-handle ${corner}`;
+    h.dataset.corner = corner;
+    ov.appendChild(h);
+    handles[corner] = h;
+  });
+
+  const bar = document.createElement("div");
+  bar.className = "bd-crop-actionbar";
+  const px = document.createElement("span");
+  px.className = "bd-crop-px";
+  bar.appendChild(px);
+  const bake = document.createElement("button");
+  bake.type = "button";
+  bake.className = "bd-crop-bake";
+  bake.textContent = "Bake";
+  bake.title = "Re-encode the cropped pixels and replace the source file";
+  const done = document.createElement("button");
+  done.type = "button";
+  done.className = "bd-crop-done";
+  done.textContent = "Done";
+  bar.appendChild(bake);
+  bar.appendChild(done);
+  ov.appendChild(bar);
+
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function updateGeometry() {
+    const c = nodeObj._cropDraft;
+    const left = clamp01(c.left) * 100;
+    const top = clamp01(c.top) * 100;
+    const right = clamp01(c.right) * 100;
+    const bottom = clamp01(c.bottom) * 100;
+    const w = right - left;
+    const h = bottom - top;
+
+    win.style.left = `${left}%`;
+    win.style.top = `${top}%`;
+    win.style.width = `${w}%`;
+    win.style.height = `${h}%`;
+
+    dimTop.style.left = "0";
+    dimTop.style.top = "0";
+    dimTop.style.width = "100%";
+    dimTop.style.height = `${top}%`;
+
+    dimBottom.style.left = "0";
+    dimBottom.style.top = `${bottom}%`;
+    dimBottom.style.width = "100%";
+    dimBottom.style.height = `${100 - bottom}%`;
+
+    dimLeft.style.left = "0";
+    dimLeft.style.top = `${top}%`;
+    dimLeft.style.width = `${left}%`;
+    dimLeft.style.height = `${h}%`;
+
+    dimRight.style.left = `${right}%`;
+    dimRight.style.top = `${top}%`;
+    dimRight.style.width = `${100 - right}%`;
+    dimRight.style.height = `${h}%`;
+
+    handles.tl.style.left = `${left}%`;
+    handles.tl.style.top = `${top}%`;
+    handles.tr.style.left = `${right}%`;
+    handles.tr.style.top = `${top}%`;
+    handles.bl.style.left = `${left}%`;
+    handles.bl.style.top = `${bottom}%`;
+    handles.br.style.left = `${right}%`;
+    handles.br.style.top = `${bottom}%`;
+
+    const cx = (left + right) / 2;
+    const cy = (top + bottom) / 2;
+    handles.t.style.left = `${cx}%`;
+    handles.t.style.top = `${top}%`;
+    handles.r.style.left = `${right}%`;
+    handles.r.style.top = `${cy}%`;
+    handles.b.style.left = `${cx}%`;
+    handles.b.style.top = `${bottom}%`;
+    handles.l.style.left = `${left}%`;
+    handles.l.style.top = `${cy}%`;
+
+    const naturalW = ovImg.naturalWidth || 0;
+    const naturalH = ovImg.naturalHeight || 0;
+    if (naturalW && naturalH) {
+      const pxW = Math.round((c.right - c.left) * naturalW);
+      const pxH = Math.round((c.bottom - c.top) * naturalH);
+      px.textContent = `${pxW} × ${pxH}`;
+    } else {
+      px.textContent = "";
+    }
+  }
+  const ovImg = img;
+  if (img.complete && img.naturalWidth) {
+    updateGeometry();
+  } else {
+    img.addEventListener("load", () => updateGeometry(), { once: true });
+    updateGeometry();
+  }
+
+  let dragMode = null;        // 'corner' | 'translate'
+  let dragCorner = null;
+  let dragStartRect = null;
+  let dragStartPoint = null;
+
+  function pointerToNorm(clientX, clientY) {
+    const rect = ov.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 };
+    return {
+      x: (clientX - rect.left) / rect.width,
+      y: (clientY - rect.top) / rect.height
+    };
+  }
+
+  function beginCornerDrag(corner, clientX, clientY) {
+    dragMode = "corner";
+    dragCorner = corner;
+    dragStartRect = { ...nodeObj._cropDraft };
+    dragStartPoint = pointerToNorm(clientX, clientY);
+  }
+
+  function beginTranslateDrag(clientX, clientY) {
+    dragMode = "translate";
+    dragCorner = null;
+    dragStartRect = { ...nodeObj._cropDraft };
+    dragStartPoint = pointerToNorm(clientX, clientY);
+  }
+
+  function updateCornerDrag(clientX, clientY, shiftKey) {
+    const p = pointerToNorm(clientX, clientY);
+    const dx = p.x - dragStartPoint.x;
+    const dy = p.y - dragStartPoint.y;
+    const min = 0.02;
+    const c = { ...dragStartRect };
+    if (dragCorner.includes("l")) c.left = Math.min(Math.max(0, dragStartRect.left + dx), dragStartRect.right - min);
+    if (dragCorner.includes("r")) c.right = Math.max(Math.min(1, dragStartRect.right + dx), dragStartRect.left + min);
+    if (dragCorner[0] === "t") c.top = Math.min(Math.max(0, dragStartRect.top + dy), dragStartRect.bottom - min);
+    if (dragCorner[0] === "b") c.bottom = Math.max(Math.min(1, dragStartRect.bottom + dy), dragStartRect.top + min);
+
+    // Shift aspect-lock only applies to corner drags (length 2). Edge drags
+    // (length 1) move a single side and ignore Shift.
+    if (shiftKey && dragCorner.length === 2) {
+      const startW = dragStartRect.right - dragStartRect.left;
+      const startH = dragStartRect.bottom - dragStartRect.top;
+      if (startW > 0 && startH > 0) {
+        const startRatio = startW / startH;
+        const newW = c.right - c.left;
+        const newH = c.bottom - c.top;
+        const widthRel = Math.abs(newW - startW) / startW;
+        const heightRel = Math.abs(newH - startH) / startH;
+        if (widthRel >= heightRel) {
+          const targetH = newW / startRatio;
+          if (dragCorner[0] === "t") c.top = clamp01(c.bottom - targetH);
+          else c.bottom = clamp01(c.top + targetH);
+        } else {
+          const targetW = newH * startRatio;
+          if (dragCorner.includes("l")) c.left = clamp01(c.right - targetW);
+          else c.right = clamp01(c.left + targetW);
+        }
+      }
+    }
+    nodeObj._cropDraft = c;
+    updateGeometry();
+  }
+
+  function updateTranslateDrag(clientX, clientY) {
+    const p = pointerToNorm(clientX, clientY);
+    const dx = p.x - dragStartPoint.x;
+    const dy = p.y - dragStartPoint.y;
+    const w = dragStartRect.right - dragStartRect.left;
+    const h = dragStartRect.bottom - dragStartRect.top;
+    let newLeft = clamp01(dragStartRect.left + dx);
+    let newTop = clamp01(dragStartRect.top + dy);
+    if (newLeft + w > 1) newLeft = 1 - w;
+    if (newTop + h > 1) newTop = 1 - h;
+    nodeObj._cropDraft = { left: newLeft, top: newTop, right: newLeft + w, bottom: newTop + h };
+    updateGeometry();
+  }
+
+  function endCropDrag() {
+    dragMode = null;
+    dragCorner = null;
+    dragStartRect = null;
+    dragStartPoint = null;
+  }
+
+  Object.entries(handles).forEach(([corner, h]) => {
+    h.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      beginCornerDrag(corner, e.clientX, e.clientY);
+    });
+    h.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginCornerDrag(corner, e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+  });
+
+  // Translate gesture: mousedown on the clear crop window translates the rect.
+  win.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    beginTranslateDrag(e.clientX, e.clientY);
+  });
+  win.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    beginTranslateDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  function onMove(e) {
+    if (!dragMode) return;
+    let cx, cy, shift;
+    if (e.touches) {
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      cx = e.touches[0].clientX; cy = e.touches[0].clientY; shift = e.shiftKey;
+    } else {
+      cx = e.clientX; cy = e.clientY; shift = e.shiftKey;
+    }
+    if (dragMode === "corner") updateCornerDrag(cx, cy, shift);
+    else if (dragMode === "translate") updateTranslateDrag(cx, cy);
+  }
+  function onUp() { endCropDrag(); }
+
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("touchmove", onMove, { passive: false });
+  window.addEventListener("mouseup", onUp);
+  window.addEventListener("touchend", onUp);
+  window.addEventListener("touchcancel", onUp);
+
+  ov.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  ov.addEventListener("touchstart", (e) => { e.stopPropagation(); }, { passive: false });
+  ov.addEventListener("dblclick", (e) => { e.stopPropagation(); });
+
+  done.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  done.addEventListener("click", (e) => {
+    e.stopPropagation();
+    commitCrop(nodeObj);
+  });
+  bake.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+  bake.addEventListener("click", (e) => {
+    e.stopPropagation();
+    bakeCrop(nodeObj);
+  });
+
+  ov._cropCleanup = () => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("touchmove", onMove);
+    window.removeEventListener("mouseup", onUp);
+    window.removeEventListener("touchend", onUp);
+    window.removeEventListener("touchcancel", onUp);
+  };
+}
+
+function findCroppingNode() {
+  return nodes.find(n => n.isCropping);
+}
+
+let _cropOutsideClickHandler = null;
+function installCropOutsideClick(nodeObj) {
+  uninstallCropOutsideClick();
+  _cropOutsideClickHandler = (e) => {
+    const el = getBoardElementById(nodeObj.id);
+    if (!el) return;
+    if (e.target instanceof Node && el.contains(e.target)) return;
+    commitCrop(nodeObj);
+  };
+  document.addEventListener("mousedown", _cropOutsideClickHandler, true);
+}
+function uninstallCropOutsideClick() {
+  if (_cropOutsideClickHandler) {
+    document.removeEventListener("mousedown", _cropOutsideClickHandler, true);
+    _cropOutsideClickHandler = null;
+  }
+}
+
+function enterCropMode(nodeObj) {
+  if (nodeObj.type !== "file") return;
+  const other = findCroppingNode();
+  if (other && other !== nodeObj) commitCrop(other);
+
+  const el = getBoardElementById(nodeObj.id);
+  if (!el) return;
+  const oldCrop = nodeObj.crop || { left: 0, top: 0, right: 1, bottom: 1 };
+  const cropW = oldCrop.right - oldCrop.left;
+  const cropH = oldCrop.bottom - oldCrop.top;
+  if (cropW <= 0 || cropH <= 0) return;
+
+  nodeObj._cropEnterCrop = nodeObj.crop ? { ...nodeObj.crop } : null;
+  nodeObj._cropEnterSize = { w: nodeObj.width, h: nodeObj.height };
+  nodeObj._cropEnterPos = { x: nodeObj.x, y: nodeObj.y };
+  nodeObj._cropDraft = { ...oldCrop };
+  nodeObj.isCropping = true;
+
+  // Expand the node to display the full source at the same visual scale as
+  // the cropped slice. Then shift the node's top-left BACK by the slice's
+  // offset inside the source so the slice stays visually where it was; the
+  // hidden area of the image extends outward around it.
+  const fullW = nodeObj.width / cropW;
+  const fullH = nodeObj.height / cropH;
+  nodeObj.x = nodeObj.x - oldCrop.left * fullW;
+  nodeObj.y = nodeObj.y - oldCrop.top * fullH;
+  nodeObj.width = fullW;
+  nodeObj.height = fullH;
+
+  el.classList.add("is-cropping");
+  el.classList.remove("selected");
+  renderNode(nodeObj);
+  installCropOutsideClick(nodeObj);
+}
+
+function commitCrop(nodeObj) {
+  if (!nodeObj.isCropping) return;
+  uninstallCropOutsideClick();
+  const draft = nodeObj._cropDraft;
+  const fullW = nodeObj.width;
+  const fullH = nodeObj.height;
+  const draftW = draft.right - draft.left;
+  const draftH = draft.bottom - draft.top;
+  const newW = fullW * draftW;
+  const newH = fullH * draftH;
+  // The slice's screen position equals the expanded node's position plus the
+  // slice offset. After commit, the node's top-left moves to the slice's
+  // top-left so the visible content stays visually anchored.
+  const newX = nodeObj.x + draft.left * fullW;
+  const newY = nodeObj.y + draft.top * fullH;
+
+  const fromCrop = nodeObj._cropEnterCrop;
+  const fromSize = nodeObj._cropEnterSize;
+  const fromPos = nodeObj._cropEnterPos;
+  const isFullRect = (draft.left <= 0.0001 && draft.top <= 0.0001 && draft.right >= 0.9999 && draft.bottom >= 0.9999);
+  const toCrop = isFullRect ? null : { ...draft };
+  const toSize = { w: newW, h: newH };
+  const toPos = { x: newX, y: newY };
+
+  if (toCrop) nodeObj.crop = toCrop;
+  else delete nodeObj.crop;
+  nodeObj.x = newX;
+  nodeObj.y = newY;
+  nodeObj.width = newW;
+  nodeObj.height = newH;
+  delete nodeObj.isCropping;
+  delete nodeObj._cropDraft;
+  delete nodeObj._cropEnterCrop;
+  delete nodeObj._cropEnterSize;
+  delete nodeObj._cropEnterPos;
+
+  const el = getBoardElementById(nodeObj.id);
+  if (el) el.classList.remove("is-cropping");
+
+  const cropChanged = JSON.stringify(fromCrop || null) !== JSON.stringify(toCrop || null);
+  const sizeChanged = Math.abs(fromSize.w - toSize.w) > 0.5 || Math.abs(fromSize.h - toSize.h) > 0.5;
+  const posChanged = fromPos && (Math.abs(fromPos.x - toPos.x) > 0.5 || Math.abs(fromPos.y - toPos.y) > 0.5);
+  if (cropChanged || sizeChanged || posChanged) {
+    pushAction({
+      type: "crop",
+      nodeId: nodeObj.id,
+      fromCrop: fromCrop ? { ...fromCrop } : null,
+      toCrop: toCrop ? { ...toCrop } : null,
+      fromSize,
+      toSize,
+      fromPos: fromPos ? { ...fromPos } : null,
+      toPos: { ...toPos }
+    });
+  }
+  renderNode(nodeObj);
+}
+
+function cancelCrop(nodeObj) {
+  if (!nodeObj.isCropping) return;
+  uninstallCropOutsideClick();
+  if (nodeObj._cropEnterCrop) nodeObj.crop = { ...nodeObj._cropEnterCrop };
+  else delete nodeObj.crop;
+  if (nodeObj._cropEnterSize) {
+    nodeObj.width = nodeObj._cropEnterSize.w;
+    nodeObj.height = nodeObj._cropEnterSize.h;
+  }
+  if (nodeObj._cropEnterPos) {
+    nodeObj.x = nodeObj._cropEnterPos.x;
+    nodeObj.y = nodeObj._cropEnterPos.y;
+  }
+  delete nodeObj.isCropping;
+  delete nodeObj._cropDraft;
+  delete nodeObj._cropEnterCrop;
+  delete nodeObj._cropEnterSize;
+  delete nodeObj._cropEnterPos;
+
+  const el = getBoardElementById(nodeObj.id);
+  if (el) el.classList.remove("is-cropping");
+  renderNode(nodeObj);
+}
+
+function deriveBakeFilename(srcUrl, ext) {
+  try {
+    const u = new URL(srcUrl, location.origin);
+    const segs = u.pathname.split("/").filter(Boolean);
+    const last = segs[segs.length - 1] || `image.${ext}`;
+    const dot = last.lastIndexOf(".");
+    const stem = dot > 0 ? last.slice(0, dot) : last;
+    return `${stem}-cropped.${ext}`;
+  } catch {
+    return `image-cropped.${ext}`;
+  }
+}
+
+async function bakeCrop(nodeObj) {
+  if (!nodeObj.isCropping) return;
+  const el = getBoardElementById(nodeObj.id);
+  const img = el && el.querySelector(".bd-crop-overlay img");
+  if (!img || !img.complete || !img.naturalWidth) {
+    showToolbarToast("Image not ready for bake", "error");
+    return;
+  }
+  const draft = nodeObj._cropDraft;
+  const sx = Math.round(draft.left * img.naturalWidth);
+  const sy = Math.round(draft.top * img.naturalHeight);
+  const sw = Math.round((draft.right - draft.left) * img.naturalWidth);
+  const sh = Math.round((draft.bottom - draft.top) * img.naturalHeight);
+  if (sw < 1 || sh < 1) return;
+  const cv = document.createElement("canvas");
+  cv.width = sw;
+  cv.height = sh;
+  const ctx = cv.getContext("2d");
+  try {
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  } catch (err) {
+    showToolbarToast(`Bake failed: ${err.message}`, "error");
+    return;
+  }
+  const ext = /\.jpe?g(\?|#|$)/i.test(nodeObj.file) ? "jpeg" : "png";
+  const mime = ext === "jpeg" ? "image/jpeg" : "image/png";
+  const blob = await new Promise(res => cv.toBlob(res, mime, 0.92));
+  if (!blob) {
+    showToolbarToast("Bake failed: encoding error", "error");
+    return;
+  }
+  const filename = deriveBakeFilename(nodeObj.file, ext === "jpeg" ? "jpg" : "png");
+  const file = new File([blob], filename, { type: mime });
+  let result;
+  try {
+    result = await uploadAsset(file);
+  } catch (err) {
+    showToolbarToast(`Bake upload failed: ${err.message}`, "error");
+    return;
+  }
+  uninstallCropOutsideClick();
+  const fromFile = nodeObj.file;
+  const fromCrop = nodeObj._cropEnterCrop ? { ...nodeObj._cropEnterCrop } : null;
+  const fromSize = nodeObj._cropEnterSize ? { ...nodeObj._cropEnterSize } : { w: nodeObj.width, h: nodeObj.height };
+  const fromPos = nodeObj._cropEnterPos ? { ...nodeObj._cropEnterPos } : { x: nodeObj.x, y: nodeObj.y };
+  const fullW = nodeObj.width;
+  const fullH = nodeObj.height;
+  const newW = fullW * (draft.right - draft.left);
+  const newH = fullH * (draft.bottom - draft.top);
+  const newX = nodeObj.x + draft.left * fullW;
+  const newY = nodeObj.y + draft.top * fullH;
+  const toFile = result.url;
+  const toSize = { w: newW, h: newH };
+  const toPos = { x: newX, y: newY };
+
+  nodeObj.file = result.url;
+  delete nodeObj.crop;
+  nodeObj.x = newX;
+  nodeObj.y = newY;
+  nodeObj.width = newW;
+  nodeObj.height = newH;
+  delete nodeObj.isCropping;
+  delete nodeObj._cropDraft;
+  delete nodeObj._cropEnterCrop;
+  delete nodeObj._cropEnterSize;
+  delete nodeObj._cropEnterPos;
+
+  const el2 = getBoardElementById(nodeObj.id);
+  if (el2) el2.classList.remove("is-cropping");
+
+  pushAction({
+    type: "bake",
+    nodeId: nodeObj.id,
+    fromFile, fromCrop, fromSize, fromPos,
+    toFile, toSize, toPos
+  });
+  renderNode(nodeObj);
 }
 
 function renderNode(nodeObj) {
@@ -5680,6 +7215,15 @@ function renderNode(nodeObj) {
     window.addEventListener("mouseup", finishNodeResize);
     window.addEventListener("touchend", finishNodeResize);
     window.addEventListener("touchcancel", finishNodeResize);
+
+    el.addEventListener("dblclick", (e) => {
+      if (nodeObj.type !== "file") return;
+      if (e.target && e.target.closest && e.target.closest(".bd-crop-overlay")) return;
+      if (nodeObj.isCropping) return;
+      e.preventDefault();
+      e.stopPropagation();
+      enterCropMode(nodeObj);
+    });
   }
 
   el.style.left = `${nodeObj.x}px`;
@@ -5727,21 +7271,18 @@ function renderNode(nodeObj) {
       }
     }
   } else if (nodeObj.type === "file") {
-    let img = el.querySelector("img");
-    if (!img) {
-      el.insertAdjacentHTML("afterbegin", `<img src="${nodeObj.file}" draggable="false" alt="file preview">`);
-      img = el.querySelector("img");
-      img.onload = () => {
-        let naturalRatio = img.naturalWidth / img.naturalHeight;
-        if (!nodeObj.hasAdjustedRatio) {
-           nodeObj.width = Math.min(img.naturalWidth, 400);
-           nodeObj.height = nodeObj.width / naturalRatio;
-           nodeObj.hasAdjustedRatio = true;
-           el.style.width = `${nodeObj.width}px`;
-           el.style.height = `${nodeObj.height}px`;
-           markBoardDirty();
-        }
-      };
+    if (nodeObj.isCropping) {
+      el.classList.add("is-cropping");
+      renderImageCropOverlay(nodeObj, el);
+    } else {
+      el.classList.remove("is-cropping");
+      const wrap = el.querySelector(".bd-file-cropbox");
+      const img = wrap && wrap.querySelector("img");
+      if (wrap && img && wrap.dataset.fileSrc === nodeObj.file) {
+        applyCropTransform(img, nodeObj.crop);
+      } else {
+        renderImageCropbox(nodeObj, el);
+      }
     }
   } else if (nodeObj.type === "link") {
     renderLinkNode(nodeObj, el);
@@ -5841,6 +7382,13 @@ function loadState(data) {
   nodes = [];
   edges = [];
 
+  boardMeta = {
+    canvasId: typeof data?.canvasId === "string" && data.canvasId ? data.canvasId : null,
+    createdAt: typeof data?.createdAt === "string" && data.createdAt ? data.createdAt : null,
+    updatedAt: typeof data?.updatedAt === "string" && data.updatedAt ? data.updatedAt : null
+  };
+  ensureCanvasId();
+
   if (data.viewport) {
     if (typeof data.viewport.x === 'number') camera.x = data.viewport.x;
     if (typeof data.viewport.y === 'number') camera.y = data.viewport.y;
@@ -5895,6 +7443,7 @@ async function saveBoard(options = {}) {
     return { ok: false, skipped: true };
   }
 
+  boardMeta.updatedAt = new Date().toISOString();
   const state = serializeState();
   const serialized = flushLocalStateSave(state);
   isPersistingRepositoryState = true;
@@ -5936,20 +7485,29 @@ async function saveBoard(options = {}) {
 setActiveTool(isPreviewMode ? "pan" : "select");
 applyBoardSettings({ persist: false });
 let saved = isPreviewMode ? getCanvasDraftStateForPreview() : getSavedState();
+// Treat empty/stub localStorage drafts as "no saved state" — otherwise loading
+// them sets dirty=true and the next autosave wipes the on-disk canvas.
 if (saved) {
   try {
-    loadState(JSON.parse(saved));
-    if (!isPreviewMode) {
-      const state = serializeState();
-      flushLocalStateSave(state);
-      setComparisonBaseline(state);
-      hasPendingRepositorySave = true;
-      autosaveRepositorySupported = true;
+    const parsedSaved = JSON.parse(saved);
+    const hasContent = parsedSaved && Array.isArray(parsedSaved.nodes) && parsedSaved.nodes.length > 0;
+    if (!hasContent) {
+      saved = null;
+    } else {
+      loadState(parsedSaved);
+      if (!isPreviewMode) {
+        const state = serializeState();
+        flushLocalStateSave(state);
+        setComparisonBaseline(state);
+        hasPendingRepositorySave = true;
+        autosaveRepositorySupported = true;
+      }
     }
   } catch(e) {
-    loadBoard();
+    saved = null;
   }
-} else { loadBoard(); }
+}
+if (!saved) { loadBoard(); }
 updateTransform();
 
 if (pendingStartupToast && !isPreviewMode) {

@@ -1,0 +1,1223 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - complementary "Primary" [ref=e3]:
+    - generic [ref=e4]:
+      - link "About Me" [ref=e5] [cursor=pointer]:
+        - /url: index.html
+      - link "Projects" [ref=e6] [cursor=pointer]:
+        - /url: projects.html
+      - link "Things i do" [ref=e7] [cursor=pointer]:
+        - /url: things_i_do.html
+      - link "Photography" [ref=e8] [cursor=pointer]:
+        - /url: photography.html
+      - link "Open-Quests" [ref=e9] [cursor=pointer]:
+        - /url: open-quests.html
+      - link "Cool bookmarks" [ref=e10] [cursor=pointer]:
+        - /url: cool-bookmarks.html
+      - link "Braindump" [ref=e11] [cursor=pointer]:
+        - /url: braindump.html
+      - link "Cosmoboard" [ref=e12] [cursor=pointer]:
+        - /url: cosmoboard.html
+    - generic [ref=e13]:
+      - button "Copy Evren Ucar email address" [ref=e14] [cursor=pointer]:
+        - img "Email icon" [ref=e15]
+      - link "LinkedIn" [ref=e16] [cursor=pointer]:
+        - /url: https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/
+        - img "LinkedIn icon" [ref=e17]
+      - link "YouTube" [ref=e18] [cursor=pointer]:
+        - /url: https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw
+        - img "YouTube icon" [ref=e19]
+  - generic [ref=e20]:
+    - button "Toggle navigation" [ref=e21] [cursor=pointer]:
+      - generic [ref=e25]: Toggle navigation
+    - main [ref=e26]:
+      - generic [ref=e27]:
+        - generic:
+          - img
+          - img
+          - generic [ref=e29]:
+            - text: Cosmoboard
+            - text: A first onboarding board inside the current site
+            - text: File-first. Local-first. Oriented, not just captured.
+          - generic [ref=e31]: This is the first concrete slice of the broader Cosmoboard direction. It stays inside evrenucar.com and uses the same board surface as Braindump, but shifts the focus from freeform capture toward orientation.
+          - generic [ref=e33]: The board introduces how boards, markdown, bases, and embeds should work together. Boards stay spatial, markdown stays durable, bases organize files and metadata, and GitHub remains the near-term collaboration bridge.
+          - generic [ref=e35]:
+            - text: Near term
+            - text: GitHub handles async review and versioning for now.
+            - text: Preview-first embeds, multiple boards per page, markdown references, and deeper base views are the next layers after this starter board.
+          - generic [ref=e37]:
+            - text: Boards
+            - text: Boards map a topic or project spatially.
+            - text: Use the canvas for orientation, grouping, and navigation.
+          - generic [ref=e39]:
+            - text: Markdown
+            - text: Markdown holds notes, specs, and durable writing.
+            - text: Keep the longer thinking in files, not only on the board.
+          - generic [ref=e41]:
+            - text: Bases
+            - text: Bases query and sort files, notes, and projects.
+            - text: Treat them as stable anchors behind the board.
+          - generic [ref=e43]:
+            - text: Embeds
+            - text: Embeds default to previews before live mode.
+            - text: Use live views only when the extra motion earns its place.
+          - generic [ref=e45]:
+            - generic [ref=e46]: braindump / Missing source
+            - generic [ref=e47]:
+              - heading "Braindump" [level=3] [ref=e48]
+              - paragraph [ref=e49]: A linked board preview. Open the broader freeform board when you want the wider working surface.
+            - generic:
+              - generic: Board not available
+            - link "Open Braindump" [ref=e51] [cursor=pointer]:
+              - /url: braindump.html
+              - text: Open board
+          - generic [ref=e53]:
+            - button "View live embed" [ref=e54] [cursor=pointer]:
+              - img [ref=e55]
+            - generic [ref=e57]:
+              - heading "Open Board File" [level=3] [ref=e58]
+              - paragraph [ref=e59]: The canvas file is the board. Edit it locally first, then rebuild and ship.
+              - link "content/boards/cosmoboard/current.canvas" [ref=e60] [cursor=pointer]:
+                - /url: content/boards/cosmoboard/current.canvas
+          - generic [ref=e62]:
+            - button "View live embed" [ref=e63] [cursor=pointer]:
+              - img [ref=e64]
+            - generic [ref=e66]:
+              - heading "View Repo" [level=3] [ref=e67]
+              - paragraph [ref=e68]: Remote review and publish layer. Keep the working copy here on disk, then push the board file when it is ready.
+              - link "https://github.com/evrenucar/proto_website" [ref=e69] [cursor=pointer]:
+                - /url: https://github.com/evrenucar/proto_website
+          - generic [ref=e72]:
+            - img [ref=e73]
+            - generic "Double-click to rename" [ref=e76]: Cosmoboard direction
+            - button "Open markdown" [ref=e77] [cursor=pointer]:
+              - img [ref=e78]
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - img [ref=e88]
+              - generic [ref=e92]: Projects
+              - generic [ref=e93]: "5"
+            - table [ref=e95]:
+              - rowgroup [ref=e96]:
+                - row "Title Status Year Effort" [ref=e97]:
+                  - columnheader "Title" [ref=e98]
+                  - columnheader "Status" [ref=e99]
+                  - columnheader "Year" [ref=e100]
+                  - columnheader "Effort" [ref=e101]
+              - rowgroup [ref=e102]:
+                - row "Eurocrate storage universal solution Greenlit 2026 Weekend Project (4-10hrs)" [ref=e103] [cursor=pointer]:
+                  - cell "Eurocrate storage universal solution" [ref=e104]
+                  - cell "Greenlit" [ref=e105]:
+                    - generic [ref=e106]: Greenlit
+                  - cell "2026" [ref=e107]
+                  - cell "Weekend Project (4-10hrs)" [ref=e108]
+                - row "diy flightcases Just Idea — —" [ref=e109] [cursor=pointer]:
+                  - cell "diy flightcases" [ref=e110]
+                  - cell "Just Idea" [ref=e111]:
+                    - generic [ref=e112]: Just Idea
+                  - cell "—" [ref=e113]
+                  - cell "—" [ref=e114]
+                - row "Project Box system Greenlit — —" [ref=e115] [cursor=pointer]:
+                  - cell "Project Box system" [ref=e116]
+                  - cell "Greenlit" [ref=e117]:
+                    - generic [ref=e118]: Greenlit
+                  - cell "—" [ref=e119]
+                  - cell "—" [ref=e120]
+                - row "Cyberdeck small modular pc Greenlit — —" [ref=e121] [cursor=pointer]:
+                  - cell "Cyberdeck small modular pc" [ref=e122]
+                  - cell "Greenlit" [ref=e123]:
+                    - generic [ref=e124]: Greenlit
+                  - cell "—" [ref=e125]
+                  - cell "—" [ref=e126]
+                - row "micro lego kits for people Active — Mini Project (0-4 hrs)" [ref=e127] [cursor=pointer]:
+                  - cell "micro lego kits for people" [ref=e128]
+                  - cell "Active" [ref=e129]:
+                    - generic [ref=e130]: Active
+                  - cell "—" [ref=e131]
+                  - cell "Mini Project (0-4 hrs)" [ref=e132]
+          - generic [ref=e134]:
+            - generic [ref=e135]:
+              - button "Back to preview" [ref=e136] [cursor=pointer]:
+                - img [ref=e137]
+                - text: Preview
+              - generic: en.wikipedia.org
+              - link "Open in new tab" [ref=e139] [cursor=pointer]:
+                - /url: https://en.wikipedia.org/wiki/Infinite_canvas
+                - text: Open
+                - img [ref=e140]
+            - iframe [ref=e144]:
+              - generic [active] [ref=f1e1]:
+                - link "Jump to content" [ref=f1e2] [cursor=pointer]:
+                  - /url: "#bodyContent"
+                - banner [ref=f1e4]:
+                  - generic [ref=f1e5]:
+                    - navigation "Site" [ref=f1e6]:
+                      - generic "Main menu" [ref=f1e7]:
+                        - button "Main menu" [ref=f1e8] [cursor=pointer]
+                        - generic [ref=f1e11]: Main menu
+                    - link "Wikipedia The Free Encyclopedia" [ref=f1e12] [cursor=pointer]:
+                      - /url: /wiki/Main_Page
+                      - generic [ref=f1e13]:
+                        - img "Wikipedia" [ref=f1e14]
+                        - img "The Free Encyclopedia" [ref=f1e15]
+                  - generic [ref=f1e16]:
+                    - search [ref=f1e17]:
+                      - link "Search" [ref=f1e18] [cursor=pointer]:
+                        - /url: /wiki/Special:Search
+                        - generic [ref=f1e20]: Search
+                    - navigation "Personal tools" [ref=f1e21]:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - list
+                      - generic "Log in and more options" [ref=f1e22]:
+                        - button "Personal tools" [ref=f1e23] [cursor=pointer]
+                        - generic [ref=f1e26]: Personal tools
+                - generic [ref=f1e28]:
+                  - main [ref=f1e30]:
+                    - generic [ref=f1e31]:
+                      - navigation "Contents" [ref=f1e32]:
+                        - generic "Table of Contents" [ref=f1e33]:
+                          - button "Toggle the table of contents" [ref=f1e34] [cursor=pointer]
+                          - generic [ref=f1e37]: Toggle the table of contents
+                      - heading "Infinite canvas" [level=1] [ref=f1e38]:
+                        - generic [ref=f1e39]: Infinite canvas
+                      - generic [ref=f1e40]:
+                        - button "Go to an article in another language. Available in 4 languages" [ref=f1e41] [cursor=pointer]
+                        - generic [ref=f1e44]: 4 languages
+                    - generic [ref=f1e46]:
+                      - navigation "Namespaces" [ref=f1e48]:
+                        - generic [ref=f1e49]:
+                          - generic:
+                            - list:
+                              - listitem [ref=f1e50]:
+                                - link "Article" [ref=f1e51] [cursor=pointer]:
+                                  - /url: /wiki/Infinite_canvas
+                                  - generic [ref=f1e52]: Article
+                              - listitem [ref=f1e53]:
+                                - link "Talk" [ref=f1e54] [cursor=pointer]:
+                                  - /url: /wiki/Talk:Infinite_canvas
+                                  - generic [ref=f1e55]: Talk
+                      - generic [ref=f1e56]:
+                        - navigation "Views"
+                        - navigation "Page tools" [ref=f1e57]:
+                          - generic [ref=f1e58]:
+                            - button "Tools" [ref=f1e59] [cursor=pointer]
+                            - generic [ref=f1e61] [cursor=pointer]: Tools
+                    - generic "Infinite canvas" [ref=f1e62]:
+                      - generic [ref=f1e64]: From Wikipedia, the free encyclopedia
+                      - generic [ref=f1e66]:
+                        - figure "Scott McCloud described the possibility of linking webcomic panels using \"trails\", suggesting it offers distinct storytelling advantages.[1]" [ref=f1e67]:
+                          - link "Blank panels of various sizes are linked by a line, guiding a reader's eyes right, down, left, diagonally up, and down again." [ref=f1e68] [cursor=pointer]:
+                            - /url: /wiki/File:Infinite_Canvas_trails.PNG
+                            - img "Blank panels of various sizes are linked by a line, guiding a reader's eyes right, down, left, diagonally up, and down again." [ref=f1e69]
+                          - generic [ref=f1e70]:
+                            - text: Scott McCloud described the possibility of linking webcomic panels using "trails", suggesting it offers distinct storytelling advantages.
+                            - superscript [ref=f1e71]:
+                              - link "[1]" [ref=f1e72] [cursor=pointer]:
+                                - /url: "#cite_note-1"
+                        - paragraph [ref=f1e73]:
+                          - text: The infinite canvas is the feeling of available space for a
+                          - link "webcomic" [ref=f1e74] [cursor=pointer]:
+                            - /url: /wiki/Webcomic
+                          - text: on the
+                          - link "World Wide Web" [ref=f1e75] [cursor=pointer]:
+                            - /url: /wiki/World_Wide_Web
+                          - text: relative to paper. The term was introduced by
+                          - link "Scott McCloud" [ref=f1e76] [cursor=pointer]:
+                            - /url: /wiki/Scott_McCloud
+                          - text: in his 2000 book
+                          - link "Reinventing Comics" [ref=f1e78] [cursor=pointer]:
+                            - /url: /wiki/Reinventing_Comics
+                          - text: ", which supposes a"
+                          - link "web page" [ref=f1e79] [cursor=pointer]:
+                            - /url: /wiki/Web_page
+                          - text: can grow as large as needed. This infinite canvas gives infinite storytelling features and creators more freedom in how they present their artwork.
+                        - paragraph [ref=f1e80]:
+                          - text: Journalists responded doubtfully, because five years after the publication of Reinventing Comics, the concept had not been widely adopted. Webcomics were primarily presented in the form of
+                          - link "comic strips" [ref=f1e81] [cursor=pointer]:
+                            - /url: /wiki/Comic_strips
+                          - text: ", which fit easily on a screen. Many artists experiment with the infinite canvas, however, and comics growing beyond what is possible in print has gained some popularity over the years."
+                        - generic [ref=f1e82]:
+                          - heading "Description" [level=2] [ref=f1e83]
+                          - generic [ref=f1e84]:
+                            - text: "["
+                            - link "edit" [ref=f1e85] [cursor=pointer]:
+                              - /url: /w/index.php?title=Infinite_canvas&action=edit&section=1
+                            - text: "]"
+                        - paragraph [ref=f1e86]:
+                          - text: In
+                          - link "comic books" [ref=f1e87] [cursor=pointer]:
+                            - /url: /wiki/Comic_books
+                          - text: ", the panels are fit according to the page, thus limiting artists to few arrangements for each page. In his 2000 book, Reinventing Comics, cartoonist Scott McCloud proposes that a web page solves the problem. Instead of making the monitor the \"page\", McCloud suggests making it a \"window\" upon an infinite canvas. A webcomic artist could give a reader an ability to"
+                          - link "zoom in and out" [ref=f1e88] [cursor=pointer]:
+                            - /url: /wiki/Zooming_user_interface
+                          - text: "rendering the comic infinitely large. McCloud wrote that webcomics could be made any shape: vertically like a tower, horizontally like a skyline, diagonally like a descending staircase, or even three dimensionally like a revolving cube."
+                          - superscript [ref=f1e89]:
+                            - link "[2]" [ref=f1e90] [cursor=pointer]:
+                              - /url: "#cite_note-ReinventingComics-2"
+                        - paragraph [ref=f1e91]:
+                          - text: According to David Balan of
+                          - link "Sequart Organization" [ref=f1e93] [cursor=pointer]:
+                            - /url: /wiki/Sequart_Organization
+                          - text: ", some webcomics might require small size pages (due to slow internet) and using"
+                          - link "hyperlinks" [ref=f1e94] [cursor=pointer]:
+                            - /url: /wiki/Hyperlinks
+                          - text: to move forward in the story consistently takes the reader out of the experience, because there exists no visual link between any two pages. Balan praised McCloud's 2003 webcomic,
+                          - generic [ref=f1e95]:
+                            - link "The Right Number" [ref=f1e96] [cursor=pointer]:
+                              - /url: /wiki/The_Right_Number
+                            - text: ","
+                          - text: for its zooming interface, which would have the same benefits as other infinite canvas formats, but still allows for a certain rhythm to exist.
+                          - superscript [ref=f1e97]:
+                            - link "[3]" [ref=f1e98] [cursor=pointer]:
+                              - /url: "#cite_note-Sequart-3"
+                          - text: Other artists known for making persistent use of the infinite canvas in the early 2000s include
+                          - link "Cayetano Garza" [ref=f1e99] [cursor=pointer]:
+                            - /url: /wiki/Cayetano_Garza
+                          - text: ","
+                          - link "demian5" [ref=f1e100] [cursor=pointer]:
+                            - /url: /wiki/Demian5
+                          - text: ","
+                          - link "Patrick Farley" [ref=f1e101] [cursor=pointer]:
+                            - /url: /wiki/Patrick_Farley
+                          - text: ","
+                          - link "Tristan A. Farnon" [ref=f1e102] [cursor=pointer]:
+                            - /url: /wiki/Tristan_A._Farnon
+                          - text: ", and David Gaddis."
+                          - superscript [ref=f1e103]:
+                            - link "[4]" [ref=f1e104] [cursor=pointer]:
+                              - /url: "#cite_note-Campbell-4"
+                        - generic [ref=f1e105]:
+                          - heading "Usage" [level=2] [ref=f1e106]
+                          - generic [ref=f1e107]:
+                            - text: "["
+                            - link "edit" [ref=f1e108] [cursor=pointer]:
+                              - /url: /w/index.php?title=Infinite_canvas&action=edit&section=2
+                            - text: "]"
+                        - paragraph [ref=f1e109]:
+                          - text: In 2005,
+                          - link "Daniel Merlin Goodbrey" [ref=f1e110] [cursor=pointer]:
+                            - /url: /wiki/Daniel_Merlin_Goodbrey
+                          - text: created the "Tarquin Engine", a piece of Web software that uses
+                          - link "Adobe Flash" [ref=f1e111] [cursor=pointer]:
+                            - /url: /wiki/Adobe_Flash
+                          - text: to depict an infinite canvas that a reader can freely scroll through and zoom in on. It greatly simplified the production of infinite canvas webcomics.
+                          - superscript [ref=f1e112]:
+                            - link "[5]" [ref=f1e113] [cursor=pointer]:
+                              - /url: "#cite_note-5"
+                          - superscript [ref=f1e114]:
+                            - link "[6]" [ref=f1e115] [cursor=pointer]:
+                              - /url: "#cite_note-6"
+                          - text: The tool is not widely used. In 2009,
+                          - link "Microsoft Live Labs" [ref=f1e116] [cursor=pointer]:
+                            - /url: /wiki/Microsoft_Live_Labs
+                          - text: released an infinite canvas
+                          - link "web application" [ref=f1e117] [cursor=pointer]:
+                            - /url: /wiki/Web_application
+                          - text: ", which reached a wider audience."
+                          - superscript [ref=f1e118]:
+                            - link "[7]" [ref=f1e119] [cursor=pointer]:
+                              - /url: "#cite_note-7"
+                        - paragraph [ref=f1e120]:
+                          - text: In 2013, Yvyes Bigerel and
+                          - link "Mark Waid" [ref=f1e121] [cursor=pointer]:
+                            - /url: /wiki/Mark_Waid
+                          - text: of
+                          - link "Marvel Comics" [ref=f1e122] [cursor=pointer]:
+                            - /url: /wiki/Marvel_Comics
+                          - text: launched an initiative to create and publish digital comics under the title
+                          - link "Marvel ReEvolution" [ref=f1e123] [cursor=pointer]:
+                            - /url: /wiki/Marvel_ReEvolution
+                          - text: . While creating these webcomics, Bigerel and Waid were inspired by the manner in which time is experienced within comics, as the passage of time in a comic book is ultimately controlled by its reader. Rather than to allow readers to skim through the images on a whim or to increase the space between panels as McCloud suggested, the duo stacked the panels up "like a
+                          - link "PowerPoint" [ref=f1e124] [cursor=pointer]:
+                            - /url: /wiki/PowerPoint
+                          - text: slideshow," forcing the reader to look at one panel at a time. According to
+                          - link "Comic Book Resources" [ref=f1e126] [cursor=pointer]:
+                            - /url: /wiki/Comic_Book_Resources
+                          - text: ", this design directly affects how a comic is created and read, as surprises can be better controlled and a letterer could directly control the reading order of text balloons."
+                          - superscript [ref=f1e127]:
+                            - link "[8]" [ref=f1e128] [cursor=pointer]:
+                              - /url: "#cite_note-8"
+                          - text: Rachel Edidin of
+                          - link "Wired" [ref=f1e130] [cursor=pointer]:
+                            - /url: /wiki/Wired_(website)
+                          - text: "said of Wolverine: Japan's Most Wanted and Iron Man: Fatal Frontier that \"these are comics that truly feel native to the digital format.\""
+                          - superscript [ref=f1e131]:
+                            - link "[9]" [ref=f1e132] [cursor=pointer]:
+                              - /url: "#cite_note-9"
+                        - paragraph [ref=f1e133]:
+                          - text: In 2016,
+                          - link "Oculus Story Studio" [ref=f1e134] [cursor=pointer]:
+                            - /url: /wiki/Oculus_Story_Studio
+                          - text: released Quill, a piece of software that allows people to create a three-dimensional world on an "infinite canvas", meant to be experienced through
+                          - link "virtual reality" [ref=f1e135] [cursor=pointer]:
+                            - /url: /wiki/Virtual_reality
+                          - text: .
+                          - superscript [ref=f1e136]:
+                            - link "[10]" [ref=f1e137] [cursor=pointer]:
+                              - /url: "#cite_note-10"
+                          - superscript [ref=f1e138]:
+                            - link "[11]" [ref=f1e139] [cursor=pointer]:
+                              - /url: "#cite_note-11"
+                          - text: In September 2021, Facebook, now the owner of Oculus, sold Quill to its original creator, who continues to develop and support the app.
+                          - superscript [ref=f1e140]:
+                            - link "[12]" [ref=f1e141] [cursor=pointer]:
+                              - /url: "#cite_note-12"
+                        - generic [ref=f1e142]:
+                          - heading "Reception" [level=2] [ref=f1e143]
+                          - generic [ref=f1e144]:
+                            - text: "["
+                            - link "edit" [ref=f1e145] [cursor=pointer]:
+                              - /url: /w/index.php?title=Infinite_canvas&action=edit&section=3
+                            - text: "]"
+                        - paragraph [ref=f1e146]:
+                          - text: In 2005, Sarah Boxer of
+                          - link "The New York Times" [ref=f1e148] [cursor=pointer]:
+                            - /url: /wiki/The_New_York_Times
+                          - text: stated that the infinite canvas was hard to find in use, as many webcomics were sticking to a printable format. A few, however, like Nicholas Gurewitch's
+                          - link "The Perry Bible Fellowship" [ref=f1e150] [cursor=pointer]:
+                            - /url: /wiki/The_Perry_Bible_Fellowship
+                          - text: and
+                          - link "Drew Weing" [ref=f1e151] [cursor=pointer]:
+                            - /url: /wiki/Drew_Weing
+                          - text: "'s Pup, did make use of the format (Pup won a"
+                          - link "Web Cartoonists' Choice Award" [ref=f1e152] [cursor=pointer]:
+                            - /url: /wiki/Web_Cartoonists%27_Choice_Award
+                          - text: in the "infinite canvas" category in 2005). Boxer pointed out that most popular webcomics either fit on a webpage easily – such as Adrian Ramos's Count Your Sheep – or attempted to use various aspects of the digital medium, such as
+                          - link "Flash animation" [ref=f1e153] [cursor=pointer]:
+                            - /url: /wiki/Flash_animation
+                          - text: and music.
+                          - superscript [ref=f1e154]:
+                            - link "[13]" [ref=f1e155] [cursor=pointer]:
+                              - /url: "#cite_note-13"
+                          - text: That same year,
+                          - link "Joe Zabel" [ref=f1e156] [cursor=pointer]:
+                            - /url: /wiki/Joe_Zabel
+                          - text: also noted that the primary purpose for the infinite canvas would be to create lengthy and deep works on the Web, while
+                          - link "comic strips" [ref=f1e157] [cursor=pointer]:
+                            - /url: /wiki/Comic_strips
+                          - text: like
+                          - link "PvP" [ref=f1e159] [cursor=pointer]:
+                            - /url: /wiki/PvP_(webcomic)
+                          - text: and
+                          - link "Penny Arcade" [ref=f1e161] [cursor=pointer]:
+                            - /url: /wiki/Penny_Arcade
+                          - text: showed to have much more success in this environment. Because of the time that would go into any page of an infinite canvas comic, Zabel deemed it unlikely for such webcomics to gain a large popularity. Journalist
+                          - link "Eric Burns" [ref=f1e162] [cursor=pointer]:
+                            - /url: /wiki/Eric_Burns
+                          - text: ", meanwhile, claimed that McCloud was mainly discussing the potential of webcomics, rather than what they are actually like."
+                          - superscript [ref=f1e163]:
+                            - link "[14]" [ref=f1e164] [cursor=pointer]:
+                              - /url: "#cite_note-14"
+                        - paragraph [ref=f1e165]:
+                          - text: In an interview in 2008, Scott McCloud said that in Reinventing Comics he was "shooting for the moon, in hopes that we could create these radical departures from traditional comics," noting that "most online comics are still pretty conservative in format and style" but also that "there have been some impressive strides in that direction." McCloud specified that he was still keeping an eye on things that needed to happen for the infinite canvas to take off, saying that "the notion of Web applications being as robust as desktop applications has placed us closer to that hope that we may finally be able to create those spaces in a seamless way online. Right now, it's very difficult to do that."
+                          - superscript [ref=f1e166]:
+                            - link "[15]" [ref=f1e167] [cursor=pointer]:
+                              - /url: "#cite_note-15"
+                          - text: In an interview in 2014, McCloud said that "without a reliable financial structure to support these experimental webcomics, a lot of people just turn away and get a real job, or start doing three-panel gag strips. Those have an
+                          - link "economic model" [ref=f1e168] [cursor=pointer]:
+                            - /url: /wiki/Webcomics_and_income
+                          - text: that works."
+                          - superscript [ref=f1e169]:
+                            - link "[16]" [ref=f1e170] [cursor=pointer]:
+                              - /url: "#cite_note-2014interview-16"
+                        - paragraph [ref=f1e171]:
+                          - text: Regardless of the format's initial popularity, a large amount of cartoonists have created infinite canvas webcomics over the years; in the book Storytelling in the Media Convergence Age, cartoonist Daniel Goodbrew states that "the infinite canvas has remained a popular choice among webcomic creators."
+                          - superscript [ref=f1e172]:
+                            - link "[17]" [ref=f1e173] [cursor=pointer]:
+                              - /url: "#cite_note-17"
+                          - text: The infinite canvas has shown more success in Europe and Australia than in North America. The infinite canvas has obtained a large popularity among South Korean
+                          - link "webtoons" [ref=f1e174] [cursor=pointer]:
+                            - /url: /wiki/Webtoons
+                          - text: ": McCloud noted in 2014 that \"most digital comics are"
+                          - link "scrollers" [ref=f1e175] [cursor=pointer]:
+                            - /url: /wiki/Scrolling
+                          - text: in Korea."
+                          - superscript [ref=f1e176]:
+                            - link "[16]" [ref=f1e177] [cursor=pointer]:
+                              - /url: "#cite_note-2014interview-16"
+                        - generic [ref=f1e178]:
+                          - heading "See also" [level=2] [ref=f1e179]
+                          - generic [ref=f1e180]:
+                            - text: "["
+                            - link "edit" [ref=f1e181] [cursor=pointer]:
+                              - /url: /w/index.php?title=Infinite_canvas&action=edit&section=4
+                            - text: "]"
+                        - list [ref=f1e182]:
+                          - listitem [ref=f1e183]:
+                            - text: "Marvel Comics formats:"
+                            - list [ref=f1e184]:
+                              - listitem [ref=f1e185]:
+                                - link "Infinite Comics" [ref=f1e186] [cursor=pointer]:
+                                  - /url: /wiki/Infinite_Comics
+                                - text: (horizontal, on-screen direction)
+                              - listitem [ref=f1e187]:
+                                - link "Infinity Comics" [ref=f1e188] [cursor=pointer]:
+                                  - /url: /wiki/Marvel_Unlimited#Infinity_Comics
+                                - text: (vertical scrolling)
+                        - generic [ref=f1e189]:
+                          - heading "References" [level=2] [ref=f1e190]
+                          - generic [ref=f1e191]:
+                            - text: "["
+                            - link "edit" [ref=f1e192] [cursor=pointer]:
+                              - /url: /w/index.php?title=Infinite_canvas&action=edit&section=5
+                            - text: "]"
+                        - list [ref=f1e194]:
+                          - listitem [ref=f1e195]:
+                            - link "^" [ref=f1e198] [cursor=pointer]:
+                              - /url: "#cite_ref-1"
+                            - generic [ref=f1e199]:
+                              - generic [ref=f1e200]:
+                                - text: McCloud, Scott (2000).
+                                - link "\"Follow that Trail\"" [ref=f1e201] [cursor=pointer]:
+                                  - /url: http://www.scottmccloud.com/1-webcomics/icst/icst-4/icst-4.html
+                                - text: . I Can't Stop Thinking!.
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=I+Can%27t+Stop+Thinking%21&rft.atitle=Follow+that+Trail&rft.date=2000&rft.aulast=McCloud&rft.aufirst=Scott&rft_id=http%3A%2F%2Fwww.scottmccloud.com%2F1-webcomics%2Ficst%2Ficst-4%2Ficst-4.html&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e202]:
+                            - link "^" [ref=f1e205] [cursor=pointer]:
+                              - /url: "#cite_ref-ReinventingComics_2-0"
+                            - generic [ref=f1e206]:
+                              - generic [ref=f1e207]:
+                                - link "McCloud, Scott" [ref=f1e208] [cursor=pointer]:
+                                  - /url: /wiki/Scott_McCloud
+                                - text: (2000).
+                                - link "Reinventing Comics" [ref=f1e210] [cursor=pointer]:
+                                  - /url: /wiki/Reinventing_Comics
+                                - text: .
+                                - link "HarperCollins" [ref=f1e211] [cursor=pointer]:
+                                  - /url: /wiki/HarperCollins
+                                - text: . p. 220–229.
+                                - link "ISBN" [ref=f1e212] [cursor=pointer]:
+                                  - /url: /wiki/ISBN_(identifier)
+                                - link "0-06-095350-0" [ref=f1e213] [cursor=pointer]:
+                                  - /url: /wiki/Special:BookSources/0-06-095350-0
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=book&rft.btitle=Reinventing+Comics&rft.pages=220-229&rft.pub=HarperCollins&rft.date=2000&rft.isbn=0-06-095350-0&rft.aulast=McCloud&rft.aufirst=Scott&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e214]:
+                            - link "^" [ref=f1e217] [cursor=pointer]:
+                              - /url: "#cite_ref-Sequart_3-0"
+                            - generic [ref=f1e218]:
+                              - generic [ref=f1e219]:
+                                - text: Balan, David (2011-09-13).
+                                - link "\"The Right Number – A New Reading Convention\"" [ref=f1e220] [cursor=pointer]:
+                                  - /url: http://sequart.org/magazine/4728/the-right-number-–-a-new-reading-convention/
+                                - text: .
+                                - link "Sequart Organization" [ref=f1e222] [cursor=pointer]:
+                                  - /url: /wiki/Sequart_Organization
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=Sequart+Organization&rft.atitle=The+Right+Number+%E2%80%93+A+New+Reading+Convention&rft.date=2011-09-13&rft.aulast=Balan&rft.aufirst=David&rft_id=http%3A%2F%2Fsequart.org%2Fmagazine%2F4728%2Fthe-right-number-%E2%80%93-a-new-reading-convention%2F&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e223]:
+                            - link "^" [ref=f1e226] [cursor=pointer]:
+                              - /url: "#cite_ref-Campbell_4-0"
+                            - generic [ref=f1e227]:
+                              - generic [ref=f1e228]:
+                                - text: Campbell, T. (2006-06-08). The History of Webcomics.
+                                - link "Antarctic Press" [ref=f1e229] [cursor=pointer]:
+                                  - /url: /wiki/Antarctic_Press
+                                - text: . pp. 17–18, 30.
+                                - link "ISBN" [ref=f1e230] [cursor=pointer]:
+                                  - /url: /wiki/ISBN_(identifier)
+                                - link "0976804395" [ref=f1e231] [cursor=pointer]:
+                                  - /url: /wiki/Special:BookSources/0976804395
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=book&rft.btitle=The+History+of+Webcomics&rft.pages=17-18%2C+30&rft.pub=Antarctic+Press&rft.date=2006-06-08&rft.isbn=0976804395&rft.aulast=Campbell&rft.aufirst=T.&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e232]:
+                            - link "^" [ref=f1e235] [cursor=pointer]:
+                              - /url: "#cite_ref-5"
+                            - generic [ref=f1e236]:
+                              - generic [ref=f1e237]:
+                                - link "Goodbrey, Daniel Merlin" [ref=f1e238] [cursor=pointer]:
+                                  - /url: /wiki/Daniel_Merlin_Goodbrey
+                                - text: (2005).
+                                - link "\"The Tarquin Engine\"" [ref=f1e239] [cursor=pointer]:
+                                  - /url: http://researchprofiles.herts.ac.uk/portal/en/publications/the-tarquin-engine(97678b47-06d7-4551-9def-5dc987991b71)/export.html
+                                - text: .
+                                - link "University of Hertfordshire" [ref=f1e240] [cursor=pointer]:
+                                  - /url: /wiki/University_of_Hertfordshire
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=unknown&rft.btitle=The+Tarquin+Engine&rft.pub=University+of+Hertfordshire&rft.date=2005&rft.aulast=Goodbrey&rft.aufirst=Daniel+Merlin&rft_id=http%3A%2F%2Fresearchprofiles.herts.ac.uk%2Fportal%2Fen%2Fpublications%2Fthe-tarquin-engine%2897678b47-06d7-4551-9def-5dc987991b71%29%2Fexport.html&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e241]:
+                            - link "^" [ref=f1e244] [cursor=pointer]:
+                              - /url: "#cite_ref-6"
+                            - generic [ref=f1e245]:
+                              - generic [ref=f1e246]:
+                                - link "Zabel, Joe" [ref=f1e247] [cursor=pointer]:
+                                  - /url: /wiki/Joe_Zabel
+                                - text: (2006-06-21).
+                                - link "\"Making Lightning – An Interview with Scott McCloud\"" [ref=f1e248] [cursor=pointer]:
+                                  - /url: https://web.archive.org/web/20080324025118/http://webcomicsreview.com/?p=151&page=3
+                                - text: . The Webcomics Examiner. Archived from
+                                - link "the original" [ref=f1e249] [cursor=pointer]:
+                                  - /url: http://webcomicsreview.com/?p=151&page=3
+                                - text: on 2008-03-24.
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=The+Webcomics+Examiner&rft.atitle=Making+Lightning+%26ndash%3B+An+Interview+with+Scott+McCloud&rft.date=2006-06-21&rft.aulast=Zabel&rft.aufirst=Joe&rft_id=http%3A%2F%2Fwebcomicsreview.com%2F%3Fp%3D151%26page%3D3&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e250]:
+                            - link "^" [ref=f1e253] [cursor=pointer]:
+                              - /url: "#cite_ref-7"
+                            - generic [ref=f1e254]:
+                              - generic [ref=f1e255]:
+                                - text: Booker, M. Keith (2014-10-28).
+                                - 'link "Comics through Time: A History of Icons, Idols, and Ideas" [ref=f1e256] [cursor=pointer]':
+                                  - /url: https://books.google.com/books?id=hnuQBQAAQBAJ&q=%22The+Right+Number%22+McCloud
+                                - text: .
+                                - link "ABC-CLIO" [ref=f1e257] [cursor=pointer]:
+                                  - /url: /wiki/ABC-CLIO
+                                - text: . p. 1825.
+                                - link "ISBN" [ref=f1e258] [cursor=pointer]:
+                                  - /url: /wiki/ISBN_(identifier)
+                                - link "978-0313397516" [ref=f1e259] [cursor=pointer]:
+                                  - /url: /wiki/Special:BookSources/978-0313397516
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=book&rft.btitle=Comics+through+Time%3A+A+History+of+Icons%2C+Idols%2C+and+Ideas&rft.pages=1825&rft.pub=ABC-CLIO&rft.date=2014-10-28&rft.isbn=978-0313397516&rft.aulast=Booker&rft.aufirst=M.+Keith&rft_id=https%3A%2F%2Fbooks.google.com%2Fbooks%3Fid%3DhnuQBQAAQBAJ%26q%3D%2522The%2BRight%2BNumber%2522%2BMcCloud&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e260]:
+                            - link "^" [ref=f1e263] [cursor=pointer]:
+                              - /url: "#cite_ref-8"
+                            - generic [ref=f1e264]:
+                              - generic [ref=f1e265]:
+                                - text: Blake, Corey (2013-06-05).
+                                - 'link "\"The digital evolution: from infinite canvas to infinite comics\"" [ref=f1e266] [cursor=pointer]':
+                                  - /url: https://www.cbr.com/the-digital-evolution-from-infinite-canvas-to-infinite-comics/
+                                - text: .
+                                - link "Comic Book Resources" [ref=f1e268] [cursor=pointer]:
+                                  - /url: /wiki/Comic_Book_Resources
+                                - text: .
+                                - link "Archived" [ref=f1e269] [cursor=pointer]:
+                                  - /url: https://web.archive.org/web/20160617070352/http://robot6.comicbookresources.com/2013/06/the-digital-evolution-from-infinite-canvas-to-infinite-comics/
+                                - text: from the original on 2016-06-17
+                                - generic [ref=f1e270]: . Retrieved 2017-01-09
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=Comic+Book+Resources&rft.atitle=The+digital+evolution%3A+from+infinite+canvas+to+infinite+comics&rft.date=2013-06-05&rft.aulast=Blake&rft.aufirst=Corey&rft_id=https%3A%2F%2Fwww.cbr.com%2Fthe-digital-evolution-from-infinite-canvas-to-infinite-comics%2F&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e271]:
+                            - link "^" [ref=f1e274] [cursor=pointer]:
+                              - /url: "#cite_ref-9"
+                            - generic [ref=f1e275]:
+                              - generic [ref=f1e276]:
+                                - text: Edidin, Rachel (2013-07-09).
+                                - 'link "\"Exclusive: Marvel Rebuilds Iron Man for the Infinite Canvas of Digital Comics\"" [ref=f1e277] [cursor=pointer]':
+                                  - /url: https://www.wired.com/2013/07/marvel-iron-man-infinite-comics/
+                                - text: .
+                                - link "Wired" [ref=f1e279] [cursor=pointer]:
+                                  - /url: /wiki/Wired_(website)
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=Wired&rft.atitle=Exclusive%3A+Marvel+Rebuilds+Iron+Man+for+the+Infinite+Canvas+of+Digital+Comics&rft.date=2013-07-09&rft.aulast=Edidin&rft.aufirst=Rachel&rft_id=https%3A%2F%2Fwww.wired.com%2F2013%2F07%2Fmarvel-iron-man-infinite-comics%2F&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e280]:
+                            - link "^" [ref=f1e283] [cursor=pointer]:
+                              - /url: "#cite_ref-10"
+                            - generic [ref=f1e284]:
+                              - generic [ref=f1e285]:
+                                - text: Cole, Samantha (2016-12-09).
+                                - link "\"Oculus's New 'Infinite Canvas' Will Make You Question Your Place in the Universe\"" [ref=f1e286] [cursor=pointer]:
+                                  - /url: https://www.vice.com/en/article/oculus-new-infinite-canvas-will-make-you-question-your-place-in-the-universe/
+                                - text: .
+                                - link "Motherboard" [ref=f1e287] [cursor=pointer]:
+                                  - /url: /wiki/Motherboard_(website)
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=unknown&rft.btitle=Oculus%27s+New+%27Infinite+Canvas%27+Will+Make+You+Question+Your+Place+in+the+Universe&rft.pub=Motherboard&rft.date=2016-12-09&rft.aulast=Cole&rft.aufirst=Samantha&rft_id=https%3A%2F%2Fwww.vice.com%2Fen%2Farticle%2Foculus-new-infinite-canvas-will-make-you-question-your-place-in-the-universe%2F&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e288]:
+                            - link "^" [ref=f1e291] [cursor=pointer]:
+                              - /url: "#cite_ref-11"
+                            - generic [ref=f1e292]:
+                              - generic [ref=f1e293]:
+                                - text: Strange, Adario (2016-12-20).
+                                - link "\"Oculus Quill shows how 'Inception'-like layered realities appear in VR\"" [ref=f1e294] [cursor=pointer]:
+                                  - /url: http://mashable.com/2016/12/20/oculus-quill-multiple-realities/#Y8OHRbdAEPq1
+                                - text: .
+                                - link "Mashable" [ref=f1e296] [cursor=pointer]:
+                                  - /url: /wiki/Mashable
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=Mashable&rft.atitle=Oculus+Quill+shows+how+%27Inception%27-like+layered+realities+appear+in+VR&rft.date=2016-12-20&rft.aulast=Strange&rft.aufirst=Adario&rft_id=http%3A%2F%2Fmashable.com%2F2016%2F12%2F20%2Foculus-quill-multiple-realities%2F%23Y8OHRbdAEPq1&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e297]:
+                            - link "^" [ref=f1e300] [cursor=pointer]:
+                              - /url: "#cite_ref-12"
+                            - generic [ref=f1e301]:
+                              - generic [ref=f1e302]:
+                                - text: Alex, Dudok de Wit (20 September 2021).
+                                - link "\"Facebook Returns VR Drawing Tool Quill To Its Creator\"" [ref=f1e303] [cursor=pointer]:
+                                  - /url: https://www.cartoonbrew.com/tech/facebook-returns-vr-drawing-tool-quill-to-its-creator-208791.html
+                                - text: . Cartoon Brew
+                                - generic [ref=f1e304]: . Retrieved 25 October 2022
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=article&rft.jtitle=Cartoon+Brew&rft.atitle=Facebook+Returns+VR+Drawing+Tool+Quill+To+Its+Creator&rft.date=2021-09-20&rft.aulast=Alex&rft.aufirst=Dudok+de+Wit&rft_id=https%3A%2F%2Fwww.cartoonbrew.com%2Ftech%2Ffacebook-returns-vr-drawing-tool-quill-to-its-creator-208791.html&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e305]:
+                            - link "^" [ref=f1e308] [cursor=pointer]:
+                              - /url: "#cite_ref-13"
+                            - generic [ref=f1e309]:
+                              - generic [ref=f1e310]:
+                                - text: Boxer, Sarah (2005-07-17).
+                                - link "\"Comics Escape a Paper Box, and Electronic Questions Pop Out\"" [ref=f1e311] [cursor=pointer]:
+                                  - /url: https://www.nytimes.com/2005/08/17/books/comics-escape-a-paper-box-and-electronic-questions-pop-out.html
+                                - text: .
+                                - link "The New York Times" [ref=f1e313] [cursor=pointer]:
+                                  - /url: /wiki/The_New_York_Times
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=article&rft.jtitle=The+New+York+Times&rft.atitle=Comics+Escape+a+Paper+Box%2C+and+Electronic+Questions+Pop+Out&rft.date=2005-07-17&rft.aulast=Boxer&rft.aufirst=Sarah&rft_id=https%3A%2F%2Fwww.nytimes.com%2F2005%2F08%2F17%2Fbooks%2Fcomics-escape-a-paper-box-and-electronic-questions-pop-out.html&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e314]:
+                            - link "^" [ref=f1e317] [cursor=pointer]:
+                              - /url: "#cite_ref-14"
+                            - generic [ref=f1e318]:
+                              - generic [ref=f1e319]:
+                                - text: Various (2005).
+                                - link "\"The Artistic History of Webcomics – A Webcomics Examiner Roundtable\"" [ref=f1e320] [cursor=pointer]:
+                                  - /url: https://web.archive.org/web/20051124120515/http://webcomicsreview.com/examiner/issue050912/history1.html
+                                - text: .
+                                - link "The Webcomics Examiner" [ref=f1e321] [cursor=pointer]:
+                                  - /url: /wiki/The_Webcomics_Examiner
+                                - text: . Archived from
+                                - link "the original" [ref=f1e322] [cursor=pointer]:
+                                  - /url: http://webcomicsreview.com/examiner/issue050912/history1.html
+                                - text: on 2005-11-24.
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=unknown&rft.btitle=The+Artistic+History+of+Webcomics+%26ndash%3B+A+Webcomics+Examiner+Roundtable&rft.pub=The+Webcomics+Examiner&rft.date=2005&rft.au=Various&rft_id=http%3A%2F%2Fwebcomicsreview.com%2Fexaminer%2Fissue050912%2Fhistory1.html&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e323]:
+                            - link "^" [ref=f1e326] [cursor=pointer]:
+                              - /url: "#cite_ref-15"
+                            - generic [ref=f1e327]:
+                              - generic [ref=f1e328]:
+                                - text: Roush, Wade (2008-09-10).
+                                - 'link "\"The Infinite Canvas: An Interview with Scott McCloud, the Google Chrome Comic Guy\"" [ref=f1e329] [cursor=pointer]':
+                                  - /url: http://www.xconomy.com/national/2008/09/10/the-infinite-canvas-an-interview-with-scott-mccloud-the-google-chrome-comic-guy/
+                                - text: .
+                                - link "Xconomy" [ref=f1e331] [cursor=pointer]:
+                                  - /url: /wiki/Xconomy
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=unknown&rft.jtitle=Xconomy&rft.atitle=The+Infinite+Canvas%3A+An+Interview+with+Scott+McCloud%2C+the+Google+Chrome+Comic+Guy&rft.date=2008-09-10&rft.aulast=Roush&rft.aufirst=Wade&rft_id=http%3A%2F%2Fwww.xconomy.com%2Fnational%2F2008%2F09%2F10%2Fthe-infinite-canvas-an-interview-with-scott-mccloud-the-google-chrome-comic-guy%2F&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e332]:
+                            - generic [ref=f1e333]:
+                              - text: ^
+                              - link "a" [ref=f1e334] [cursor=pointer]:
+                                - /url: "#cite_ref-2014interview_16-0"
+                                - superscript [ref=f1e335]:
+                                  - generic [ref=f1e336]: a
+                              - link "b" [ref=f1e337] [cursor=pointer]:
+                                - /url: "#cite_ref-2014interview_16-1"
+                                - superscript [ref=f1e338]:
+                                  - generic [ref=f1e339]: b
+                            - generic [ref=f1e340]:
+                              - generic [ref=f1e341]:
+                                - text: Cavna, Michael (2014-10-07).
+                                - 'link "\"''BEST AMERICAN COMICS 2014'': Guest editor Scott McCloud illuminates the range of modern brilliance in new must-read [Q+A]\"" [ref=f1e342] [cursor=pointer]':
+                                  - /url: https://www.washingtonpost.com/news/comic-riffs/wp/2014/10/07/best-american-comics-2014-guest-editor-scott-mccloud-illuminates-the-range-of-modern-brilliance-in-new-must-read-qa/
+                                  - text: "\""
+                                  - text: "'BEST AMERICAN COMICS 2014': Guest editor Scott McCloud illuminates the range of modern brilliance in new must-read [Q+A]\""
+                                - text: .
+                                - link "the Washington Post" [ref=f1e345] [cursor=pointer]:
+                                  - /url: /wiki/The_Washington_Post
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Ajournal&rft.genre=article&rft.jtitle=the+Washington+Post&rft.atitle=%27BEST+AMERICAN+COMICS+2014%27%3A+Guest+editor+Scott+McCloud+illuminates+the+range+of+modern+brilliance+in+new+must-read+%5BQ%2BA%5D&rft.date=2014-10-07&rft.aulast=Cavna&rft.aufirst=Michael&rft_id=https%3A%2F%2Fwww.washingtonpost.com%2Fnews%2Fcomic-riffs%2Fwp%2F2014%2F10%2F07%2Fbest-american-comics-2014-guest-editor-scott-mccloud-illuminates-the-range-of-modern-brilliance-in-new-must-read-qa%2F&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                          - listitem [ref=f1e346]:
+                            - link "^" [ref=f1e349] [cursor=pointer]:
+                              - /url: "#cite_ref-17"
+                            - generic [ref=f1e350]:
+                              - generic [ref=f1e351]:
+                                - text: Pearson, R.; Smith, A. (2014-12-18).
+                                - 'link "Storytelling in the Media Convergence Age: Exploring Screen Narratives" [ref=f1e352] [cursor=pointer]':
+                                  - /url: https://books.google.com/books?id=Y_S3BgAAQBAJ
+                                - text: .
+                                - link "Springer" [ref=f1e353] [cursor=pointer]:
+                                  - /url: /wiki/Springer_(publisher)
+                                - text: .
+                                - link "ISBN" [ref=f1e354] [cursor=pointer]:
+                                  - /url: /wiki/ISBN_(identifier)
+                                - link "978-1137388155" [ref=f1e355] [cursor=pointer]:
+                                  - /url: /wiki/Special:BookSources/978-1137388155
+                                - text: .
+                              - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=book&rft.btitle=Storytelling+in+the+Media+Convergence+Age%3A+Exploring+Screen+Narratives&rft.pub=Springer&rft.date=2014-12-18&rft.isbn=978-1137388155&rft.aulast=Pearson&rft.aufirst=R.&rft.au=Smith%2C+A.&rft_id=https%3A%2F%2Fbooks.google.com%2Fbooks%3Fid%3DY_S3BgAAQBAJ&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                        - list [ref=f1e356]:
+                          - listitem [ref=f1e357]:
+                            - generic [ref=f1e358]:
+                              - text: Petersen, Robert (2010).
+                              - 'link "Comics, Manga, and Graphic Novels: A History of Graphic Narratives" [ref=f1e359] [cursor=pointer]':
+                                - /url: https://books.google.com/books?id=w1b5wVUEHpUC
+                              - text: .
+                              - link "ABC-CLIO" [ref=f1e360] [cursor=pointer]:
+                                - /url: /wiki/ABC-CLIO
+                              - text: . p. 257.
+                              - link "ISBN" [ref=f1e361] [cursor=pointer]:
+                                - /url: /wiki/ISBN_(identifier)
+                              - link "978-0-313-36330-6" [ref=f1e362] [cursor=pointer]:
+                                - /url: /wiki/Special:BookSources/978-0-313-36330-6
+                              - text: .
+                            - generic "ctx_ver=Z39.88-2004&rft_val_fmt=info%3Aofi%2Ffmt%3Akev%3Amtx%3Abook&rft.genre=book&rft.btitle=Comics%2C+Manga%2C+and+Graphic+Novels%3A+A+History+of+Graphic+Narratives&rft.pages=257&rft.pub=ABC-CLIO&rft.date=2010&rft.isbn=978-0-313-36330-6&rft.aulast=Petersen&rft.aufirst=Robert&rft_id=https%3A%2F%2Fbooks.google.com%2Fbooks%3Fid%3Dw1b5wVUEHpUC&rfr_id=info%3Asid%2Fen.wikipedia.org%3AInfinite+canvas"
+                        - navigation "Scott McCloud" [ref=f1e363]:
+                          - table [ref=f1e364]:
+                            - rowgroup [ref=f1e365]:
+                              - row "[hide] v · t · e Scott McCloud" [ref=f1e366]:
+                                - columnheader "[hide] v · t · e Scott McCloud" [ref=f1e367]:
+                                  - text: "[hide]"
+                                  - list [ref=f1e369]:
+                                    - listitem [ref=f1e370]:
+                                      - link "v" [ref=f1e371] [cursor=pointer]:
+                                        - /url: /wiki/Template:Scott_McCloud
+                                      - text: ·
+                                    - listitem [ref=f1e372]:
+                                      - link "t" [ref=f1e373] [cursor=pointer]:
+                                        - /url: /wiki/Template_talk:Scott_McCloud
+                                      - text: ·
+                                    - listitem [ref=f1e374]:
+                                      - link "e" [ref=f1e375] [cursor=pointer]:
+                                        - /url: /wiki/Special:EditPage/Template:Scott_McCloud
+                                  - link "Scott McCloud" [ref=f1e377] [cursor=pointer]:
+                                    - /url: /wiki/Scott_McCloud
+                              - row "Books Fiction Zot! · The Sculptor Non-fiction Understanding Comics · Reinventing Comics · Making Comics" [ref=f1e378]:
+                                - rowheader "Books" [ref=f1e379]
+                                - cell "Fiction Zot! · The Sculptor Non-fiction Understanding Comics · Reinventing Comics · Making Comics" [ref=f1e380]:
+                                  - table [ref=f1e381]:
+                                    - rowgroup [ref=f1e382]:
+                                      - row "Fiction Zot! · The Sculptor" [ref=f1e383]:
+                                        - rowheader "Fiction" [ref=f1e384]
+                                        - cell "Zot! · The Sculptor" [ref=f1e385]:
+                                          - list [ref=f1e387]:
+                                            - listitem [ref=f1e388]:
+                                              - link "Zot!" [ref=f1e390] [cursor=pointer]:
+                                                - /url: /wiki/Zot!
+                                              - text: ·
+                                            - listitem [ref=f1e391]:
+                                              - link "The Sculptor" [ref=f1e393] [cursor=pointer]:
+                                                - /url: /wiki/The_Sculptor_(comics)
+                                      - row "Non-fiction Understanding Comics · Reinventing Comics · Making Comics" [ref=f1e394]:
+                                        - rowheader "Non-fiction" [ref=f1e395]
+                                        - cell "Understanding Comics · Reinventing Comics · Making Comics" [ref=f1e396]:
+                                          - list [ref=f1e398]:
+                                            - listitem [ref=f1e399]:
+                                              - link "Understanding Comics" [ref=f1e401] [cursor=pointer]:
+                                                - /url: /wiki/Understanding_Comics
+                                              - text: ·
+                                            - listitem [ref=f1e402]:
+                                              - link "Reinventing Comics" [ref=f1e404] [cursor=pointer]:
+                                                - /url: /wiki/Reinventing_Comics
+                                              - text: ·
+                                            - listitem [ref=f1e405]:
+                                              - link "Making Comics" [ref=f1e407] [cursor=pointer]:
+                                                - /url: /wiki/Making_Comics
+                              - row "Webcomics Zot! Online · The Morning Improv · The Right Number" [ref=f1e408]:
+                                - rowheader "Webcomics" [ref=f1e409]
+                                - cell "Zot! Online · The Morning Improv · The Right Number" [ref=f1e410]:
+                                  - list [ref=f1e412]:
+                                    - listitem [ref=f1e413]:
+                                      - link "Zot! Online" [ref=f1e415] [cursor=pointer]:
+                                        - /url: /wiki/Zot!_Online
+                                      - text: ·
+                                    - listitem [ref=f1e416]:
+                                      - link "The Morning Improv" [ref=f1e418] [cursor=pointer]:
+                                        - /url: /wiki/The_Morning_Improv
+                                      - text: ·
+                                    - listitem [ref=f1e419]:
+                                      - link "The Right Number" [ref=f1e421] [cursor=pointer]:
+                                        - /url: /wiki/The_Right_Number
+                              - row "Other Creator's Bill of Rights · 24-hour comic · Infinite canvas" [ref=f1e422]:
+                                - rowheader "Other" [ref=f1e423]
+                                - cell "Creator's Bill of Rights · 24-hour comic · Infinite canvas" [ref=f1e424]:
+                                  - list [ref=f1e426]:
+                                    - listitem [ref=f1e427]:
+                                      - link "Creator's Bill of Rights" [ref=f1e428] [cursor=pointer]:
+                                        - /url: /wiki/Creator%27s_Bill_of_Rights
+                                      - text: ·
+                                    - listitem [ref=f1e429]:
+                                      - link "24-hour comic" [ref=f1e430] [cursor=pointer]:
+                                        - /url: /wiki/24-hour_comic
+                                      - text: ·
+                                    - listitem [ref=f1e431]: Infinite canvas
+                        - navigation "Webcomics" [ref=f1e432]:
+                          - table [ref=f1e433]:
+                            - rowgroup [ref=f1e434]:
+                              - row "[hide] v · t · e Webcomics" [ref=f1e435]:
+                                - columnheader "[hide] v · t · e Webcomics" [ref=f1e436]:
+                                  - text: "[hide]"
+                                  - list [ref=f1e438]:
+                                    - listitem [ref=f1e439]:
+                                      - link "v" [ref=f1e440] [cursor=pointer]:
+                                        - /url: /wiki/Template:Webcomics
+                                      - text: ·
+                                    - listitem [ref=f1e441]:
+                                      - link "t" [ref=f1e442] [cursor=pointer]:
+                                        - /url: /wiki/Template_talk:Webcomics
+                                      - text: ·
+                                    - listitem [ref=f1e443]:
+                                      - link "e" [ref=f1e444] [cursor=pointer]:
+                                        - /url: /wiki/Special:EditPage/Template:Webcomics
+                                  - link "Webcomics" [ref=f1e446] [cursor=pointer]:
+                                    - /url: /wiki/Webcomic
+                              - row "Lists of webcomics Webcomics in print · Webcomics with LGBT characters · Video game webcomics" [ref=f1e447]:
+                                - rowheader "Lists of webcomics" [ref=f1e448]:
+                                  - link "Lists of webcomics" [ref=f1e449] [cursor=pointer]:
+                                    - /url: /wiki/Lists_of_webcomics
+                                - cell "Webcomics in print · Webcomics with LGBT characters · Video game webcomics" [ref=f1e450]:
+                                  - list [ref=f1e452]:
+                                    - listitem [ref=f1e453]:
+                                      - link "Webcomics in print" [ref=f1e454] [cursor=pointer]:
+                                        - /url: /wiki/List_of_webcomics_in_print
+                                      - text: ·
+                                    - listitem [ref=f1e455]:
+                                      - link "Webcomics with LGBT characters" [ref=f1e456] [cursor=pointer]:
+                                        - /url: /wiki/List_of_webcomics_with_LGBT_characters
+                                      - text: ·
+                                    - listitem [ref=f1e457]:
+                                      - link "Video game webcomics" [ref=f1e458] [cursor=pointer]:
+                                        - /url: /wiki/List_of_video_game_webcomics
+                              - row "Business and culture Awards (Web Cartoonists' Choice) · Business · Gender · Creators" [ref=f1e459]:
+                                - rowheader "Business and culture" [ref=f1e460]
+                                - cell "Awards (Web Cartoonists' Choice) · Business · Gender · Creators" [ref=f1e461]:
+                                  - list [ref=f1e463]:
+                                    - listitem [ref=f1e464]:
+                                      - link "Awards" [ref=f1e465] [cursor=pointer]:
+                                        - /url: /wiki/List_of_webcomic_awards
+                                      - list [ref=f1e466]:
+                                        - listitem [ref=f1e467]:
+                                          - text: (
+                                          - link "Web Cartoonists' Choice" [ref=f1e468] [cursor=pointer]:
+                                            - /url: /wiki/Web_Cartoonists%27_Choice_Awards
+                                          - text: )
+                                      - text: ·
+                                    - listitem [ref=f1e469]:
+                                      - link "Business" [ref=f1e470] [cursor=pointer]:
+                                        - /url: /wiki/Business_of_webcomics
+                                      - text: ·
+                                    - listitem [ref=f1e471]:
+                                      - link "Gender" [ref=f1e472] [cursor=pointer]:
+                                        - /url: /wiki/Gender_and_webcomics
+                                      - text: ·
+                                    - listitem [ref=f1e473]:
+                                      - link "Creators" [ref=f1e474] [cursor=pointer]:
+                                        - /url: /wiki/List_of_webcomic_creators
+                              - row "Styles and genres Polandball · Rage comic · Sprite comic" [ref=f1e475]:
+                                - rowheader "Styles and genres" [ref=f1e476]
+                                - cell "Polandball · Rage comic · Sprite comic" [ref=f1e477]:
+                                  - list [ref=f1e479]:
+                                    - listitem [ref=f1e480]:
+                                      - link "Polandball" [ref=f1e481] [cursor=pointer]:
+                                        - /url: /wiki/Polandball
+                                      - text: ·
+                                    - listitem [ref=f1e482]:
+                                      - link "Rage comic" [ref=f1e483] [cursor=pointer]:
+                                        - /url: /wiki/Rage_comic
+                                      - text: ·
+                                    - listitem [ref=f1e484]:
+                                      - link "Sprite comic" [ref=f1e485] [cursor=pointer]:
+                                        - /url: /wiki/Sprite_comic
+                              - row "History 1980s–90s Early webcomics · 1995–1999 2000s 2000 · 2001 · 2002 · 2003 · 2004 · 2005 · 2006 · 2007 · 2008 · 2009 2010s 2010 · 2011 · 2012 · 2013 · 2014 · 2015 · 2016 · 2017 · 2018 · 2019 2020s 2020 · 2021 · 2022 · 2023" [ref=f1e486]:
+                                - rowheader "History" [ref=f1e487]:
+                                  - link "History" [ref=f1e488] [cursor=pointer]:
+                                    - /url: /wiki/History_of_webcomics
+                                - cell "1980s–90s Early webcomics · 1995–1999 2000s 2000 · 2001 · 2002 · 2003 · 2004 · 2005 · 2006 · 2007 · 2008 · 2009 2010s 2010 · 2011 · 2012 · 2013 · 2014 · 2015 · 2016 · 2017 · 2018 · 2019 2020s 2020 · 2021 · 2022 · 2023" [ref=f1e489]:
+                                  - table [ref=f1e490]:
+                                    - rowgroup [ref=f1e491]:
+                                      - row "1980s–90s Early webcomics · 1995–1999" [ref=f1e492]:
+                                        - rowheader "1980s–90s" [ref=f1e493]
+                                        - cell "Early webcomics · 1995–1999" [ref=f1e494]:
+                                          - list [ref=f1e496]:
+                                            - listitem [ref=f1e497]:
+                                              - link "Early webcomics" [ref=f1e498] [cursor=pointer]:
+                                                - /url: /wiki/List_of_early_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e499]:
+                                              - link "1995–1999" [ref=f1e500] [cursor=pointer]:
+                                                - /url: /wiki/1995%E2%80%931999_in_webcomics
+                                      - row "2000s 2000 · 2001 · 2002 · 2003 · 2004 · 2005 · 2006 · 2007 · 2008 · 2009" [ref=f1e501]:
+                                        - rowheader "2000s" [ref=f1e502]
+                                        - cell "2000 · 2001 · 2002 · 2003 · 2004 · 2005 · 2006 · 2007 · 2008 · 2009" [ref=f1e503]:
+                                          - list [ref=f1e505]:
+                                            - listitem [ref=f1e506]:
+                                              - link "2000" [ref=f1e507] [cursor=pointer]:
+                                                - /url: /wiki/2000_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e508]:
+                                              - link "2001" [ref=f1e509] [cursor=pointer]:
+                                                - /url: /wiki/2001_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e510]:
+                                              - link "2002" [ref=f1e511] [cursor=pointer]:
+                                                - /url: /wiki/2002_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e512]:
+                                              - link "2003" [ref=f1e513] [cursor=pointer]:
+                                                - /url: /wiki/2003_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e514]:
+                                              - link "2004" [ref=f1e515] [cursor=pointer]:
+                                                - /url: /wiki/2004_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e516]:
+                                              - link "2005" [ref=f1e517] [cursor=pointer]:
+                                                - /url: /wiki/2005_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e518]:
+                                              - link "2006" [ref=f1e519] [cursor=pointer]:
+                                                - /url: /wiki/2006_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e520]:
+                                              - link "2007" [ref=f1e521] [cursor=pointer]:
+                                                - /url: /wiki/2007_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e522]:
+                                              - link "2008" [ref=f1e523] [cursor=pointer]:
+                                                - /url: /wiki/2008_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e524]:
+                                              - link "2009" [ref=f1e525] [cursor=pointer]:
+                                                - /url: /wiki/2009_in_webcomics
+                                      - row "2010s 2010 · 2011 · 2012 · 2013 · 2014 · 2015 · 2016 · 2017 · 2018 · 2019" [ref=f1e526]:
+                                        - rowheader "2010s" [ref=f1e527]
+                                        - cell "2010 · 2011 · 2012 · 2013 · 2014 · 2015 · 2016 · 2017 · 2018 · 2019" [ref=f1e528]:
+                                          - list [ref=f1e530]:
+                                            - listitem [ref=f1e531]:
+                                              - link "2010" [ref=f1e532] [cursor=pointer]:
+                                                - /url: /wiki/2010_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e533]:
+                                              - link "2011" [ref=f1e534] [cursor=pointer]:
+                                                - /url: /wiki/2011_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e535]:
+                                              - link "2012" [ref=f1e536] [cursor=pointer]:
+                                                - /url: /wiki/2012_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e537]:
+                                              - link "2013" [ref=f1e538] [cursor=pointer]:
+                                                - /url: /wiki/2013_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e539]:
+                                              - link "2014" [ref=f1e540] [cursor=pointer]:
+                                                - /url: /wiki/2014_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e541]:
+                                              - link "2015" [ref=f1e542] [cursor=pointer]:
+                                                - /url: /wiki/2015_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e543]:
+                                              - link "2016" [ref=f1e544] [cursor=pointer]:
+                                                - /url: /wiki/2016_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e545]:
+                                              - link "2017" [ref=f1e546] [cursor=pointer]:
+                                                - /url: /wiki/2017_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e547]:
+                                              - link "2018" [ref=f1e548] [cursor=pointer]:
+                                                - /url: /wiki/2018_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e549]:
+                                              - link "2019" [ref=f1e550] [cursor=pointer]:
+                                                - /url: /wiki/2019_in_webcomics
+                                      - row "2020s 2020 · 2021 · 2022 · 2023" [ref=f1e551]:
+                                        - rowheader "2020s" [ref=f1e552]
+                                        - cell "2020 · 2021 · 2022 · 2023" [ref=f1e553]:
+                                          - list [ref=f1e555]:
+                                            - listitem [ref=f1e556]:
+                                              - link "2020" [ref=f1e557] [cursor=pointer]:
+                                                - /url: /wiki/2020_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e558]:
+                                              - link "2021" [ref=f1e559] [cursor=pointer]:
+                                                - /url: /wiki/2021_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e560]:
+                                              - link "2022" [ref=f1e561] [cursor=pointer]:
+                                                - /url: /wiki/2022_in_webcomics
+                                              - text: ·
+                                            - listitem [ref=f1e562]:
+                                              - link "2023" [ref=f1e563] [cursor=pointer]:
+                                                - /url: /wiki/2023_in_webcomics
+                              - row "By country China · France · India" [ref=f1e564]:
+                                - rowheader "By country" [ref=f1e565]
+                                - cell "China · France · India" [ref=f1e566]:
+                                  - list [ref=f1e568]:
+                                    - listitem [ref=f1e569]:
+                                      - link "China" [ref=f1e570] [cursor=pointer]:
+                                        - /url: /wiki/Webcomics_in_China
+                                      - text: ·
+                                    - listitem [ref=f1e571]:
+                                      - link "France" [ref=f1e572] [cursor=pointer]:
+                                        - /url: /wiki/Webcomics_in_France
+                                      - text: ·
+                                    - listitem [ref=f1e573]:
+                                      - link "India" [ref=f1e574] [cursor=pointer]:
+                                        - /url: /wiki/Webcomics_in_India
+                              - row "Related Digital comic · Webtoon" [ref=f1e575]:
+                                - rowheader "Related" [ref=f1e576]
+                                - cell "Digital comic · Webtoon" [ref=f1e577]:
+                                  - list [ref=f1e579]:
+                                    - listitem [ref=f1e580]:
+                                      - link "Digital comic" [ref=f1e581] [cursor=pointer]:
+                                        - /url: /wiki/Digital_comic
+                                      - text: ·
+                                    - listitem [ref=f1e582]:
+                                      - link "Webtoon" [ref=f1e583] [cursor=pointer]:
+                                        - /url: /wiki/Webtoon
+                      - generic [ref=f1e585]:
+                        - link "Categories" [ref=f1e586] [cursor=pointer]:
+                          - /url: /wiki/Help:Category
+                        - text: ":"
+                        - list [ref=f1e587]:
+                          - listitem [ref=f1e588]:
+                            - link "Infinite canvas webcomics" [ref=f1e589] [cursor=pointer]:
+                              - /url: /wiki/Category:Infinite_canvas_webcomics
+                          - listitem [ref=f1e590]:
+                            - link "Webcomic formats" [ref=f1e591] [cursor=pointer]:
+                              - /url: /wiki/Category:Webcomic_formats
+                          - listitem [ref=f1e592]:
+                            - link "Digital art" [ref=f1e593] [cursor=pointer]:
+                              - /url: /wiki/Category:Digital_art
+                          - listitem [ref=f1e594]:
+                            - link "Comics terminology" [ref=f1e595] [cursor=pointer]:
+                              - /url: /wiki/Category:Comics_terminology
+                  - contentinfo [ref=f1e597]:
+                    - list [ref=f1e598]:
+                      - listitem [ref=f1e599]: This page was last edited on 16 April 2026, at 18:10 (UTC).
+                      - listitem [ref=f1e600]:
+                        - text: Text is available under the
+                        - link "Creative Commons Attribution-ShareAlike 4.0 License" [ref=f1e601] [cursor=pointer]:
+                          - /url: /wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License
+                        - text: ; additional terms may apply. By using this site, you agree to the
+                        - link "Terms of Use" [ref=f1e602] [cursor=pointer]:
+                          - /url: https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Terms_of_Use
+                        - text: and
+                        - link "Privacy Policy" [ref=f1e603] [cursor=pointer]:
+                          - /url: https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Privacy_policy
+                        - text: . Wikipedia® is a registered trademark of the
+                        - link "Wikimedia Foundation, Inc." [ref=f1e604] [cursor=pointer]:
+                          - /url: https://wikimediafoundation.org/
+                        - text: ", a non-profit organization."
+                    - list:
+                      - listitem [ref=f1e605]:
+                        - link "Privacy policy" [ref=f1e606] [cursor=pointer]:
+                          - /url: https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Privacy_policy
+                      - listitem [ref=f1e607]:
+                        - link "About Wikipedia" [ref=f1e608] [cursor=pointer]:
+                          - /url: /wiki/Wikipedia:About
+                      - listitem [ref=f1e609]:
+                        - link "Disclaimers" [ref=f1e610] [cursor=pointer]:
+                          - /url: /wiki/Wikipedia:General_disclaimer
+                      - listitem [ref=f1e611]:
+                        - link "Contact Wikipedia" [ref=f1e612] [cursor=pointer]:
+                          - /url: //en.wikipedia.org/wiki/Wikipedia:Contact_us
+                      - listitem [ref=f1e613]:
+                        - link "Legal & safety contacts" [ref=f1e614] [cursor=pointer]:
+                          - /url: https://foundation.wikimedia.org/wiki/Special:MyLanguage/Legal:Wikimedia_Foundation_Legal_and_Safety_Contact_Information
+                      - listitem [ref=f1e615]:
+                        - link "Code of Conduct" [ref=f1e616] [cursor=pointer]:
+                          - /url: https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Universal_Code_of_Conduct
+                      - listitem [ref=f1e617]:
+                        - link "Developers" [ref=f1e618] [cursor=pointer]:
+                          - /url: https://developer.wikimedia.org
+                      - listitem [ref=f1e619]:
+                        - link "Statistics" [ref=f1e620] [cursor=pointer]:
+                          - /url: https://stats.wikimedia.org/#/en.wikipedia.org
+                      - listitem [ref=f1e621]:
+                        - link "Cookie statement" [ref=f1e622] [cursor=pointer]:
+                          - /url: https://foundation.wikimedia.org/wiki/Special:MyLanguage/Policy:Cookie_statement
+                      - listitem [ref=f1e623]:
+                        - link "Mobile view" [ref=f1e624] [cursor=pointer]:
+                          - /url: //en.wikipedia.org/w/index.php?title=Infinite_canvas&mobileaction=toggle_view_mobile
+                    - list [ref=f1e625]:
+                      - listitem [ref=f1e626]:
+                        - link "Wikimedia Foundation" [ref=f1e627] [cursor=pointer]:
+                          - /url: https://www.wikimedia.org/
+                          - img "Wikimedia Foundation" [ref=f1e629]
+                      - listitem [ref=f1e630]:
+                        - link "Powered by MediaWiki" [ref=f1e631] [cursor=pointer]:
+                          - /url: https://www.mediawiki.org/
+                          - img "Powered by MediaWiki" [ref=f1e633]
+          - generic [ref=e146]:
+            - img "GitHub · Change is constant. GitHub keeps you ahead." [ref=e147]
+            - button "View live embed" [ref=e148] [cursor=pointer]:
+              - img [ref=e149]
+            - generic [ref=e151]:
+              - heading "GitHub · Change is constant. GitHub keeps you ahead." [level=3] [ref=e152]
+              - paragraph [ref=e153]: Join the world’s most widely adopted, AI-powered developer platform where millions of developers, businesses, and the largest open source community build software that advances humanity.
+              - link "https://github.com" [ref=e154] [cursor=pointer]:
+                - /url: https://github.com
+          - generic [ref=e157]:
+            - generic [ref=e158]: ✏️
+            - generic [ref=e159]:
+              - heading "Excalidraw" [level=3] [ref=e160]
+              - paragraph [ref=e161]: A quick scratchpad session for wireframes.
+            - button "Launch app" [ref=e162] [cursor=pointer]: Launch App
+          - generic [ref=e164]:
+            - img "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" [ref=e165]
+            - button "View live embed" [ref=e166] [cursor=pointer]:
+              - img [ref=e167]
+            - generic [ref=e169]:
+              - heading "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" [level=3] [ref=e170]
+              - paragraph [ref=e171]: Video recommendation
+              - link "https://www.youtube.com/watch?v=dQw4w9WgXcQ" [ref=e172] [cursor=pointer]:
+                - /url: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+          - generic [ref=e175]:
+            - img [ref=e176]
+            - generic "Double-click to rename" [ref=e179]: note-2026-04-28_16-03-01
+            - button "Open markdown" [ref=e180] [cursor=pointer]:
+              - img [ref=e181]
+          - generic [ref=e190]:
+            - generic [ref=e191]:
+              - img [ref=e192]
+              - generic "Double-click to rename" [ref=e195]: direction
+              - button "Open markdown" [ref=e196] [cursor=pointer]:
+                - img [ref=e197]
+            - generic [ref=e202]:
+              - generic [ref=e203]: Cosmoboard direction
+              - generic [ref=e205]: The Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.
+              - generic [ref=e207]: Core principles
+              - generic [ref=e209]:
+                - generic [ref=e210]: •
+                - strong [ref=e211]: File-first
+                - text: — every board is a
+                - code [ref=e212]: .canvas
+                - text: JSON file on disk
+              - generic [ref=e213]:
+                - generic [ref=e214]: •
+                - strong [ref=e215]: Local-first
+                - text: — changes save to localStorage before attempting a server sync
+              - generic [ref=e216]:
+                - generic [ref=e217]: •
+                - strong [ref=e218]: Spatial by nature
+                - text: — content lives on a 2D canvas, not in a document stream
+              - generic [ref=e220]: Node types
+              - generic [ref=e222]: "| Type | Purpose |"
+              - generic [ref=e223]: "|------|---------|"
+              - generic [ref=e224]:
+                - text: "|"
+                - code [ref=e225]: text
+                - text: "| Free-form note or label |"
+              - generic [ref=e226]:
+                - text: "|"
+                - code [ref=e227]: link
+                - text: "| Bookmark with live preview |"
+              - generic [ref=e228]:
+                - text: "|"
+                - code [ref=e229]: image
+                - text: /
+                - code [ref=e230]: file
+                - text: "| Embedded asset |"
+              - generic [ref=e231]:
+                - text: "|"
+                - code [ref=e232]: board-preview
+                - text: "| Minimap reference to another board |"
+              - generic [ref=e233]:
+                - text: "|"
+                - code [ref=e234]: markdown
+                - text: "| Rendered"
+                - code [ref=e235]: .md
+                - text: file inline on the canvas |
+              - generic [ref=e237]: Status
+              - generic [ref=e239]:
+                - text: The engine is generalized. Multiple boards can mount on the same page via
+                - code [ref=e240]: mountCosmoboard(hostElement)
+                - text: . Preview mode embeds boards read-only inside project detail pages.
+              - generic [ref=e242]: "Next steps: markdown-to-canvas sync, filesystem content registry, base/database layer."
+        - generic [ref=e245]:
+          - button "Select (V)" [ref=e246] [cursor=pointer]:
+            - img [ref=e247]
+          - button "Pan (Space)" [ref=e249] [cursor=pointer]:
+            - img [ref=e250]
+          - button "Add Text (T)" [ref=e252] [cursor=pointer]:
+            - img [ref=e253]
+          - button "Draw (P)" [ref=e255] [cursor=pointer]:
+            - img [ref=e256]
+          - button "Add Bookmark (L)" [ref=e259] [cursor=pointer]:
+            - img [ref=e260]
+          - button "Save Board (Ctrl+S)" [ref=e263] [cursor=pointer]:
+            - img [ref=e264]
+          - button "Send recommendation" [ref=e268] [cursor=pointer]:
+            - img [ref=e269]
+          - button "More board actions" [ref=e274] [cursor=pointer]:
+            - img [ref=e275]

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evrenucar.com/schemas/entity.schema.json",
+  "$comment": "version:1 — contract is not yet final; breaking changes will increment this comment.",
+  "title": "Entity",
+  "description": "Schema for a proto_website entity JSON file (src/entities/*.json).",
+  "type": "object",
+  "required": ["slug", "type", "title", "summary", "status", "references"],
+  "additionalProperties": false,
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Kebab-case identifier. Must be unique across all entities. Matches the filename without the .json extension.",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Entity category. Currently only 'project' is in use; future values may include 'experiment', 'tool', 'topic'.",
+      "enum": ["project", "experiment", "tool", "topic"]
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable display name. Used as the label in Cosmoboard and other rendering surfaces."
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-sentence description. Shown in cards, tooltips, and hover states. Keep under 160 characters."
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle state of the entity.",
+      "enum": ["active", "paused", "archived", "planned"]
+    },
+    "references": {
+      "type": "array",
+      "description": "Surfaces that render or link to this entity. At least one reference is required.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["surface", "slug", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "surface": {
+            "type": "string",
+            "description": "The surface type that consumes this reference.",
+            "enum": ["project", "board", "page", "embed"]
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identifier for this specific surface instance."
+          },
+          "path": {
+            "type": "string",
+            "description": "Repo-relative path to the source file for this surface."
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional free-form labels used for filtering and grouping in the UI.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "projectSlug": {
+      "type": "string",
+      "description": "Optional. When type is 'project', the slug of the corresponding project HTML page (content/projects/<projectSlug>.html).",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    }
+  }
+}

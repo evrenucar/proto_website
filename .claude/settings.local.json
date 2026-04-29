@@ -39,7 +39,25 @@
       "Bash(git -C /c/Users/evren/Documents/GitHub/proto_website log --oneline -20)",
       "Bash(npm.cmd run build:*)",
       "Bash(grep -c '\"type\":\"markdown\"' content/boards/cosmoboard/current.canvas)",
-      "Bash(ls scripts/preview-server.mjs)"
+      "Bash(ls scripts/preview-server.mjs)",
+      "Skill(update-config)",
+      "Write",
+      "Edit",
+      "Bash(gh:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git push:*)",
+      "Bash(npm:*)",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__wait_for",
+      "mcp__chrome-devtools__evaluate_script",
+      "Bash(tasklist //FI \"PID eq 31804\")",
+      "Bash(wmic process *)",
+      "Bash(awk '/^function / {name=$2; start=NR} /^}$/ {if \\(start\\) {print NR-start, name; start=0}}' JavaScript/braindump.js)",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__close_page"
     ]
   },
   "effortLevel": "xhigh"

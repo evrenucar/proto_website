@@ -1384,8 +1384,13 @@ function renderBoardPage(currentFile, board, introPanel = null) {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span class="braindump-toolbar-action-label">Export</span>
             </button>
-            <label class="braindump-file-label braindump-toolbar-action" aria-label="Import .canvas, .canvas.json, or .zip" title="Import (.canvas / .canvas.json / .zip)">
-              <input type="file" id="braindump-import" data-board-ui="import-input" accept=".canvas,.canvas.json,.json,.zip" hidden>
+            <label class="braindump-file-label braindump-toolbar-action" aria-label="Open Canvas (.canvas / .canvas.json / .zip / .canvas.diff)" title="Open Canvas (.canvas / .canvas.json / .zip / .canvas.diff) — Ctrl+O">
+              <input type="file" id="braindump-open-canvas" data-board-ui="open-canvas-input" accept=".canvas,.canvas.json,.json,.zip,.canvas.diff,.diff" hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l2-3h6l2 3h4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 12 12 9 15 12"/><line x1="12" y1="9" x2="12" y2="17"/></svg>
+              <span class="braindump-toolbar-action-label">Open Canvas</span>
+            </label>
+            <label class="braindump-file-label braindump-toolbar-action" aria-label="Import files into the current board (image / PDF / markdown / text)" title="Import files into board — Ctrl+I">
+              <input type="file" id="braindump-import" data-board-ui="import-input" accept="image/*,.pdf,.md,.txt,.csv,.docx,.json" multiple hidden>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span class="braindump-toolbar-action-label">Import</span>
             </label>
@@ -1416,6 +1421,10 @@ function renderBoardPage(currentFile, board, introPanel = null) {
             placeholder="Short description"
             aria-label="Short description for recommendation"
           >
+          <label class="braindump-issue-toggle" for="braindump-recommend-full-canvas" style="display:flex;gap:6px;align-items:center;font-size:12px;color:#666;">
+            <input type="checkbox" id="braindump-recommend-full-canvas">
+            <span>Send full canvas instead of changes only</span>
+          </label>
           <button type="button" id="braindump-recommend-submit" class="braindump-issue-submit" title="Send recommendation">Send recommendation</button>
         </div>
         <div class="braindump-issue-panel" id="braindump-feature-panel" data-board-ui="feature-panel" hidden>
@@ -1465,7 +1474,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
             <h3 id="braindump-help-title" class="braindump-help-title">Help</h3>
             <p class="braindump-help-copy">Desktop shortcuts and mobile editing hints for the current board.</p>
             <ul class="braindump-help-list">
-              <li><strong>Desktop:</strong> <code>V</code> select, <code>T</code> text, <code>P</code> draw, <code>L</code> link, hold <code>Space</code> to pan, and <code>Ctrl/Cmd+S</code> to force a save.</li>
+              <li><strong>Desktop:</strong> <code>V</code> select, <code>T</code> text, <code>P</code> draw, <code>L</code> link, hold <code>Space</code> to pan. <code>Ctrl/Cmd+S</code> save · <code>Ctrl/Cmd+O</code> open canvas · <code>Ctrl/Cmd+I</code> import file.</li>
               <li><strong>Mobile text:</strong> tap once with the text tool and the note opens centered so you can type or long-press to paste.</li>
               <li><strong>Mobile links:</strong> tap once with the link tool and a paste-ready URL field opens immediately.</li>
               <li><strong>Autosave:</strong> local draft state saves as you work; timed background sync updates the board file when the local save endpoint is running.</li>

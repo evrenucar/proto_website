@@ -47,8 +47,8 @@ Active work state, review queue, next-up items, blockers.
     - `content/boards/cosmoboard/current.canvas` includes an `entity` node pointing to `content/entities/index.json` and `entityRef=eurocrate-storage-system`.
     - `JavaScript/braindump.js` supports `entity` nodes with a rendered card, explicit reference chips, tags, loading, empty, not-found, and error states.
     - `CSS/braindump.css` includes the `.bd-layer-entity` / `.bd-entity-*` styles.
-    - `tests/shared-entity-build.test.mjs` verifies registry, generated entity index, base-data references, and the Cosmoboard entity node.
-    - `tests/shared-entity-runtime-e2e.test.mjs` verifies the same entity rendered in the board card and projects base table.
+    - `tests/features/shared-entity-build.test.mjs` verifies registry, generated entity index, base-data references, and the Cosmoboard entity node.
+    - `tests/features/shared-entity-runtime-e2e.test.mjs` verifies the same entity rendered in the board card and projects base table.
     - Screenshot proof: `.tmp/shared-entity-e2e/cosmoboard-shared-entity.png`.
   - Validation:
     - confirm reuse is explicit and not based on hidden duplication
