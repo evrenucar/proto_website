@@ -1316,13 +1316,129 @@ function serializeState() {
   };
 }
 
+// IndexedDB-backed store for inlined drag-drop assets (PDF / image data URLs
+// from the static-host fallback). These would otherwise blow localStorage's
+// ~5MB quota and take down save/autosave entirely. Memory holds idb:<uuid>
+// refs in node URL fields; the cache hands back the actual data URL at render.
+const ASSETS_DB_NAME = "bd-assets";
+const ASSETS_DB_STORE = "assets";
+let _assetsDbPromise = null;
+const idbAssetCache = new Map();
+let didQuotaWarn = false;
+
+function openAssetsDb() {
+  if (_assetsDbPromise) return _assetsDbPromise;
+  if (typeof indexedDB === "undefined") {
+    _assetsDbPromise = Promise.reject(new Error("IndexedDB unavailable"));
+    return _assetsDbPromise;
+  }
+  _assetsDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(ASSETS_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(ASSETS_DB_STORE)) {
+        db.createObjectStore(ASSETS_DB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return _assetsDbPromise;
+}
+
+async function idbAssetPut(key, value) {
+  const db = await openAssetsDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ASSETS_DB_STORE, "readwrite");
+    tx.objectStore(ASSETS_DB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+async function idbLoadAllAssets() {
+  let db;
+  try {
+    db = await openAssetsDb();
+  } catch {
+    return;
+  }
+  return new Promise((resolve) => {
+    const tx = db.transaction(ASSETS_DB_STORE, "readonly");
+    const store = tx.objectStore(ASSETS_DB_STORE);
+    const cursorReq = store.openCursor();
+    cursorReq.onsuccess = () => {
+      const cursor = cursorReq.result;
+      if (cursor) {
+        if (typeof cursor.value === "string") {
+          idbAssetCache.set(cursor.key, cursor.value);
+        }
+        cursor.continue();
+      } else {
+        resolve();
+      }
+    };
+    cursorReq.onerror = () => resolve();
+  });
+}
+
+function offloadDataUrlToIdb(dataUrl) {
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) return dataUrl;
+  const idbKey = `bd-asset-${uuid()}`;
+  idbAssetCache.set(idbKey, dataUrl);
+  idbAssetPut(idbKey, dataUrl).catch((err) => {
+    console.warn("Asset IDB persist failed:", err);
+  });
+  return `idb:${idbKey}`;
+}
+
+function resolveStoredAssetUrl(url) {
+  if (typeof url !== "string" || !url.startsWith("idb:")) return url;
+  const cached = idbAssetCache.get(url.slice(4));
+  return typeof cached === "string" ? cached : url;
+}
+
+const ASSET_URL_FIELDS = ["file", "url", "href", "boardSource", "boardHref", "source"];
+
+async function rehydrateIdbReferencesAndRerender() {
+  await idbLoadAllAssets();
+  for (const n of nodes) {
+    let touched = false;
+    for (const field of ASSET_URL_FIELDS) {
+      const v = n[field];
+      if (typeof v === "string" && v.startsWith("idb:")) {
+        const resolved = resolveStoredAssetUrl(v);
+        if (resolved !== v) {
+          n[field] = resolved;
+          touched = true;
+        }
+      }
+    }
+    if (touched) {
+      try { renderNode(n); } catch {}
+    }
+  }
+}
+
 function persistLocalState(state) {
   const serialized = JSON.stringify(state);
-  localStorage.setItem(boardConfig.storageKey, serialized);
-  if (boardConfig.legacyStorageKey && boardConfig.legacyStorageKey !== boardConfig.storageKey) {
-    localStorage.setItem(boardConfig.legacyStorageKey, serialized);
+  try {
+    localStorage.setItem(boardConfig.storageKey, serialized);
+    if (boardConfig.legacyStorageKey && boardConfig.legacyStorageKey !== boardConfig.storageKey) {
+      localStorage.setItem(boardConfig.legacyStorageKey, serialized);
+    }
+    localStorage.setItem(getBoardStateMetaKey(), JSON.stringify(buildBoardStateMeta()));
+  } catch (err) {
+    if (!didQuotaWarn) {
+      didQuotaWarn = true;
+      const msg = err?.name === "QuotaExceededError"
+        ? "Local storage full. Recent edits may not survive reload."
+        : `Local save failed: ${err?.message || err}`;
+      try { showToolbarToast(msg, "error"); } catch {}
+    }
+    console.warn("persistLocalState failed:", err);
   }
-  localStorage.setItem(getBoardStateMetaKey(), JSON.stringify(buildBoardStateMeta()));
   return serialized;
 }
 
@@ -3784,15 +3900,28 @@ function renderLinkNode(nodeObj, el) {
       el.style.height = `${nodeObj.height}px`;
     }
 
-    // Chrome blocks data:application/pdf in iframes, so swap in a blob: URL when
-    // the stored asset is inlined (static-host fallback). Firefox accepts both.
+    // Chrome blocks data:application/pdf in sandboxed iframes (its PDF viewer
+    // is a MimeHandlerView extension that can't load there). Mint a blob: URL
+    // and render via <embed> for inlined PDFs; Firefox is fine with either.
+    const resolvedSourceUrl = resolveStoredAssetUrl(nodeObj.url);
     const blobUrlForData = ensureBlobUrlForDataUrl(nodeObj);
-    const runtimeUrl = blobUrlForData || nodeObj.url;
-    const embedUrl = getYouTubeEmbedUrl(nodeObj.url) || runtimeUrl;
-    const isYouTube = !!getYouTubeVideoId(nodeObj.url);
+    const isInlinedPdf = !!blobUrlForData &&
+      typeof resolvedSourceUrl === "string" &&
+      /^data:application\/pdf/i.test(resolvedSourceUrl);
+    const runtimeUrl = blobUrlForData || resolvedSourceUrl;
+    const embedUrl = getYouTubeEmbedUrl(resolvedSourceUrl) || runtimeUrl;
+    const isYouTube = !!getYouTubeVideoId(resolvedSourceUrl);
     const headerDomain = blobUrlForData
       ? "Local file"
-      : new URL(nodeObj.url || "http://localhost", typeof location !== "undefined" ? location.origin : "http://localhost").hostname;
+      : new URL(resolvedSourceUrl || "http://localhost", typeof location !== "undefined" ? location.origin : "http://localhost").hostname;
+
+    // Inlined PDFs: render via a non-sandboxed iframe. Chrome's PDF viewer is a
+    // MimeHandlerView that refuses sandboxed iframes (and paints blank inside
+    // <embed> when the parent has CSS transforms, which the canvas always
+    // does). A plain iframe lets the viewer mount through the normal path.
+    const viewerHtml = isInlinedPdf
+      ? `<iframe class="bd-embed-iframe" src="${escapeHtml(runtimeUrl)}" allowfullscreen loading="lazy"></iframe>`
+      : `<iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allowfullscreen loading="lazy"></iframe>`;
 
     shell.innerHTML = `
       <div class="bd-embed-header">
@@ -3806,7 +3935,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
         </a>
       </div>
-      <iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allowfullscreen loading="lazy"></iframe>
+      ${viewerHtml}
       ${isYouTube ? `<div class="bd-yt-wheel-shield" aria-hidden="true"></div>` : ""}
     `;
 
@@ -5654,7 +5783,8 @@ async function uploadAsset(file) {
 // the live embed src at render time. Cached on the node so repeat renders reuse
 // it; revoked when the node is destroyed.
 function ensureBlobUrlForDataUrl(nodeObj) {
-  const url = nodeObj?.url;
+  const stored = nodeObj?.url;
+  const url = resolveStoredAssetUrl(stored);
   if (typeof url !== "string" || !url.startsWith("data:")) return null;
   if (nodeObj.__blobObjectUrl && nodeObj.__blobObjectUrlSource === url) {
     return nodeObj.__blobObjectUrl;
@@ -5765,14 +5895,14 @@ async function importDroppedFile(file, x, y) {
 
   if (kind === "image") {
     const result = await tryUploadAsset(file);
-    const fileSrc = result?.url || await readFileAsDataURL(file);
+    const fileSrc = result?.url || offloadDataUrlToIdb(await readFileAsDataURL(file));
     createNode("image", x, y, { file: fileSrc });
     return true;
   }
 
   if (kind === "pdf") {
     const result = await tryUploadAsset(file);
-    const url = result?.url || await readFileAsDataURL(file);
+    const url = result?.url || offloadDataUrlToIdb(await readFileAsDataURL(file));
     createNode("bookmark", x, y, {
       url,
       title: file.name.replace(/\.pdf$/i, ""),
@@ -6445,13 +6575,15 @@ function renderImageCropbox(nodeObj, el) {
 
   const wrap = document.createElement("div");
   wrap.className = "bd-file-cropbox";
+  const resolvedSrc = resolveStoredAssetUrl(nodeObj.file);
   wrap.dataset.fileSrc = nodeObj.file;
   el.insertBefore(wrap, el.firstChild);
 
   const img = document.createElement("img");
   img.draggable = false;
   img.alt = "file preview";
-  img.src = nodeObj.file;
+  if (resolvedSrc && resolvedSrc !== nodeObj.file) img.src = resolvedSrc;
+  else img.src = nodeObj.file;
   wrap.appendChild(img);
 
   applyCropTransform(img, nodeObj.crop);
@@ -6486,7 +6618,7 @@ function renderImageCropOverlay(nodeObj, el) {
   const img = document.createElement("img");
   img.draggable = false;
   img.alt = "crop preview";
-  img.src = nodeObj.file;
+  img.src = resolveStoredAssetUrl(nodeObj.file);
   ov.appendChild(img);
 
   const dimTop = document.createElement("div");
@@ -7613,6 +7745,12 @@ if (saved) {
 }
 if (!saved) { loadBoard(); }
 updateTransform();
+
+// Drag-drop assets dropped on the static-site fallback live in IndexedDB so
+// they don't blow localStorage's quota. After the sync init renders nodes
+// (with idb: refs unresolved), pull the cache, swap refs to data URLs, and
+// re-render any affected nodes.
+void rehydrateIdbReferencesAndRerender();
 
 if (pendingStartupToast && !isPreviewMode) {
   window.setTimeout(() => {
