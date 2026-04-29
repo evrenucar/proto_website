@@ -1,5 +1,7 @@
 # evrenucar.com
 
+Live site: [evrenucar.com](https://evrenucar.com)
+
 My personal website. It started as a simple portfolio. Then I added a tiny whiteboard for jotting things down. Then I kept building. Now this repo is two things at once.
 
 ```mermaid
@@ -159,6 +161,7 @@ Preview runs at `http://127.0.0.1:4173`.
 
 There is a separate, plain landing page for the Cosmoboard idea on its own, in case I want to share it without the full personal site around it.
 
+- Live: [evrenucar.com/cosmoboard-landing.html](https://evrenucar.com/cosmoboard-landing.html)
 - File: [`cosmoboard-landing.html`](cosmoboard-landing.html)
 - Not linked from the site navigation on purpose
 - Open it directly, or visit `http://127.0.0.1:4173/cosmoboard-landing.html` while running `npm run preview`
