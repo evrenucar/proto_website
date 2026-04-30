@@ -1772,6 +1772,28 @@ html:has(body.page-board) {
   transform: scale(1.1);
 }
 
+.bd-markdown-download-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: #3fdaca;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s, transform 0.12s;
+  border-radius: 4px;
+}
+
+.bd-markdown-header .bd-markdown-download-btn + .bd-markdown-fullscreen-btn {
+  margin-left: 0;
+}
+
+.bd-markdown-download-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 /* Fullscreen markdown viewer */
 .bd-markdown-fullscreen {
   position: fixed;
@@ -1827,7 +1849,7 @@ html:has(body.page-board) {
 .bd-markdown-fullscreen-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding: 16px 20px;
   border-bottom: 1px solid rgba(63, 218, 202, 0.15);
   background: rgba(63, 218, 202, 0.03);
@@ -1838,8 +1860,14 @@ html:has(body.page-board) {
   font-size: 18px;
   font-weight: 600;
   color: #fafafa;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.bd-markdown-fullscreen-download,
 .bd-markdown-fullscreen-close {
   padding: 6px;
   background: transparent;
@@ -1848,8 +1876,13 @@ html:has(body.page-board) {
   cursor: pointer;
   border-radius: 6px;
   transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.bd-markdown-fullscreen-download:hover,
 .bd-markdown-fullscreen-close:hover {
   color: #fafafa;
   background: rgba(255, 255, 255, 0.1);
