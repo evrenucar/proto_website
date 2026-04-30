@@ -24,6 +24,15 @@
       "tags": ["primary", "onboarding"]
     },
     {
+      "slug": "onboarding",
+      "title": "Onboarding",
+      "file": "onboarding.html",
+      "sourcePath": "content/boards/onboarding/current.canvas",
+      "storageKey": "board:onboarding",
+      "description": "Guided onboarding board introducing the Cosmoboard node types, editing model, and feedback flow.",
+      "tags": ["onboarding"]
+    },
+    {
       "slug": "eurocrate-storage",
       "title": "Eurocrate storage",
       "file": "content/boards/eurocrate-storage.html",

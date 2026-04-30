@@ -1307,7 +1307,7 @@ function stripTransientNodeFields(node) {
 
 function serializeState() {
   ensureCanvasId();
-  return {
+  const out = {
     canvasId: boardMeta.canvasId,
     createdAt: boardMeta.createdAt,
     updatedAt: boardMeta.updatedAt,
@@ -1315,6 +1315,14 @@ function serializeState() {
     edges,
     viewport: { x: camera.x, y: camera.y, z: camera.z }
   };
+  if (boardMeta.defaultViewport && isFiniteViewport(boardMeta.defaultViewport)) {
+    out.defaultViewport = {
+      x: boardMeta.defaultViewport.x,
+      y: boardMeta.defaultViewport.y,
+      z: boardMeta.defaultViewport.z
+    };
+  }
+  return out;
 }
 
 function persistLocalState(state) {
@@ -1442,7 +1450,7 @@ const touchPlacementState = {
 
 let nodes = [];
 let edges = [];
-let boardMeta = { canvasId: null, createdAt: null, updatedAt: null };
+let boardMeta = { canvasId: null, createdAt: null, updatedAt: null, defaultViewport: null };
 
 function ensureCanvasId() {
   if (!boardMeta.canvasId) {
@@ -7826,6 +7834,74 @@ document.addEventListener("paste", (e) => {
   }
 });
 
+function isFiniteViewport(v) {
+  return (
+    v &&
+    typeof v === "object" &&
+    Number.isFinite(Number(v.x)) &&
+    Number.isFinite(Number(v.y)) &&
+    Number.isFinite(Number(v.z)) &&
+    Number(v.z) > 0
+  );
+}
+
+// Read a previously saved preview camera from this preview's own localStorage.
+// Returns the saved viewport object, or null if missing / stale (sourceVersion
+// mismatch) / unparseable. Only meaningful in preview mode.
+function getSavedPreviewCamera() {
+  if (!isPreviewMode) return null;
+  const rawState = localStorage.getItem(boardConfig.storageKey);
+  if (!rawState) return null;
+
+  if (boardConfig.sourceVersion) {
+    let meta = null;
+    try {
+      const rawMeta = localStorage.getItem(getBoardStateMetaKey());
+      meta = rawMeta ? JSON.parse(rawMeta) : null;
+    } catch (error) {
+      meta = null;
+    }
+    const hasMatchingIdentity =
+      meta &&
+      (!meta.slug || meta.slug === boardConfig.slug) &&
+      (!meta.sourcePath || meta.sourcePath === boardConfig.sourcePath);
+    const hasMatchingVersion = meta && meta.sourceVersion === boardConfig.sourceVersion;
+    if (!hasMatchingIdentity || !hasMatchingVersion) return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawState);
+    if (isFiniteViewport(parsed?.viewport)) {
+      return {
+        x: Number(parsed.viewport.x),
+        y: Number(parsed.viewport.y),
+        z: Number(parsed.viewport.z)
+      };
+    }
+  } catch (error) {}
+  return null;
+}
+
+// In preview mode, override the camera set by loadState's `data.viewport` with
+// (1) this visitor's saved preview camera, or (2) the canvas's defaultViewport.
+// Falls through silently (leaving the camera as-is) when neither is available.
+function applyPreviewCameraOverride(data) {
+  if (!isPreviewMode) return;
+  const saved = getSavedPreviewCamera();
+  if (saved) {
+    camera.x = saved.x;
+    camera.y = saved.y;
+    camera.z = saved.z;
+    return;
+  }
+  const dv = data?.defaultViewport;
+  if (isFiniteViewport(dv)) {
+    camera.x = Number(dv.x);
+    camera.y = Number(dv.y);
+    camera.z = Number(dv.z);
+  }
+}
+
 // Load & Save
 function loadState(data) {
   isLoadingState = true;
@@ -7837,7 +7913,12 @@ function loadState(data) {
   boardMeta = {
     canvasId: typeof data?.canvasId === "string" && data.canvasId ? data.canvasId : null,
     createdAt: typeof data?.createdAt === "string" && data.createdAt ? data.createdAt : null,
-    updatedAt: typeof data?.updatedAt === "string" && data.updatedAt ? data.updatedAt : null
+    updatedAt: typeof data?.updatedAt === "string" && data.updatedAt ? data.updatedAt : null,
+    defaultViewport: isFiniteViewport(data?.defaultViewport) ? {
+      x: Number(data.defaultViewport.x),
+      y: Number(data.defaultViewport.y),
+      z: Number(data.defaultViewport.z)
+    } : null
   };
   ensureCanvasId();
 
@@ -7846,6 +7927,8 @@ function loadState(data) {
     if (typeof data.viewport.y === 'number') camera.y = data.viewport.y;
     if (typeof data.viewport.z === 'number') camera.z = data.viewport.z;
   }
+
+  applyPreviewCameraOverride(data);
 
   if (data.nodes) {
     data.nodes.forEach(n => {
