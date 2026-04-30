@@ -1,25 +1,36 @@
 # Random Ideas
 
-- **Rich markdown**: Add code blocks, formulas, mermaid graphs and tables to markdown.
-- **Cursor emotes**: Cursor with emotes. With certain shortcuts or while doing certain things cursors should be able to do emotes, cool movements, animations, etc.
-- **Project metadata as a separate branch**: Project metadata is stored in a separate branch so you can easily move it to any instance and can be even terminal accessible (ssh). Reference: https://youtu.be/9YjWGXi5tDw?si=KvKJhgY_VpzHN0CA
-- **photo cropping**: If you double click on a photo it will go into crop mode. Should be able to move all 4 corners to be able to crop the image either by clicking away or pressing enter. The parts being cropped should be still visible but less dim. ESC results in cancelled crop. Crop only becomes the view side. The original image is stored uncropped. This might result in privacy issues if it was cropped intentionally. for a cropped image if you double click you should be able to get the same overlay again that you saw during cropping and save in the same way. Now sure what is the best way to store the cropping information
-- **add snapping alignment and distribution behavior**: snapping behavior first. Edges of elements as well as centers of elements should be able to snap
-- **add alt and shift dragging behavior**: make sure that you are able to alt drag to duplicate. ANd shift drag to move it along an axis
-
-- would be cool to be able to have themes for the whole thing. Just like obsidian does!
-
-- sharable templates like in obsidian and miro
-
---------WORKING ON THIS------------
+Rich markdown: Add code blocks, formulas, mermaid graphs and tables to markdown.
 
 
 
+Project metadata as a separate branch: Project metadata is stored in a separate branch so you can easily move it to any instance and can be even terminal accessible (ssh). Reference: https://youtu.be/9YjWGXi5tDw?si=KvKJhgY_VpzHN0CA
+
+photo cropping: If you double click on a photo it will go into crop mode. Should be able to move all 4 corners to be able to crop the image either by clicking away or pressing enter. The parts being cropped should be still visible but less dim. ESC results in cancelled crop. Crop only becomes the view side. The original image is stored uncropped. This might result in privacy issues if it was cropped intentionally. for a cropped image if you double click you should be able to get the same overlay again that you saw during cropping and save in the same way. Now sure what is the best way to store the cropping information
+
+add snapping alignment and distribution behavior: snapping behavior first. Edges of elements as well as centers of elements should be able to snap
+
+add alt and shift dragging behavior: make sure that you are able to alt drag to duplicate. ANd shift drag to move it along an axis
+
+would be cool to be able to have themes for the whole thing. Just like obsidian does!
+
+sharable templates like in obsidian and miro
+
+-------------WORKING ON THIS-----------------
+
+markdown eror on deployed website
 
 
------NEXT THINGS TO WORK ON--------
+
+------------NEXT THINGS TO WORK ON-----------
+
+linking between files. Without having to have them twice. Copies could also act as identical
 
 
+make linked board nodes and other bookmarks not overflow ith their content
+
+The website asks permisions when in canvas website (not great we could do this later but for now when stuff is not secure its a bad idea)
+![alt text](image.png)
 
 just continue with making the tests work just like said in C:\Users\evren\Documents\GitHub\proto_website\.agents\reviews_and_feedback\gpt_review_20260429_032501.md
 
@@ -29,7 +40,6 @@ add ctrl+D for duplication and multiplication
 
 add rotation of elements
 
-make linked board nodes and other bookmarks not overflow ith their content
 
 implement performance audit testing and benchmark structure procedure. (standard board. panning around recording fps recording board load time when cache empty)
 
@@ -54,6 +64,20 @@ woud be nice to be able to move around with arrows for panning. single click cou
 
 
 
+-----------File system and use---------
+
+What this enables later (no code yet)
+
+  - "Smart routing": when a file with parentId is dropped on
+  the wrong board, the importer can detect that mismatch and
+  offer Send to original board alongside Replace / Keep both /   Cancel.
+  - Bidirectional markdown-in-markdown: when you build
+  embedded markdown notes, the parent becomes the containing
+  note's id instead of the board slug. Same shape, deeper
+  hierarchy.
+  - A future "where did this come from?" badge on imported
+  nodes.
+
 
 -----------NEW NODES and Node things--------------
 download youtube video
@@ -75,6 +99,10 @@ at the end of a video there are recommendations appearing. When I click it a new
 
 
 
+---------------MISC / FUN --------------------
+
+
+
 
 ---INSANE IDEAS
 -make it possible to edit videos inside
@@ -83,21 +111,20 @@ at the end of a video there are recommendations appearing. When I click it a new
 -make it so you can leave an audio note then click a button to transcribe it
 -ADD cli inside the page
 -MAke a debug mode where all info is shown. Maybe add a terminal / console inside the board
+-Cursor emotes: Cursor with emotes. With certain shortcuts or while doing certain things cursors should be able to do emotes, cool movements, animations, etc.
 
 
 
 
 
 
-----COMPLETED--------------------------------------
-
-The website asks permisions when in canvas website (not great we could do this later but for now when stuff is not secure its a bad idea). Disabled by stripping the iframe `allow=` attribute on embeds. See `.agents/feature_implementation/embed-iframe-permissions.md` for the spec when we want to bring this back safely.
+--------------------------COMPLETED--------------------------------------
 
 If I click on an embedded youtube video to start it in chrome the youtube window gets stuck to my cursor almost as if im holding down m1. Same behavior doesn't happen in firefox. reproduce it, Find the cause, fix it, test and confirm its fixed
  
 when I add text by clicking t and then clicking somewhere the text box should be added at my    cursor. with the top left of the text box being where my cursor is and the tet box being fix this!
 
-
+[fixed]drag and drop uploads don't work! HTTP 405 error
 
 
 

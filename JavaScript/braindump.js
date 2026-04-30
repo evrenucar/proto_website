@@ -394,6 +394,7 @@ let lastViewportTouchTime = 0;
 let localStateSaveTimeout = null;
 let autosaveIntervalId = null;
 let autosaveRepositorySupported = true;
+let markdownSidecarSupported = true;
 let hasPendingRepositorySave = false;
 let isPersistingRepositoryState = false;
 let pendingRecommendation = null;
@@ -4398,31 +4399,35 @@ function scheduleMarkdownSave(nodeObj, body) {
 }
 
 async function saveMarkdownNodeFile(nodeObj, body) {
-  // _rawMarkdown is the canonical inline store — always update it so the
-  // canvas-level save captures the latest content even when no file sidecar
-  // path is set (or when the sidecar write below fails).
+  // _rawMarkdown is the canonical inline store. Update it first so the
+  // canvas-level save captures the latest content even when the sidecar
+  // disk write is skipped or unavailable.
   const content = readMarkdownEditorContent(body);
   nodeObj._rawMarkdown = content;
+  // Lazy-stamp identity for legacy notes that predate frontmatter so future
+  // re-imports of a downloaded copy can still match.
+  if (!nodeObj.markdownId) {
+    Object.assign(nodeObj, newMarkdownIdentity());
+  } else {
+    nodeObj.markdownUpdatedAt = new Date().toISOString();
+  }
   if (typeof markBoardDirty === "function") markBoardDirty();
+
+  // Once the host has shown it can't accept the sidecar POST (typical static
+  // deploy: 405 Method Not Allowed), don't keep firing the request on every
+  // debounce. Local content is already persisted via the canvas-level save.
+  if (!markdownSidecarSupported) return;
 
   const filePath = String(nodeObj?.file || "");
   if (!filePath) return;
-  // Skip blob: / data: / external URLs — only repo-relative paths are persisted.
-  if (/^(?:blob:|data:|https?:|file:)/i.test(filePath)) return;
+  if (/^(?:blob:|data:|https?:|file:|idb:)/i.test(filePath)) return;
 
   const filename = filePath.split("/").pop() || "note.md";
   const sourcePath = filePath.replace(/^\//, "");
-  try {
-    const response = await fetch(`/api/save-markdown?slug=${encodeURIComponent(boardConfig.slug)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, path: sourcePath, content })
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  } catch (error) {
-    // Sidecar disk write failed — content is still saved inline via the
-    // canvas-level save. Show a toast so the user knows the sidecar is stale.
-    showToolbarToast(`Sidecar save failed: ${error.message}`, "error");
+  const result = await trySaveMarkdownSidecar({ filename, path: sourcePath, content });
+  if (!result) {
+    markdownSidecarSupported = false;
+    showToolbarToast("Saved in this browser only. Static host can't write the .md file back to disk.", "info");
   }
 }
 
@@ -5094,11 +5099,22 @@ function renderMarkdownNode(nodeObj, el) {
   header.innerHTML = `
     <svg class="bd-markdown-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     <span class="bd-markdown-title">${escapeHtml(title)}</span>
+    <button type="button" class="bd-markdown-download-btn" aria-label="Download markdown" title="Download markdown">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
     <button type="button" class="bd-markdown-fullscreen-btn" aria-label="Open markdown" title="Open markdown">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
     </button>
   `;
   shell.appendChild(header);
+
+  // Download button handler
+  const downloadBtn = header.querySelector(".bd-markdown-download-btn");
+  downloadBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    downloadMarkdownNode(nodeObj);
+  });
+  downloadBtn?.addEventListener("mousedown", (e) => e.stopPropagation());
 
   // Fullscreen button handler
   const fullscreenBtn = header.querySelector(".bd-markdown-fullscreen-btn");
@@ -5166,6 +5182,52 @@ function renderMarkdownNode(nodeObj, el) {
 
 let _markdownFullscreenEl = null;
 
+function deriveMarkdownDownloadFilename(nodeObj) {
+  // Prefer the current node title so renames take effect for download.
+  // Fall back to the on-disk filename, then to "note".
+  const liveTitle = String(nodeObj?.title || "").trim();
+  if (liveTitle) return sanitizeMarkdownFilename(`${liveTitle}.md`);
+  const filePathBase = String(nodeObj?.file || "").split("/").pop() || "";
+  if (filePathBase) return sanitizeMarkdownFilename(filePathBase);
+  return sanitizeMarkdownFilename("note.md");
+}
+
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+async function downloadMarkdownNode(nodeObj) {
+  if (!nodeObj) return;
+  let content = typeof nodeObj._rawMarkdown === "string" ? nodeObj._rawMarkdown : null;
+  if (content == null) {
+    const filePath = String(nodeObj.file || "");
+    if (filePath && !/^(?:blob:|data:|idb:)/i.test(filePath)) {
+      try {
+        const res = await fetch(filePath, { cache: "no-store" });
+        if (res.ok) content = await res.text();
+      } catch {}
+    }
+  }
+  if (content == null) {
+    showToolbarToast("No markdown content to download.", "error");
+    return;
+  }
+  // Stamp identity if the note never had one, so the download carries it and
+  // a later re-import can match the file back to this node.
+  if (!nodeObj.markdownId) Object.assign(nodeObj, newMarkdownIdentity());
+  const serialized = serializeMarkdownWithFrontmatter(nodeObj, content);
+  const filename = deriveMarkdownDownloadFilename(nodeObj);
+  triggerBlobDownload(new Blob([serialized], { type: "text/markdown;charset=utf-8" }), filename);
+}
+
 function openMarkdownFullscreen(nodeObj, title, filePath) {
   // Create fullscreen overlay if it doesn't exist
   if (!_markdownFullscreenEl) {
@@ -5176,6 +5238,9 @@ function openMarkdownFullscreen(nodeObj, title, filePath) {
       <div class="bd-markdown-fullscreen-container">
         <div class="bd-markdown-fullscreen-header">
           <h2 class="bd-markdown-fullscreen-title"></h2>
+          <button type="button" class="bd-markdown-fullscreen-download" aria-label="Download markdown" title="Download markdown">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
           <button type="button" class="bd-markdown-fullscreen-close" aria-label="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -5188,8 +5253,12 @@ function openMarkdownFullscreen(nodeObj, title, filePath) {
     // Close handlers
     const closeBtn = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-close");
     const backdrop = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-backdrop");
+    const downloadBtnFs = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-download");
     closeBtn?.addEventListener("click", closeMarkdownFullscreen);
     backdrop?.addEventListener("click", closeMarkdownFullscreen);
+    downloadBtnFs?.addEventListener("click", () => {
+      if (_fullscreenNodeObj) downloadMarkdownNode(_fullscreenNodeObj);
+    });
     _markdownFullscreenEl.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeMarkdownFullscreen();
     });
@@ -5198,6 +5267,11 @@ function openMarkdownFullscreen(nodeObj, title, filePath) {
   // Update content
   const titleEl = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-title");
   const bodyEl = _markdownFullscreenEl.querySelector(".bd-markdown-fullscreen-body");
+
+  // Bind the node early so the download button works even before the body
+  // finishes loading. renderFullscreenMarkdown will overwrite this with the
+  // same node once it's done.
+  _fullscreenNodeObj = nodeObj;
 
   titleEl.textContent = title;
   bodyEl.innerHTML = `<p class="bd-markdown-loading">Loading…</p>`;
@@ -5389,6 +5463,81 @@ function sanitizeMarkdownFilename(value) {
   return `${name}.md`;
 }
 
+// YAML-frontmatter round-trip for markdown notes. We stamp metadata on
+// download so a re-import can match the file back to the originating node.
+// The body stored in `_rawMarkdown` never contains frontmatter; the parser
+// strips it on import, the serializer re-adds it on download.
+//
+// Kept deliberately minimal: id (stable identity) + updatedAt (freshness) +
+// title (display). Container/board relationships are intentionally NOT in the
+// file — that belongs to a future app-level registry/database, not embedded
+// metadata on a portable file.
+const MARKDOWN_FRONTMATTER_KEYS = ["id", "updatedAt", "title"];
+
+function parseMarkdownFrontmatter(text) {
+  const source = String(text || "");
+  if (!source.startsWith("---")) return { meta: null, body: source };
+  // Accept either \n or \r\n line endings between the opening fence and the rest.
+  const fenceMatch = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!fenceMatch) return { meta: null, body: source };
+  const block = fenceMatch[1];
+  const meta = {};
+  for (const rawLine of block.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const colonIdx = line.indexOf(":");
+    if (colonIdx <= 0) continue;
+    const key = line.slice(0, colonIdx).trim();
+    if (!key) continue;
+    let value = line.slice(colonIdx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    meta[key] = value;
+  }
+  const body = source.slice(fenceMatch[0].length);
+  return { meta, body };
+}
+
+function buildMarkdownFrontmatterBlock(nodeObj) {
+  if (!nodeObj?.markdownId) return "";
+  const fields = {
+    id: nodeObj.markdownId,
+    updatedAt: nodeObj.markdownUpdatedAt || new Date().toISOString(),
+    title: String(nodeObj.title || "").trim()
+  };
+  const lines = [];
+  for (const key of MARKDOWN_FRONTMATTER_KEYS) {
+    const value = fields[key];
+    if (value == null || value === "") continue;
+    // Quote any value containing a colon, leading/trailing whitespace, or YAML
+    // special chars to keep the parser simple.
+    const needsQuotes = /[:#\n]|^\s|\s$/.test(value);
+    const safe = needsQuotes ? `"${value.replace(/"/g, '\\"')}"` : value;
+    lines.push(`${key}: ${safe}`);
+  }
+  if (lines.length === 0) return "";
+  return `---\n${lines.join("\n")}\n---\n`;
+}
+
+function serializeMarkdownWithFrontmatter(nodeObj, body) {
+  const block = buildMarkdownFrontmatterBlock(nodeObj);
+  const cleanBody = String(body || "");
+  if (!block) return cleanBody;
+  // Ensure exactly one blank line between the closing --- and the body when
+  // the body has content, so it reads naturally in any markdown viewer.
+  if (cleanBody.length === 0) return block;
+  return `${block}\n${cleanBody}`;
+}
+
+function newMarkdownIdentity() {
+  return {
+    markdownId: `cosmo-note-${uuid()}`,
+    markdownUpdatedAt: new Date().toISOString()
+  };
+}
+
 let _markdownPanelEl = null;
 let _markdownPanelTitle = null;
 let _markdownPanelFilename = null;
@@ -5467,7 +5616,12 @@ async function createNewMarkdownNote(spawnAt = null) {
     spawnX = center.x;
     spawnY = center.y - 80;
   }
-  const props = { title, ...dimensions, _rawMarkdown: "" };
+  const props = {
+    title,
+    ...dimensions,
+    _rawMarkdown: "",
+    ...newMarkdownIdentity()
+  };
   if (result?.url) {
     props.file = result.url;
     props.href = result.url;
@@ -5507,7 +5661,8 @@ async function saveMarkdownFromPanel() {
     const nodeProps = {
       title: title || filename.replace(/\.md$/i, ""),
       ...dimensions,
-      _rawMarkdown: content
+      _rawMarkdown: content,
+      ...newMarkdownIdentity()
     };
     if (result?.url) {
       nodeProps.file = result.url;
@@ -5745,15 +5900,60 @@ async function trySaveMarkdownSidecar({ filename, path = "", content }) {
 async function importDroppedFile(file, x, y) {
   const kind = classifyDroppedFile(file);
   if (kind === "markdown") {
-    const text = await file.text();
+    const rawText = await file.text();
+    const parsed = parseMarkdownFrontmatter(rawText);
+    const body = parsed.body;
+    const incomingId = parsed.meta?.id || "";
+    const incomingUpdatedAt = parsed.meta?.updatedAt || "";
     const filename = sanitizeMarkdownFilename(file.name);
-    const title = filename.replace(/\.md$/i, "");
-    const result = await trySaveMarkdownSidecar({ filename, path: "", content: text });
+    const filenameTitle = filename.replace(/\.md$/i, "");
+    const incomingTitle = String(parsed.meta?.title || "").trim() || filenameTitle;
+
+    if (incomingId) {
+      const match = nodes.find((n) => n?.type === "markdown" && n.markdownId === incomingId);
+      if (match) {
+        const choice = await markdownConflictPrompt({
+          existing: match,
+          incoming: { title: incomingTitle, updatedAt: incomingUpdatedAt }
+        });
+        if (choice === "cancel") return false;
+        if (choice === "replace") {
+          match._rawMarkdown = body;
+          match.markdownUpdatedAt = incomingUpdatedAt || new Date().toISOString();
+          if (incomingTitle) match.title = incomingTitle;
+          // renderMarkdownNode is build-once (early-returns if .bd-markdown-shell
+          // already exists). Drop the shell so the next render rebuilds with the
+          // new content and title.
+          const matchEl = getBoardElementById(match.id);
+          matchEl?.querySelector(".bd-markdown-shell")?.remove();
+          renderNode(match);
+          markBoardDirty();
+          showToolbarToast(`Replaced "${match.title || filenameTitle}"`, "success");
+          return true;
+        }
+        // choice === "keepBoth" — fall through to spawn a new node with a fresh id.
+      }
+    }
+
+    const result = await trySaveMarkdownSidecar({ filename, path: "", content: body });
+    let identity;
+    if (incomingId && !nodes.some((n) => n?.type === "markdown" && n.markdownId === incomingId)) {
+      // Preserve the imported note's stable identity so a later round-trip
+      // back to a board where it lives still matches.
+      identity = {
+        markdownId: incomingId,
+        markdownUpdatedAt: incomingUpdatedAt || new Date().toISOString()
+      };
+    } else {
+      // Either no incoming id, or the user chose Keep both → fresh identity.
+      identity = newMarkdownIdentity();
+    }
     const props = {
-      title,
+      title: incomingTitle,
       width: 380,
       height: 420,
-      _rawMarkdown: text
+      _rawMarkdown: body,
+      ...identity
     };
     if (result?.url) {
       props.file = result.url;
@@ -5764,21 +5964,77 @@ async function importDroppedFile(file, x, y) {
   }
 
   if (kind === "image") {
+    const incomingBasename = String(file.name || "").trim();
+    const match = incomingBasename
+      ? nodes.find((n) =>
+          n?.type === "file" &&
+          (n.originalFilename === incomingBasename ||
+           basenameOfUrl(n.file) === incomingBasename)
+        )
+      : null;
+    if (match) {
+      const choice = await assetConflictPrompt({ kind: "image", filename: incomingBasename });
+      if (choice === "cancel") return false;
+      if (choice === "replace") {
+        const result = await tryUploadAsset(file);
+        const fileSrc = result?.url || offloadDataUrlToIdb(await readFileAsDataURL(file));
+        match.file = fileSrc;
+        match.originalFilename = incomingBasename;
+        match.hasAdjustedRatio = false;
+        renderNode(match);
+        markBoardDirty();
+        showToolbarToast(`Replaced "${incomingBasename}"`, "success");
+        return true;
+      }
+      // keepBoth — fall through.
+    }
     const result = await tryUploadAsset(file);
-    const fileSrc = result?.url || await readFileAsDataURL(file);
-    createNode("image", x, y, { file: fileSrc });
+    const fileSrc = result?.url || offloadDataUrlToIdb(await readFileAsDataURL(file));
+    createNode("image", x, y, { file: fileSrc, originalFilename: incomingBasename });
     return true;
   }
 
   if (kind === "pdf") {
+    const incomingBasename = String(file.name || "").trim();
+    const incomingTitle = incomingBasename.replace(/\.pdf$/i, "");
+    const match = incomingBasename
+      ? nodes.find((n) =>
+          n?.type === "link" && n.embedMode === "live" &&
+          (n.originalFilename === incomingBasename ||
+           basenameOfUrl(n.url) === incomingBasename ||
+           (typeof n.title === "string" && n.title === incomingTitle))
+        )
+      : null;
+    if (match) {
+      const choice = await assetConflictPrompt({ kind: "pdf", filename: incomingBasename });
+      if (choice === "cancel") return false;
+      if (choice === "replace") {
+        const result = await tryUploadAsset(file);
+        const url = result?.url || offloadDataUrlToIdb(await readFileAsDataURL(file));
+        if (match.__blobObjectUrl) {
+          URL.revokeObjectURL(match.__blobObjectUrl);
+          match.__blobObjectUrl = null;
+          match.__blobObjectUrlSource = null;
+        }
+        match.url = url;
+        match.title = incomingTitle || match.title;
+        match.originalFilename = incomingBasename;
+        renderNode(match);
+        markBoardDirty();
+        showToolbarToast(`Replaced "${incomingBasename}"`, "success");
+        return true;
+      }
+      // keepBoth — fall through.
+    }
     const result = await tryUploadAsset(file);
-    const url = result?.url || await readFileAsDataURL(file);
+    const url = result?.url || offloadDataUrlToIdb(await readFileAsDataURL(file));
     createNode("bookmark", x, y, {
       url,
-      title: file.name.replace(/\.pdf$/i, ""),
+      title: incomingTitle,
       embedMode: "live",
       width: 600,
-      height: 760
+      height: 760,
+      originalFilename: incomingBasename
     });
     return true;
   }
@@ -6139,6 +6395,110 @@ function reconcilePrompt({ local, incoming }) {
       overlay.remove();
       resolve(choice);
     };
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target.closest("[data-action]");
+      if (!target && ev.target === overlay) return finish("cancel");
+      if (!target) return;
+      finish(target.dataset.action);
+    });
+    overlay.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") finish("cancel");
+    });
+    overlay.tabIndex = -1;
+    overlay.focus();
+  });
+}
+
+function basenameOfUrl(input) {
+  if (typeof input !== "string" || !input) return "";
+  // Normalize idb:/blob:/data:/relative/absolute URLs down to the trailing
+  // filename component when one is present. Returns "" when the URL is
+  // opaque (no path, e.g. data: or idb:).
+  if (/^(?:idb:|data:|blob:)/i.test(input)) return "";
+  try {
+    const u = new URL(input, location.origin);
+    const seg = u.pathname.split("/").filter(Boolean).pop() || "";
+    return seg;
+  } catch {
+    const seg = input.split(/[?#]/)[0].split("/").filter(Boolean).pop() || "";
+    return seg;
+  }
+}
+
+function markdownConflictPrompt({ existing, incoming }) {
+  return new Promise((resolve) => {
+    const existingTitle = String(existing?.title || "").trim() || "Untitled note";
+    const incomingTitle = String(incoming?.title || "").trim() || existingTitle;
+    const existingTs = existing?.markdownUpdatedAt || "";
+    const incomingTs = incoming?.updatedAt || "";
+    let guidance = "";
+    if (existingTs && incomingTs) {
+      const incomingNewer = new Date(incomingTs).getTime() >= new Date(existingTs).getTime();
+      guidance = incomingNewer
+        ? `<p class="braindump-modal-description">The incoming file is newer.</p>`
+        : `<p class="braindump-modal-description">The existing note is newer.</p>`;
+    }
+    const html = `
+      <h2 class="braindump-modal-title">Note already on this board</h2>
+      <p class="braindump-modal-description">A note with the same id is already here. Choose how to import.</p>
+      ${guidance}
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:0.5rem 0 1rem;">
+        <thead>
+          <tr>
+            <th></th>
+            <th style="text-align:left;padding:4px 12px;">Existing</th>
+            <th style="text-align:left;padding:4px 12px;">Incoming</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th style="text-align:left;padding:4px 12px 4px 0;font-weight:500;color:#666;">Title</th>
+            <td style="padding:4px 12px;">${escapeHtml(existingTitle)}</td>
+            <td style="padding:4px 12px;">${escapeHtml(incomingTitle)}</td>
+          </tr>
+          <tr>
+            <th style="text-align:left;padding:4px 12px 4px 0;font-weight:500;color:#666;">Last updated</th>
+            <td style="padding:4px 12px;">${formatTimestampDisplay(existingTs)}</td>
+            <td style="padding:4px 12px;">${formatTimestampDisplay(incomingTs)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="braindump-modal-actions">
+        <button type="button" data-action="cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+        <button type="button" data-action="keepBoth" class="braindump-modal-button braindump-modal-button-secondary">Keep both</button>
+        <button type="button" data-action="replace" class="braindump-modal-button braindump-modal-button-primary">Replace existing</button>
+      </div>
+    `;
+    const overlay = buildPromptOverlay(html);
+    const finish = (choice) => { overlay.remove(); resolve(choice); };
+    overlay.addEventListener("click", (ev) => {
+      const target = ev.target.closest("[data-action]");
+      if (!target && ev.target === overlay) return finish("cancel");
+      if (!target) return;
+      finish(target.dataset.action);
+    });
+    overlay.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") finish("cancel");
+    });
+    overlay.tabIndex = -1;
+    overlay.focus();
+  });
+}
+
+function assetConflictPrompt({ kind, filename }) {
+  return new Promise((resolve) => {
+    const label = kind === "pdf" ? "PDF" : "image";
+    const html = `
+      <h2 class="braindump-modal-title">${label.charAt(0).toUpperCase() + label.slice(1)} already on this board</h2>
+      <p class="braindump-modal-description">A file named <code>${escapeHtml(filename)}</code> is already here. Choose how to import.</p>
+      <div class="braindump-modal-actions">
+        <button type="button" data-action="cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+        <button type="button" data-action="keepBoth" class="braindump-modal-button braindump-modal-button-secondary">Keep both</button>
+        <button type="button" data-action="replace" class="braindump-modal-button braindump-modal-button-primary">Replace existing</button>
+      </div>
+    `;
+    const overlay = buildPromptOverlay(html);
+    const finish = (choice) => { overlay.remove(); resolve(choice); };
     overlay.addEventListener("click", (ev) => {
       const target = ev.target.closest("[data-action]");
       if (!target && ev.target === overlay) return finish("cancel");

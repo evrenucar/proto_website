@@ -1,7 +1,7 @@
 {
   "canvasId": "bfca6ad2-3592-424a-a463-533da7c29720",
   "createdAt": "2026-04-28T15:42:09.615Z",
-  "updatedAt": "2026-04-29T11:57:23.921Z",
+  "updatedAt": "2026-04-30T01:32:34.772Z",
   "nodes": [
     {
       "id": "cosmo-title",
@@ -80,11 +80,11 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 260,
+      "height": 328,
       "type": "board-preview",
       "boardSlug": "braindump",
-      "boardSource": "boards/cosmo-braindump_current.canvas",
-      "boardHref": "braindump.html",
+      "boardSource": "/boards/cosmo-braindump_current.canvas",
+      "boardHref": "/braindump.html",
       "title": "Braindump",
       "description": "A linked board preview. Open the broader freeform board when you want the wider working surface."
     },
@@ -95,7 +95,7 @@
       "width": 320,
       "height": 180,
       "type": "link",
-      "url": "content/boards/cosmoboard/current.canvas",
+      "url": "/content/boards/cosmoboard/current.canvas",
       "title": "Open Board File",
       "description": "The canvas file is the board. Edit it locally first, then rebuild and ship.",
       "embedMode": "preview"
@@ -119,9 +119,9 @@
       "width": 380,
       "height": 680,
       "type": "markdown",
-      "file": "markdown/cosmo-direction-md_direction.md",
+      "file": "/markdown/cosmo-direction-md_direction.md",
       "title": "Cosmoboard direction",
-      "href": "content/boards/cosmoboard/direction.md",
+      "href": "/content/boards/cosmoboard/direction.md",
       "_rawMarkdown": ""
     },
     {
@@ -131,7 +131,7 @@
       "width": 700,
       "height": 380,
       "type": "base",
-      "source": "content/base-data/items.json",
+      "source": "/content/base-data/items.json",
       "collection": "",
       "filter": "section=projects",
       "columns": [
@@ -177,7 +177,7 @@
       "width": 380,
       "height": 220,
       "type": "app",
-      "source": "content/apps/excalidraw-proto.json",
+      "source": "/content/apps/excalidraw-proto.json",
       "embedMode": "preview",
       "appConfig": {
         "slug": "excalidraw-proto",
@@ -213,9 +213,9 @@
       "height": 420,
       "file": "/content/boards/cosmoboard/note-2026-04-28-16-03-01.md",
       "href": "/content/boards/cosmoboard/note-2026-04-28-16-03-01.md",
-      "title": "note-2026-04-28_16-03-01",
+      "title": "name",
       "type": "markdown",
-      "_rawMarkdown": "\n"
+      "_rawMarkdown": "\n- testing\n- testing\n- "
     },
     {
       "id": "2w1038jprlt",
@@ -235,7 +235,7 @@
       "y": 1974.459135161894,
       "width": 780.5871776961721,
       "height": 947.2123234865269,
-      "url": "http://127.0.0.1:4173/content/boards/cosmoboard/participant-information.pdf",
+      "url": "/content/boards/cosmoboard/participant-information.pdf",
       "title": "Participant information",
       "embedMode": "live",
       "type": "link"
@@ -256,16 +256,30 @@
       "y": 1968.4233203548733,
       "width": 1176.0516462723128,
       "height": 767.7844817063831,
-      "url": "http://127.0.0.1:4173/content/boards/cosmoboard/funda-hoca-sunum-26-4-28.pdf",
+      "url": "/content/boards/cosmoboard/funda-hoca-sunum-26-4-28.pdf",
       "title": "Funda Hoca Sunum 26_4_28",
       "embedMode": "live",
       "type": "link"
+    },
+    {
+      "id": "0t81eff6u5n",
+      "x": 1529.8642560737335,
+      "y": 1965.7629904621867,
+      "width": 409.58399451963163,
+      "height": 500.12331849066913,
+      "title": "meow note",
+      "_rawMarkdown": "\n- I made notes\n- gotta work\n  - but first tea!\n  - with friends\n- added on typedown\n- saved\n\n\n\n\n\nupdated on my pc now\n\n\n",
+      "markdownId": "bd-note-xcw4cuat5l",
+      "markdownUpdatedAt": "2026-04-30T01:32:20.141Z",
+      "file": "/content/boards/cosmoboard/note-2026-04-30-02-41-01.md",
+      "href": "/content/boards/cosmoboard/note-2026-04-30-02-41-01.md",
+      "type": "markdown"
     }
   ],
   "edges": [],
   "viewport": {
-    "x": 1169.8799309503156,
-    "y": 56.22879981168319,
-    "z": 0.27667013424762027
+    "x": -628.5286792611219,
+    "y": -1305.5976361380078,
+    "z": 0.8112494742410046
   }
 }
