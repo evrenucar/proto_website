@@ -358,6 +358,42 @@ export const cosmoboardPage = {
   }
 };
 
+export const onboardingPage = {
+  file: "onboarding.html",
+  title: "Onboarding | Evren Ucar",
+  description:
+    "Guided onboarding board introducing the Cosmoboard node types, editing model, and feedback flow.",
+  board: {
+    slug: "onboarding",
+    title: "Onboarding",
+    sourcePath: "content/boards/onboarding/current.canvas",
+    legacySourcePath: "",
+    storageKey: "board:onboarding",
+    legacyStorageKey: "",
+    saveEndpoint: "/api/save-board",
+    autosaveSeconds: 20,
+    allowRecommendations: true,
+    recommendation: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["recommendation", "onboarding"]
+    },
+    featureRequest: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["enhancement", "onboarding"]
+    },
+    bugReport: {
+      type: "issue",
+      owner: "evrenucar",
+      repo: "proto_website",
+      labels: ["bug", "onboarding"]
+    }
+  }
+};
+
 export const eurocrateBoardPage = {
   file: "content/boards/eurocrate-storage.html",
   title: "Eurocrate storage board | Evren Ucar",
@@ -375,4 +411,4 @@ export const eurocrateBoardPage = {
   }
 };
 
-export const boardPages = [braindumpPage, cosmoboardPage, eurocrateBoardPage];
+export const boardPages = [braindumpPage, cosmoboardPage, onboardingPage, eurocrateBoardPage];

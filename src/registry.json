@@ -20,8 +20,8 @@
       "file": "cosmoboard.html",
       "sourcePath": "content/boards/cosmoboard/current.canvas",
       "storageKey": "board:cosmoboard",
-      "description": "Onboarding board for the Cosmoboard direction — oriented, not just captured.",
-      "tags": ["primary", "onboarding"]
+      "description": "Working board for the Cosmoboard direction. Oriented, not just captured.",
+      "tags": ["primary"]
     },
     {
       "slug": "onboarding",

@@ -14,11 +14,11 @@ assert.ok(Array.isArray(boardPages));
 assert.equal(boardPages.length >= 2, true);
 assert.deepEqual(
   boardPages.map((page) => page.file),
-  ["braindump.html", "cosmoboard.html", "content/boards/eurocrate-storage.html"]
+  ["braindump.html", "cosmoboard.html", "onboarding.html", "content/boards/eurocrate-storage.html"]
 );
 assert.deepEqual(
   boardPages.map((page) => page.board.slug),
-  ["braindump", "cosmoboard", "eurocrate-storage"]
+  ["braindump", "cosmoboard", "onboarding", "eurocrate-storage"]
 );
 assert.equal(boardPages.every((page) => !("pagePath" in page.board)), true);
 
@@ -54,15 +54,30 @@ const boardPreviewNodes = cosmoboardCanvas.nodes.filter((node) => node.type === 
 assert.match(textContent, /A first onboarding board inside the current site/i);
 assert.match(textContent, /Boards stay spatial, markdown stays durable/i);
 assert.match(textContent, /Preview-first embeds, multiple boards per page/i);
+// Canvas paths are written both root-absolute ("/content/...") and page-relative
+// ("content/..."); both resolve on the site, so compare without the leading slash.
+const unrooted = (value) => String(value || "").replace(/^\//, "");
+
 assert.equal(boardPreviewNodes.length >= 1, true);
 assert.equal(boardPreviewNodes.some((node) => node.boardSlug === "braindump"), true);
-assert.equal(boardPreviewNodes.some((node) => node.boardSource === "content/boards/braindump/current.canvas"), true);
-assert.equal(boardPreviewNodes.some((node) => node.boardHref === "braindump.html"), true);
-assert.equal(linkTargets.includes("content/boards/cosmoboard/current.canvas"), true);
+assert.equal(
+  boardPreviewNodes.some((node) => unrooted(node.boardSource) === "content/boards/braindump/current.canvas"),
+  true
+);
+assert.equal(boardPreviewNodes.some((node) => unrooted(node.boardHref) === "braindump.html"), true);
+assert.equal(linkTargets.map(unrooted).includes("content/boards/cosmoboard/current.canvas"), true);
 assert.equal(linkTargets.includes("https://github.com/evrenucar/proto_website"), true);
 assert.equal(homeHtml.match(/data-board-mode="preview"/g)?.length, 2);
-assert.equal(homeHtml.match(/CSS\/braindump\.css\?v=29/g)?.length, 1);
-assert.equal(homeHtml.match(/JavaScript\/braindump\.js\?v=56/g)?.length, 1);
+// The generator owns the cache-bust version. Pin the invariant (every generated
+// page agrees) rather than a literal number, which went stale twice already and
+// let a hand-edited bump in the HTML diverge from what the build emits.
+const runtimeVersion = /JavaScript\/braindump\.js\?v=(\d+)/.exec(homeHtml)?.[1];
+const styleVersion = /CSS\/braindump\.css\?v=(\d+)/.exec(homeHtml)?.[1];
+assert.ok(runtimeVersion, "home page loads a versioned braindump.js");
+assert.ok(styleVersion, "home page loads a versioned braindump.css");
+assert.equal(homeHtml.match(new RegExp(`JavaScript/braindump\\.js\\?v=${runtimeVersion}`, "g")).length, 1);
+assert.match(html, new RegExp(`JavaScript/braindump\\.js\\?v=${runtimeVersion}"`));
+assert.match(html, new RegExp(`CSS/braindump\\.css\\?v=${styleVersion}"`));
 assert.equal(homeHtml.match(/data-board-source-version="[a-f0-9]{12}"/g)?.length >= 2, true);
 assert.match(homeHtml, /data-board-slug="braindump"/);
 assert.match(homeHtml, /data-board-full-href="braindump\.html"/);

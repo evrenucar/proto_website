@@ -244,7 +244,7 @@
       "height": 260,
       "type": "board-preview",
       "boardSlug": "braindump",
-      "boardSource": "/boards/cosmo-braindump_current.canvas",
+      "boardSource": "/content/boards/braindump/current.canvas",
       "boardHref": "/braindump.html",
       "title": "Braindump",
       "description": "A linked board preview. Open the broader freeform board when you want the wider working surface."
@@ -325,7 +325,7 @@
       "file": "/content/boards/cosmoboard/direction.md",
       "href": "/content/boards/cosmoboard/direction.md",
       "title": "Cosmoboard direction",
-      "_rawMarkdown": ""
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
     },
     {
       "id": "jx3jppha179",

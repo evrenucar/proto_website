@@ -14,6 +14,7 @@ await build();
 const fullBoardFiles = [
   "braindump.html",
   "cosmoboard.html",
+  "onboarding.html",
   path.join("content", "boards", "eurocrate-storage.html")
 ];
 
@@ -24,9 +25,11 @@ for (const relativeFile of fullBoardFiles) {
   assert.match(html, /Export Board/, `${relativeFile} labels the modal as a board export flow`);
   assert.match(html, /id="braindump-export-canvas"/, `${relativeFile} offers a single canvas export action`);
   assert.match(html, /JavaScript\/vendor\/fflate\.min\.js/, `${relativeFile} loads the local fflate bundler`);
+  // Leading extensions are asserted in order; the list has since grown a
+  // .canvas.diff/.diff tail, so match the prefix rather than the exact string.
   assert.match(
     html,
-    /accept="\.canvas,\.canvas\.json,\.json,\.zip"/,
+    /accept="\.canvas,\.canvas\.json,\.json,\.zip[^"]*"/,
     `${relativeFile} allows zip imports through the file input fallback`
   );
 }

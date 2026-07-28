@@ -1549,7 +1549,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
     </div>
     ${renderBoardIntroPanel(currentFile, introPanel)}
     <script src="${relativeHref(currentFile, "JavaScript/vendor/fflate.min.js")}" defer></script>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=58" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=59" defer></script>
   `;
 }
 
@@ -1613,7 +1613,7 @@ function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
 function renderEmbeddedBoardPreviewAssets(currentFile) {
   return `
     <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=30">
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=58" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=59" defer></script>
   `;
 }
 

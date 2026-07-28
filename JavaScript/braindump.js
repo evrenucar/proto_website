@@ -432,6 +432,27 @@ function buildBoardStateMeta() {
   };
 }
 
+// A stored draft is only usable when it was written for this board (slug and
+// source path) and against the same source version this page was built with.
+// Shared by getSavedState, getCanvasDraftStateForPreview and getSavedPreviewCamera.
+function checkStoredStateMeta(metaKey) {
+  let meta = null;
+  try {
+    const rawMeta = localStorage.getItem(metaKey);
+    meta = rawMeta ? JSON.parse(rawMeta) : null;
+  } catch (error) {
+    meta = null;
+  }
+
+  return {
+    hasMatchingIdentity:
+      !!meta &&
+      (!meta.slug || meta.slug === boardConfig.slug) &&
+      (!meta.sourcePath || meta.sourcePath === boardConfig.sourcePath),
+    hasMatchingVersion: !!meta && meta.sourceVersion === boardConfig.sourceVersion
+  };
+}
+
 function clearSavedStateKeys() {
   localStorage.removeItem(boardConfig.storageKey);
   if (boardConfig.legacyStorageKey && boardConfig.legacyStorageKey !== boardConfig.storageKey) {
@@ -501,7 +522,13 @@ function flushLocalStateSave(state = serializeState()) {
 
 function markBoardDirty(options = {}) {
   const { scheduleLocalSave = true } = options;
-  hasPendingRepositorySave = true;
+  // Preview embeds are read-only against the repository. They still persist
+  // locally, so a visitor's pan/zoom survives a reload, but they must never
+  // queue a repository save. Otherwise scrolling a landing-page preview
+  // rewrites the board's .canvas file with the visitor's camera.
+  if (!isPreviewMode) {
+    hasPendingRepositorySave = true;
+  }
   if (scheduleLocalSave) {
     scheduleLocalStateSave();
   }
@@ -512,6 +539,7 @@ function startAutosaveLoop() {
     window.clearInterval(autosaveIntervalId);
     autosaveIntervalId = null;
   }
+  if (isPreviewMode) return;
   if (!boardSettings.autosaveEnabled || boardConfig.autosaveSeconds <= 0) return;
 
   autosaveIntervalId = window.setInterval(() => {
@@ -1348,19 +1376,7 @@ function getSavedState() {
     return rawState;
   }
 
-  let meta = null;
-  try {
-    const rawMeta = localStorage.getItem(getBoardStateMetaKey());
-    meta = rawMeta ? JSON.parse(rawMeta) : null;
-  } catch (error) {
-    meta = null;
-  }
-
-  const hasMatchingIdentity =
-    meta &&
-    (!meta.slug || meta.slug === boardConfig.slug) &&
-    (!meta.sourcePath || meta.sourcePath === boardConfig.sourcePath);
-  const hasMatchingVersion = meta && meta.sourceVersion === boardConfig.sourceVersion;
+  const { hasMatchingIdentity, hasMatchingVersion } = checkStoredStateMeta(getBoardStateMetaKey());
 
   if (hasMatchingIdentity && hasMatchingVersion) {
     return rawState;
@@ -1371,15 +1387,16 @@ function getSavedState() {
   return null;
 }
 
-// In preview mode the embedded board never writes to its own storage key, so
-// canvas edits that have only autosaved to localStorage (not yet flushed to
-// the .canvas file) don't show up via fetchBoardState. Read the full canvas's
-// draft directly so the preview reflects unsaved edits.
+// A preview embed writes its own camera to its own storage key, but never the
+// board's content. Edits that have only autosaved to the full board's
+// localStorage (not yet flushed to the .canvas file) don't show up via
+// fetchBoardState. Read the full canvas's draft directly so the preview
+// reflects unsaved edits.
 function getCanvasDraftStateForPreview() {
-  const previewKey = boardConfig.storageKey;
-  if (!previewKey || !previewKey.endsWith(":preview")) return null;
-  const canvasKey = previewKey.slice(0, -":preview".length);
-  if (!canvasKey || canvasKey === previewKey) return null;
+  // Preview keys are the canvas key plus a trailing preview segment, e.g.
+  // "board:onboarding:preview" or "board:onboarding:landing-preview".
+  const canvasKey = /^(.*):[a-z0-9-]*preview$/i.exec(boardConfig.storageKey || "")?.[1] || "";
+  if (!canvasKey) return null;
 
   const rawState = localStorage.getItem(canvasKey);
   if (!rawState) return null;
@@ -1388,20 +1405,10 @@ function getCanvasDraftStateForPreview() {
     return rawState;
   }
 
-  let meta = null;
-  try {
-    const rawMeta = localStorage.getItem(`${canvasKey}${BOARD_STATE_META_SUFFIX}`);
-    meta = rawMeta ? JSON.parse(rawMeta) : null;
-  } catch (error) {
-    meta = null;
-  }
-
-  const slugMatches = !meta || !meta.slug || meta.slug === boardConfig.slug;
-  const versionMatches = meta && meta.sourceVersion === boardConfig.sourceVersion;
-  if (slugMatches && versionMatches) {
-    return rawState;
-  }
-  return null;
+  const { hasMatchingIdentity, hasMatchingVersion } = checkStoredStateMeta(
+    `${canvasKey}${BOARD_STATE_META_SUFFIX}`
+  );
+  return hasMatchingIdentity && hasMatchingVersion ? rawState : null;
 }
 
 async function fetchBoardState(sourcePath) {
@@ -6330,7 +6337,8 @@ function applyDiffToState(diff) {
     updatedAt: new Date().toISOString(),
     nodes: nextNodes,
     edges: nextEdges,
-    viewport: { x: camera.x, y: camera.y, z: camera.z }
+    viewport: { x: camera.x, y: camera.y, z: camera.z },
+    defaultViewport: boardMeta.defaultViewport
   });
 }
 
@@ -7854,18 +7862,7 @@ function getSavedPreviewCamera() {
   if (!rawState) return null;
 
   if (boardConfig.sourceVersion) {
-    let meta = null;
-    try {
-      const rawMeta = localStorage.getItem(getBoardStateMetaKey());
-      meta = rawMeta ? JSON.parse(rawMeta) : null;
-    } catch (error) {
-      meta = null;
-    }
-    const hasMatchingIdentity =
-      meta &&
-      (!meta.slug || meta.slug === boardConfig.slug) &&
-      (!meta.sourcePath || meta.sourcePath === boardConfig.sourcePath);
-    const hasMatchingVersion = meta && meta.sourceVersion === boardConfig.sourceVersion;
+    const { hasMatchingIdentity, hasMatchingVersion } = checkStoredStateMeta(getBoardStateMetaKey());
     if (!hasMatchingIdentity || !hasMatchingVersion) return null;
   }
 
@@ -7882,18 +7879,27 @@ function getSavedPreviewCamera() {
   return null;
 }
 
-// In preview mode, override the camera set by loadState's `data.viewport` with
-// (1) this visitor's saved preview camera, or (2) the canvas's defaultViewport.
-// Falls through silently (leaving the camera as-is) when neither is available.
-function applyPreviewCameraOverride(data) {
-  if (!isPreviewMode) return;
-  const saved = getSavedPreviewCamera();
-  if (saved) {
-    camera.x = saved.x;
-    camera.y = saved.y;
-    camera.z = saved.z;
+// Decide the camera after loadState has applied `data.viewport`.
+//   Preview: this visitor's remembered preview camera wins, otherwise the
+//     canvas's defaultViewport.
+//   Full board: defaultViewport applies only on a first load straight from the
+//     source file, so it never overrides a camera the author has saved locally
+//     or an explicit import/diff.
+// Falls through silently (leaving the camera as-is) when nothing applies.
+function applyCameraOverride(data, options = {}) {
+  const { isFreshSourceLoad = false } = options;
+  if (isPreviewMode) {
+    const saved = getSavedPreviewCamera();
+    if (saved) {
+      camera.x = saved.x;
+      camera.y = saved.y;
+      camera.z = saved.z;
+      return;
+    }
+  } else if (!isFreshSourceLoad) {
     return;
   }
+
   const dv = data?.defaultViewport;
   if (isFiniteViewport(dv)) {
     camera.x = Number(dv.x);
@@ -7903,7 +7909,7 @@ function applyPreviewCameraOverride(data) {
 }
 
 // Load & Save
-function loadState(data) {
+function loadState(data, options = {}) {
   isLoadingState = true;
   canvas.querySelectorAll(".bd-item").forEach(n => n.remove());
   svgLayer.innerHTML = "";
@@ -7928,7 +7934,7 @@ function loadState(data) {
     if (typeof data.viewport.z === 'number') camera.z = data.viewport.z;
   }
 
-  applyPreviewCameraOverride(data);
+  applyCameraOverride(data, options);
 
   if (data.nodes) {
     data.nodes.forEach(n => {
@@ -7963,7 +7969,7 @@ async function loadBoard() {
       const data = await fetchBoardState(sourcePath);
       if (!data) continue;
 
-      loadState(data);
+      loadState(data, { isFreshSourceLoad: true });
       const state = serializeState();
       if (!isPreviewMode) {
         flushLocalStateSave(state);
@@ -7983,6 +7989,8 @@ async function loadBoard() {
 
 async function saveBoard(options = {}) {
   const { showFeedback = true, source = "manual" } = options;
+  // Last line of defence: a preview embed never owns the repository copy.
+  if (isPreviewMode) return { ok: false, skipped: true };
   if (source === "autosave" && (!hasPendingRepositorySave || !autosaveRepositorySupported || isPersistingRepositoryState)) {
     return { ok: false, skipped: true };
   }
