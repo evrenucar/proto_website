@@ -25,16 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const buildDate = new Date().toISOString().slice(0, 10);
-const boardsDir = path.join(rootDir, "content", "boards");
 const registryFile = path.join(rootDir, "src", "registry.json");
-const preservedBoardsDir = path.join(rootDir, ".build-preserve", "boards");
-const legacyBoardFiles = boardPages
-  .map((page) => page.board?.legacySourcePath)
-  .filter(Boolean)
-  .map((legacySourcePath) => ({
-    sourcePath: path.join(rootDir, legacySourcePath),
-    preservedPath: path.join(rootDir, ".build-preserve", path.basename(legacySourcePath))
-  }));
 const notionProjectOverridesPath = path.join(rootDir, "src", "notion-projects.json");
 const notionItemsPath = path.join(rootDir, "src", "notion-items.json");
 const photographyItemsPath = path.join(rootDir, "photography_assets", "photos.json");
@@ -1903,85 +1894,26 @@ async function loadPhotographyItems() {
     .filter(Boolean);
 }
 
-async function preserveBoardContent() {
-  await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
-  await mkdir(path.dirname(preservedBoardsDir), { recursive: true });
+// Directories under content/ that the build owns outright and clears before a
+// run. content/boards is NOT one of them: it holds source canvases and their
+// sidecar assets. Generated board pages living inside it are overwritten in
+// place, which is enough, and never wiping it means a build can no longer
+// destroy board content.
+const GENERATED_CONTENT_DIRS = [
+  "apps",
+  "base-data",
+  "cool-bookmarks",
+  "entities",
+  "open-quests",
+  "projects"
+];
 
-  try {
-    await access(boardsDir);
-    await cp(boardsDir, preservedBoardsDir, { recursive: true, force: true });
-  } catch (error) {
-    if (error && error.code !== "ENOENT") {
-      throw error;
-    }
-  }
-
+async function clearGeneratedContent() {
   await Promise.all(
-    legacyBoardFiles.map(async ({ sourcePath, preservedPath }) => {
-      try {
-        await access(sourcePath);
-        await cp(sourcePath, preservedPath, { force: true });
-      } catch (error) {
-        if (error && error.code !== "ENOENT") {
-          throw error;
-        }
-      }
-    })
+    GENERATED_CONTENT_DIRS.map((dir) =>
+      rm(path.join(rootDir, "content", dir), { recursive: true, force: true })
+    )
   );
-}
-
-async function restoreBoardContent() {
-  let hasPreservedBoards = false;
-  let hasPreservedLegacyBoard = false;
-
-  try {
-    await access(preservedBoardsDir);
-    hasPreservedBoards = true;
-  } catch (error) {
-    if (error && error.code !== "ENOENT") {
-      throw error;
-    }
-  }
-
-  for (const { preservedPath } of legacyBoardFiles) {
-    try {
-      await access(preservedPath);
-      hasPreservedLegacyBoard = true;
-      break;
-    } catch (error) {
-      if (error && error.code !== "ENOENT") {
-        throw error;
-      }
-    }
-  }
-
-  if (!hasPreservedBoards && !hasPreservedLegacyBoard) {
-    await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
-    return;
-  }
-
-  await mkdir(path.join(rootDir, "content"), { recursive: true });
-
-  if (hasPreservedBoards) {
-    await cp(preservedBoardsDir, boardsDir, { recursive: true, force: true });
-  }
-
-  if (hasPreservedLegacyBoard) {
-    await Promise.all(
-      legacyBoardFiles.map(async ({ sourcePath, preservedPath }) => {
-        try {
-          await mkdir(path.dirname(sourcePath), { recursive: true });
-          await cp(preservedPath, sourcePath, { force: true });
-        } catch (error) {
-          if (error && error.code !== "ENOENT") {
-            throw error;
-          }
-        }
-      })
-    );
-  }
-
-  await rm(path.dirname(preservedBoardsDir), { recursive: true, force: true });
 }
 
 async function loadLegacyProjectOverrides() {
@@ -2284,9 +2216,7 @@ export async function build() {
 
   const { projectsData, makingData, openQuestsData, coolBookmarksData, photographyData, detailItems } =
     await loadContentData();
-  await preserveBoardContent();
-  await rm(path.join(rootDir, "content"), { recursive: true, force: true });
-  await restoreBoardContent();
+  await clearGeneratedContent();
 
   const pages = [
     {
