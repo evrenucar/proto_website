@@ -1039,6 +1039,12 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     "## Board repo path",
     boardConfig.repoPath || "",
     "",
+    // The reviewer needs to know which revision of the board this export came
+    // from, otherwise an accepted recommendation can silently overwrite newer
+    // work. This is the value the attached file should be compared against.
+    "## Board source version",
+    boardConfig.sourceVersion || "unknown",
+    "",
     "## Page",
     getPublicPageUrl(),
     "",
@@ -1065,7 +1071,9 @@ function buildRecommendationIssueBody(summary, details, exportFilename) {
     "",
     "## Notes",
     "- If you already opened a recommendation issue for this board, update that issue instead of creating a new one.",
-    "- This recommendation will be reviewed before it appears on the live site."
+    "- This recommendation will be reviewed before it appears on the live site.",
+    "- This issue is a review request, not a direct publish or overwrite action.",
+    "- The exported file can be compared against the board source version above before any accepted change is merged."
   ];
 
   return lines.join("\n");
