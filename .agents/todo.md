@@ -18,13 +18,23 @@ Open tasks, known issues, review queue, backlog.
 
 ## Status legend
 
-- `[ ]` pending
-- `[A]` implemented, waiting on user review
-- `[x]` user has verified it
+These four markers are the kanban columns on `/tracker.html`. Changing a marker here moves the
+card there within seconds.
+
+- `[ ]` To do
+- `[~]` In progress, someone is on it right now
+- `[A]` Review, implemented and waiting on user verification
+- `[x]` Done, user has verified it
 
 ## Rules
 
 - Highest priority nearest the top of its section.
+- **Claim a card before you start:** set it to `[~]` and add `@your-name` anywhere in the line.
+  The tracker colours the card border per agent, so it is visible who holds what. Release it by
+  moving it to `[A]` and dropping the tag.
+- **Push a status line when you start, finish, or get stuck.** Prepend an entry to
+  `tracker-feed.json` at the repo root: `{ "at": "<ISO time>", "agent": "<name>", "text": "..." }`.
+  Newest first. That feed is the strip across the top of the tracker.
 - When a task moves, its subtasks and notes move with it.
 - One small validation block near the end of a task, not repeated test steps throughout.
 - Once you verify an `[A]` item, mark it `[x]` and delete it on the next pass.
@@ -34,9 +44,8 @@ Open tasks, known issues, review queue, backlog.
 
 ## Now
 
-- [ ] Decide whether Cosmoboard gets its own repo. Extraction plan and recommendation:
-  [`cosmoboard_extraction_plan.md`](./cosmoboard_extraction_plan.md). Current call is no,
-  do the directory boundary first.
+- [x] Cosmoboard stays in this repo, and the `cosmoboard/` directory boundary is on hold too.
+  Reasoning kept in [`cosmoboard_extraction_plan.md`](./cosmoboard_extraction_plan.md).
 - [ ] Caret offset mapping for lines with inline markdown. Code landed but the browser session
   closed before verification, so it needs a real check. Helpers `computeVisibleOffsetInLine`,
   `buildVisibleToRawMap`, `visibleToRawOffset` map a visible offset to a raw offset through
@@ -45,10 +54,13 @@ Open tasks, known issues, review queue, backlog.
 
 ## Bugs
 
-- [ ] Select-all and delete inside an empty markdown window kills the active edit bar. Everything
-  falls back to preview, and a save then refresh loses the changes although normal editing returns.
-  This is the bug that emptied `content/boards/cosmoboard/direction.md`, so it has already cost
-  real content once.
+- [x] Wheel zoom ceiling raised from 3x to 5x so it matches touch pinch. At the ceiling the
+  view stopped responding entirely, which read as broken zoom.
+
+- [~] @claude Select-all and delete inside an empty markdown window kills the active edit bar.
+  Everything falls back to preview, and a save then refresh loses the changes although normal
+  editing returns. This is the bug that emptied `content/boards/cosmoboard/direction.md`, so it has
+  already cost real content once.
 - [ ] Text overflows in the feature request, bug report, and recommendation panels.
 - [ ] Save fails with HTTP 405 on GitHub Pages. Static hosting has no backend, so
   `POST /api/save-board` 405s. `saveBoard` degrades gracefully to localStorage, but once 405 fires
@@ -75,9 +87,9 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
   `tests/features/markdown-authoring-e2e.pending.mjs`, rewritten for the quick path and passing up
   to the point where it has to type into the note. Its header lists everything already ruled out,
   read that before retrying. It no longer litters note files.
-- [ ] `tests/board/board-save-export-runtime.test.mjs` fails: asserts on `exportModalCanvasBtn`,
+- [ ] Fix `tests/board/board-save-export-runtime.test.mjs`. It fails: asserts on `exportModalCanvasBtn`,
   an identifier that no longer exists in `braindump.js`.
-- [ ] `tests/board/board-url-paste-preview-e2e.test.mjs` fails: 30s `waitForSelector` timeout.
+- [ ] Fix `tests/board/board-url-paste-preview-e2e.test.mjs`. It fails: 30s `waitForSelector` timeout.
 - [ ] Suites still flake when a whole directory runs in parallel, because concurrent builds write
   the same generated files while other tests read them. Cosmetic only: the destructive part is
   fixed, nothing gets deleted. Run one file at a time for a reliable result.
@@ -96,13 +108,9 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
 
 ## Dead code
 
-- [ ] The markdown naming dialog is unreachable. `ensureMarkdownPanel` (about 87 lines, plus
-  `saveMarkdownFromPanel` and `closeMarkdownPanel`) builds a title/filename dialog, but nothing
-  calls it, so its DOM never exists. `openMarkdownPanel` ignores it and calls
-  `createNewMarkdownNote` directly, which is the one-click timestamped note that works today and
-  should stay. The comment inside `openMarkdownPanel` claims it "falls back to the panel", which is
-  not true. Decide whether to delete the dialog or wire it back up as an option; the working
-  behaviour is unaffected either way.
+- [x] The markdown naming dialog is deleted, 98 lines of JS and 61 of CSS. Nothing called
+  `ensureMarkdownPanel`, so its DOM never existed and the save and close handlers behind it were
+  unreachable. The one-click timestamped note is untouched.
 
 ## Features and ideas
 

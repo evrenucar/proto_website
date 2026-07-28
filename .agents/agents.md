@@ -12,7 +12,7 @@
 | Architecture or capability matrix | `project.md`, `holistic_planning/holistic_architecture.md` |
 | Technology research or references | `holistic_planning/holistic_research.md` |
 | Deep research artifact or candidate comparison | `.agents/research/` |
-| Any open task, bug, backlog item, or review queue | `todo.md` |
+| Any open task, bug, backlog item, or review queue | `todo.md`, or the board at `/tracker.html` |
 | Active implementation follow-up | `current_scratch_pad.md`, `todo.md` |
 | Page database or structured content | `.agents/page_database/` |
 | Splitting Cosmoboard into its own repo | `cosmoboard_extraction_plan.md` |
@@ -37,6 +37,18 @@
 - Default to one minimal verification pass near the end of implementation.
 - For Braindump browser verification, use `.agents/skills/whiteboard-automated-testing-skill/skill.md`.
 - Only expand into broader Playwright coverage when the user asks or the change is high-risk.
+
+## Board Rule
+
+- The kanban at `http://127.0.0.1:4173/tracker.html` is a live view of `todo.md`. It polls, so any
+  edit shows up within seconds. No build step, nothing to publish.
+- Before starting a task, claim its card: change `[ ]` to `[~]` and add `@your-name` to the line.
+  The board colours the card border per agent, so it is visible who holds what.
+- Push a status line when you start, finish, or get stuck. Prepend to `tracker-feed.json`:
+  `{ "at": "<ISO time>", "agent": "<name>", "text": "..." }`, newest first.
+- Move the card to `[A]` when done and drop the `@` tag. Only the user sets `[x]`.
+- Open questions for the user go in `tracker-questions.json` under `questions`. An empty array
+  hides that panel.
 
 ## Local Server Rule
 

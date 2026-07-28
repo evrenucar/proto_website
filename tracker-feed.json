@@ -1,0 +1,22 @@
+[
+  {
+    "at": "2026-07-28T20:52:00Z",
+    "agent": "claude",
+    "text": "Claimed the empty-markdown data loss bug. Reproducing it in the browser first."
+  },
+  {
+    "at": "2026-07-28T20:47:00Z",
+    "agent": "claude",
+    "text": "Deleted the dead markdown naming dialog, 98 lines of JS and 61 of CSS. Note creation verified unaffected."
+  },
+  {
+    "at": "2026-07-28T20:45:00Z",
+    "agent": "claude",
+    "text": "Wheel zoom ceiling raised 3x to 5x, matching touch pinch. Anchoring still 0px drift."
+  },
+  {
+    "at": "2026-07-28T18:55:00Z",
+    "agent": "claude",
+    "text": "Tracker moved local, served at /tracker.html and reading .agents/todo.md live."
+  }
+]
