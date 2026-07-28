@@ -68,11 +68,12 @@ assert.equal(boardPreviewNodes.some((node) => unrooted(node.boardHref) === "brai
 assert.equal(linkTargets.map(unrooted).includes("content/boards/cosmoboard/current.canvas"), true);
 assert.equal(linkTargets.includes("https://github.com/evrenucar/proto_website"), true);
 assert.equal(homeHtml.match(/data-board-mode="preview"/g)?.length, 2);
-// The generator owns the cache-bust version. Pin the invariant (every generated
-// page agrees) rather than a literal number, which went stale twice already and
-// let a hand-edited bump in the HTML diverge from what the build emits.
-const runtimeVersion = /JavaScript\/braindump\.js\?v=(\d+)/.exec(homeHtml)?.[1];
-const styleVersion = /CSS\/braindump\.css\?v=(\d+)/.exec(homeHtml)?.[1];
+// The cache-bust version is a content hash of the asset, so it changes whenever
+// the file does and cannot be forgotten. Assert the invariant (every generated
+// page agrees, and the value really is a hash) rather than a literal, which went
+// stale twice before and let the runtime change six times under a fixed ?v=59.
+const runtimeVersion = /JavaScript\/braindump\.js\?v=([a-f0-9]{12})/.exec(homeHtml)?.[1];
+const styleVersion = /CSS\/braindump\.css\?v=([a-f0-9]{12})/.exec(homeHtml)?.[1];
 assert.ok(runtimeVersion, "home page loads a versioned braindump.js");
 assert.ok(styleVersion, "home page loads a versioned braindump.css");
 assert.equal(homeHtml.match(new RegExp(`JavaScript/braindump\\.js\\?v=${runtimeVersion}`, "g")).length, 1);

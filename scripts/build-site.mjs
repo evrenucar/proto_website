@@ -87,6 +87,27 @@ function getBoardSourceVersion(sourcePath) {
   return boardSourceVersionMap.get(sourcePath) || "";
 }
 
+// Cache-bust query for the board runtime and its stylesheet, derived from the
+// file contents rather than a hand-edited number. A hand-edited number is a
+// standing trap: change braindump.js, forget the bump, and every returning
+// visitor keeps the stale file until they hard-reload. Content hashes cannot
+// drift out of sync with what they version.
+let boardAssetVersions = { js: "0", css: "0" };
+
+async function buildBoardAssetVersions() {
+  const read = async (relativePath) => {
+    try {
+      return hashContent(await readFile(path.join(rootDir, relativePath), "utf8"));
+    } catch (error) {
+      return "0";
+    }
+  };
+  return {
+    js: await read(path.join("JavaScript", "braindump.js")),
+    css: await read(path.join("CSS", "braindump.css"))
+  };
+}
+
 function pageTitle(title) {
   return title.includes(site.name) ? title : `${title} | ${site.name}`;
 }
@@ -1282,7 +1303,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
   }));
 
   return `
-    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=30">
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=${boardAssetVersions.css}">
     <div
       class="braindump-viewport"
       id="braindump-viewport"
@@ -1540,7 +1561,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
     </div>
     ${renderBoardIntroPanel(currentFile, introPanel)}
     <script src="${relativeHref(currentFile, "JavaScript/vendor/fflate.min.js")}" defer></script>
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=59" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=${boardAssetVersions.js}" defer></script>
   `;
 }
 
@@ -1603,8 +1624,8 @@ function renderEmbeddedBoardPreview(currentFile, board, options = {}) {
 
 function renderEmbeddedBoardPreviewAssets(currentFile) {
   return `
-    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=30">
-    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=59" defer></script>
+    <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/braindump.css")}?v=${boardAssetVersions.css}">
+    <script src="${relativeHref(currentFile, "JavaScript/braindump.js")}?v=${boardAssetVersions.js}" defer></script>
   `;
 }
 
@@ -2186,6 +2207,7 @@ async function buildEntityIndex(registry) {
 
 export async function build() {
   boardSourceVersionMap = await buildBoardSourceVersionMap();
+  boardAssetVersions = await buildBoardAssetVersions();
   let registry = { version: 0 };
 
   // Load and validate content registry
