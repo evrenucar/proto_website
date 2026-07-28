@@ -1,11 +1,11 @@
 {
-  "updated": "2026-07-28",
+  "updated": "2026-07-29",
   "branch": "fix-markdown-sidecar-405-error",
   "suites": [
     { "name": "build", "pass": 4, "total": 4 },
     { "name": "preview", "pass": 3, "total": 3 },
     { "name": "features", "pass": 2, "total": 2 },
-    { "name": "board", "pass": 30, "total": 32 }
+    { "name": "board", "pass": 32, "total": 32 }
   ],
   "questions": []
 }
