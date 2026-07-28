@@ -2414,7 +2414,10 @@ function applyWheelZoom(deltaY, clientX, clientY, ctrlKey) {
   // Trackpad pinch-to-zoom sends ctrlKey with small deltaY — use a larger multiplier
   const sensitivity = ctrlKey ? -0.016 : -0.002;
   const zoomAmount = deltaY * sensitivity;
-  const newZ = Math.min(Math.max(camera.z + zoomAmount * camera.z, 0.1), 3);
+  // Ceiling matches the touch pinch path below. They used to disagree (3 here, 5
+  // there), and hitting 3 on a wheel reads as broken: the view stops responding
+  // entirely rather than slowing down.
+  const newZ = Math.min(Math.max(camera.z + zoomAmount * camera.z, 0.1), 5);
 
   const rect = viewport.getBoundingClientRect();
   const mouseX = clientX - rect.left;
@@ -5704,64 +5707,6 @@ function newMarkdownIdentity() {
   };
 }
 
-let _markdownPanelEl = null;
-let _markdownPanelTitle = null;
-let _markdownPanelFilename = null;
-let _markdownPanelBody = null;
-let _markdownPanelSave = null;
-let _markdownPanelCancel = null;
-
-function ensureMarkdownPanel() {
-  if (_markdownPanelEl) return _markdownPanelEl;
-  const panel = document.createElement("div");
-  panel.className = "braindump-markdown-panel";
-  panel.id = "braindump-markdown-panel";
-  panel.hidden = true;
-  panel.innerHTML = `
-    <div class="braindump-markdown-panel-inner">
-      <h3 class="braindump-markdown-panel-title">New markdown note</h3>
-      <label class="braindump-markdown-panel-label" for="braindump-markdown-title">Title</label>
-      <input id="braindump-markdown-title" type="text" placeholder="Note title" maxlength="120">
-      <label class="braindump-markdown-panel-label" for="braindump-markdown-filename">Filename</label>
-      <input id="braindump-markdown-filename" type="text" placeholder="note-name.md" maxlength="80">
-      <label class="braindump-markdown-panel-label" for="braindump-markdown-body">Initial content</label>
-      <textarea id="braindump-markdown-body" rows="6" placeholder="# My note\n\nWrite here..."></textarea>
-      <div class="braindump-markdown-panel-actions">
-        <button type="button" id="braindump-markdown-cancel" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
-        <button type="button" id="braindump-markdown-save" class="braindump-modal-button braindump-modal-button-primary">Save</button>
-      </div>
-    </div>
-  `;
-  toolbarShell?.appendChild(panel);
-  _markdownPanelEl = panel;
-  _markdownPanelTitle = panel.querySelector("#braindump-markdown-title");
-  _markdownPanelFilename = panel.querySelector("#braindump-markdown-filename");
-  _markdownPanelBody = panel.querySelector("#braindump-markdown-body");
-  _markdownPanelSave = panel.querySelector("#braindump-markdown-save");
-  _markdownPanelCancel = panel.querySelector("#braindump-markdown-cancel");
-
-  _markdownPanelTitle?.addEventListener("input", () => {
-    if (!_markdownPanelFilename.value || _markdownPanelFilename.dataset.autofilled === "true") {
-      _markdownPanelFilename.value = sanitizeMarkdownFilename(_markdownPanelTitle.value);
-      _markdownPanelFilename.dataset.autofilled = "true";
-    }
-  });
-  _markdownPanelFilename?.addEventListener("input", () => {
-    _markdownPanelFilename.dataset.autofilled = "false";
-  });
-  _markdownPanelCancel?.addEventListener("click", closeMarkdownPanel);
-  _markdownPanelSave?.addEventListener("click", () => void saveMarkdownFromPanel());
-  panel.addEventListener("keydown", (e) => {
-    e.stopPropagation();
-    if (e.key === "Escape") closeMarkdownPanel();
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
-      e.preventDefault();
-      void saveMarkdownFromPanel();
-    }
-  });
-  return panel;
-}
-
 function defaultMarkdownTimestampName() {
   return `note-${formatTimestamp()}`;
 }
@@ -5798,50 +5743,12 @@ async function createNewMarkdownNote(spawnAt = null) {
   return node;
 }
 
+// One click spawns a fresh timestamped note straight onto the board. The old
+// dialog that asked for a title and filename first is gone; it had been
+// unreachable for a while, and its comment here claimed a fallback that did not
+// exist. Kept as a named function because the toolbar and the X shortcut call it.
 function openMarkdownPanel(spawnAt = null) {
-  // Quick path: skip the panel and spawn a fresh timestamped note in one click.
-  // Falls back to the panel if anything looks wrong.
   void createNewMarkdownNote(spawnAt);
-}
-
-function closeMarkdownPanel() {
-  if (!_markdownPanelEl) return;
-  _markdownPanelEl.hidden = true;
-  _markdownPanelEl.classList.remove("is-open");
-}
-
-async function saveMarkdownFromPanel() {
-  if (!_markdownPanelTitle || !_markdownPanelFilename || !_markdownPanelBody) return;
-  const title = String(_markdownPanelTitle.value || "").trim();
-  const filename = sanitizeMarkdownFilename(_markdownPanelFilename.value || title);
-  const initialBody = _markdownPanelBody.value;
-  const content = initialBody.trim().length === 0 && title
-    ? `# ${title}\n\n`
-    : initialBody;
-
-  _markdownPanelSave.disabled = true;
-  try {
-    const result = await trySaveMarkdownSidecar({ filename, path: "", content });
-    const dimensions = { width: 380, height: 420 };
-    const position = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
-    const nodeProps = {
-      title: title || filename.replace(/\.md$/i, ""),
-      ...dimensions,
-      _rawMarkdown: content,
-      ...newMarkdownIdentity()
-    };
-    if (result?.url) {
-      nodeProps.file = result.url;
-      nodeProps.href = result.url;
-    }
-    createNode("markdown", position.x, position.y, nodeProps);
-    flushLocalStateSave();
-    closeMarkdownPanel();
-    if (result?.path) showToolbarToast(`Saved ${result.path}`, "success");
-    else showToolbarToast(`Created ${nodeProps.title}`, "success");
-  } finally {
-    _markdownPanelSave.disabled = false;
-  }
 }
 
 function ensureDropOverlay() {
