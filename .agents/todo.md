@@ -60,16 +60,43 @@ Open tasks, known issues, review queue, backlog.
 
 ## Test failures
 
-Status verified 2026-07-28. Each was reproduced on unmodified `HEAD`, so none is a regression.
-Run build tests in parallel again if you like, the race that made that dangerous is fixed.
+Triaged 2026-07-28. Each was reproduced on unmodified `HEAD` first, so none is a regression from
+the review fixes.
 
-- [ ] `tests/features/` all 5 fail. Not yet triaged.
+- [ ] **YouTube live URLs are not recognised.** `getYouTubeVideoId` does not handle
+  `youtube.com/live/<id>`, so a live link renders its raw watch URL inside the iframe instead of an
+  embed URL. This is what `tests/features/youtube-live-embed.test.mjs` now fails on, at its second
+  assertion block around line 147. Real bug, and the reason that test is still red.
+- [ ] **Shared entity model is half built.** `src/entities/`, `content/entities/index.json` and the
+  base-data `entityRef` all exist, but the `entity` node was never added to
+  `content/boards/cosmoboard/current.canvas`, in any commit, despite the review-queue proof block
+  claiming otherwise. The two tests are parked as
+  `tests/features/shared-entity-*.pending.mjs`. Rename them back to `*.test.mjs` when the node lands.
+- [ ] `tests/features/markdown-authoring-e2e.test.mjs` fails: it drives the old markdown naming
+  dialog, which nothing can open any more. See the dead dialog note below. The test also litters
+  `content/boards/cosmoboard/` with `note-<timestamp>.md` files, because it cleans up the file it
+  names but not the one the quick path creates behind it.
 - [ ] `tests/preview/preview-markdown-endpoint.test.mjs` fails: the endpoint writes the sidecar to
   the board root, the test expects it under `.../markdown/`. Sits in the markdown sidecar area.
 - [ ] `tests/board/board-save-export-runtime.test.mjs` fails: asserts on `exportModalCanvasBtn`,
   an identifier that no longer exists in `braindump.js`.
 - [ ] `tests/board/board-url-paste-preview-e2e.test.mjs` fails: 30s `waitForSelector` timeout.
+- [ ] Build tests still flake occasionally when run in parallel, because two concurrent builds write
+  the same generated files. This is now cosmetic: the destructive part is fixed, nothing gets
+  deleted. Run them one file at a time if you want a reliable result.
+- [x] `tests/features/recommendation-flow-e2e.test.mjs` fixed. The issue body was missing the board
+  source version and the review framing.
 - [x] `tests/board/cosmoboard-initial-layout.test.mjs` now passes. Previously listed as failing.
+
+## Dead code
+
+- [ ] The markdown naming dialog is unreachable. `ensureMarkdownPanel` (about 87 lines, plus
+  `saveMarkdownFromPanel` and `closeMarkdownPanel`) builds a title/filename dialog, but nothing
+  calls it, so its DOM never exists. `openMarkdownPanel` ignores it and calls
+  `createNewMarkdownNote` directly, which is the one-click timestamped note that works today and
+  should stay. The comment inside `openMarkdownPanel` claims it "falls back to the panel", which is
+  not true. Decide whether to delete the dialog or wire it back up as an option; the working
+  behaviour is unaffected either way.
 
 ## Features and ideas
 
@@ -100,7 +127,10 @@ Not bugs, just things that bite if you forget them.
 
 Implemented, proof recorded in the archived task file. Mark `[x]` and drop once checked.
 
-- [A] Shared-entity model for content reused across boards, markdown, and structured views.
+Treat those proof blocks with suspicion. The shared-entity entry was listed here as done, with a
+proof line stating the cosmoboard canvas contains an `entity` node. It does not, and never did. It
+has been moved to open work above. Spot-check the others before marking them `[x]`.
+
 - [A] Multiple boards per page, including nested board and embed containers.
 - [A] Markdown-to-canvas and canvas-to-markdown embedding and reference flows.
   Still open inside it: canvas-to-markdown export, md-to-board navigation, markdown node is

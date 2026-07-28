@@ -73,10 +73,22 @@ was dropped.
     destroys nothing.
   - Task tracking pruned from six markdown files to one: `.agents/todo.md`. The old files keep a
     supersede banner so existing links still resolve.
-  - Wrote `.agents/cosmoboard_extraction_plan.md`. Recommendation is not to split the repo yet.
+  - Wrote `.agents/cosmoboard_extraction_plan.md`. User agreed: no repo split for now.
+  - Merged `origin/fix-markdown-sidecar-405-error` (4 remote commits including the IndexedDB asset
+    store) and pushed. Branch is in sync.
+  - Triaged all 5 failing feature tests. Fixed `recommendation-flow-e2e` by adding the missing
+    board source version and review framing to the GitHub issue body. Parked the two shared-entity
+    tests as `*.pending.mjs`. Added the standard `allow` and `referrerpolicy` attributes to YouTube
+    iframes.
 - What still needs work:
-  - Red test suites, all tracked in `.agents/todo.md`. None are regressions.
-  - Branch has diverged from `origin/fix-markdown-sidecar-405-error` (1 local vs 4 remote commits),
-    so it needs a pull or a rebase before pushing.
+  - `tests/features/youtube-live-embed.test.mjs` is still red, now for a real reason:
+    `getYouTubeVideoId` does not recognise `youtube.com/live/<id>`, so a live link renders its raw
+    watch URL in the iframe instead of an embed URL. **This is where to pick up.** The fix is in
+    `getYouTubeVideoId` in `JavaScript/braindump.js`, and the failing assertion is the second block
+    in that test, around line 147.
+  - Everything else is itemised in `.agents/todo.md` under Test failures and Dead code.
+  - Two decisions still open there: whether to build the missing shared-entity canvas node, and
+    whether to delete or rewire the unreachable markdown naming dialog.
 - Next step:
-  - Decide the Cosmoboard directory boundary, then triage the 5 failing feature tests.
+  - Teach `getYouTubeVideoId` about `/live/` URLs, then re-run
+    `node --test tests/features/youtube-live-embed.test.mjs`.
