@@ -910,6 +910,14 @@ function parseYouTubeStartSeconds(value) {
   return (hours * 3600) + (minutes * 60) + seconds;
 }
 
+// Standard YouTube embed attributes: the feature permissions the player needs to
+// autoplay, go picture-in-picture and play DRM content, plus a referrer policy
+// that sends only the origin instead of the full board URL. Applied to YouTube
+// embeds only, other embeds keep the plain sandboxed iframe.
+const YOUTUBE_IFRAME_ATTRS =
+  ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"' +
+  ' referrerpolicy="strict-origin-when-cross-origin"';
+
 function getYouTubeEmbedUrl(url) {
   const videoId = getYouTubeVideoId(url);
   if (!videoId) return "";
@@ -3945,7 +3953,7 @@ function renderLinkNode(nodeObj, el) {
     // does). A plain iframe lets the viewer mount through the normal path.
     const viewerHtml = isInlinedPdf
       ? `<iframe class="bd-embed-iframe" src="${escapeHtml(runtimeUrl)}" allowfullscreen loading="lazy"></iframe>`
-      : `<iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allowfullscreen loading="lazy"></iframe>`;
+      : `<iframe class="bd-embed-iframe" src="${escapeHtml(embedUrl)}"${isYouTube ? YOUTUBE_IFRAME_ATTRS : ""} sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" allowfullscreen loading="lazy"></iframe>`;
 
     shell.innerHTML = `
       <div class="bd-embed-header">

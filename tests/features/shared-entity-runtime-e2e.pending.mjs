@@ -1,3 +1,14 @@
+// PENDING: not part of the suite (.pending.mjs is outside the *.test.mjs glob).
+//
+// This asserts on an `entity` node in content/boards/cosmoboard/current.canvas.
+// That node has never existed, in any commit. The shared-entity model was marked
+// done with a proof block claiming otherwise, but only the build-side half landed:
+// src/entities/, content/entities/index.json and the base-data entityRef all exist,
+// the canvas node does not.
+//
+// Tracked as open work in .agents/todo.md. Rename back to *.test.mjs once the node
+// is actually on the board.
+
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";

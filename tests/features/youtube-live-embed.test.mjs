@@ -117,7 +117,16 @@ try {
     };
   });
 
-  assert.equal(result.iframeSrc, "https://www.youtube-nocookie.com/embed/1CLEPpCOnoI?start=43");
+  // Embeds use youtube.com rather than youtube-nocookie.com because the runtime
+  // drives them through the IFrame Player API: enablejsapi plus a matching origin
+  // let the board send play/pause/seek postMessage commands to the selected node
+  // without the user clicking into the iframe first. Assert the parts rather than
+  // the whole string, since origin varies with the port the test server picks.
+  const iframeSrc = new URL(result.iframeSrc);
+  assert.equal(iframeSrc.origin + iframeSrc.pathname, "https://www.youtube.com/embed/1CLEPpCOnoI");
+  assert.equal(iframeSrc.searchParams.get("start"), "43");
+  assert.equal(iframeSrc.searchParams.get("enablejsapi"), "1");
+  assert.match(iframeSrc.searchParams.get("origin") || "", /^http:\/\/127\.0\.0\.1:\d+$/);
   assert.equal(result.openHref, watchUrl);
   assert.match(result.allow, /accelerometer/);
   assert.match(result.allow, /autoplay/);
