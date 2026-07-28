@@ -882,7 +882,13 @@ function getYouTubeVideoId(url) {
         return parsed.searchParams.get("v") || "";
       }
 
-      if (parsed.pathname.startsWith("/shorts/") || parsed.pathname.startsWith("/embed/")) {
+      // /live/<id> is the URL YouTube hands out for a stream, including after it
+      // ends and becomes a normal video. Same shape as /shorts/ and /embed/.
+      if (
+        parsed.pathname.startsWith("/shorts/") ||
+        parsed.pathname.startsWith("/embed/") ||
+        parsed.pathname.startsWith("/live/")
+      ) {
         return parsed.pathname.split("/")[2] || "";
       }
     }

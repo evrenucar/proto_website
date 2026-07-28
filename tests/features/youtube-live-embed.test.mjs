@@ -144,7 +144,13 @@ try {
     return iframe?.getAttribute("src") || "";
   });
 
-  assert.equal(liveResult, "https://www.youtube-nocookie.com/embed/1CLEPpCOnoI?start=43");
+  // A /live/<id> URL must resolve to the same embed as the /watch?v= form, start
+  // offset included. Before getYouTubeVideoId learned about /live/, this rendered
+  // the raw watch URL inside the iframe instead of an embed URL.
+  const liveSrc = new URL(liveResult);
+  assert.equal(liveSrc.origin + liveSrc.pathname, "https://www.youtube.com/embed/1CLEPpCOnoI");
+  assert.equal(liveSrc.searchParams.get("start"), "43");
+  assert.equal(liveSrc.searchParams.get("enablejsapi"), "1");
 } finally {
   if (browser) {
     await browser.close();
