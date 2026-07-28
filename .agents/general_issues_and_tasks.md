@@ -1,5 +1,8 @@
 # Cross-Domain Inbox
 
+> **Superseded 2026-07-28.** Live tasks now live in [./todo.md](./todo.md).
+> Kept for its history and so existing links keep resolving. Do not add new work here.
+
 ## Purpose
 Short shared notes and pointers that do not belong in a single domain doc.
 

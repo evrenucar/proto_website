@@ -12,22 +12,23 @@
 | Architecture or capability matrix | `project.md`, `holistic_planning/holistic_architecture.md` |
 | Technology research or references | `holistic_planning/holistic_research.md` |
 | Deep research artifact or candidate comparison | `.agents/research/` |
-| Active implementation follow-up | `current_scratch_pad.md`, `holistic_planning/holistic_tasks.md` |
+| Any open task, bug, backlog item, or review queue | `todo.md` |
+| Active implementation follow-up | `current_scratch_pad.md`, `todo.md` |
 | Page database or structured content | `.agents/page_database/` |
-| Cross-domain inbox or quick notes | `general_issues_and_tasks.md` |
-| Backlog or medium-term work | `holistic_planning/holistic_backlog.md` |
+| Splitting Cosmoboard into its own repo | `cosmoboard_extraction_plan.md` |
 
 ## Key Stable Docs
 
+- [todo.md](./todo.md) — the single live task list: open work, bugs, review queue, backlog
 - [project.md](./project.md) — durable product facts, visual constraints, writing style, technical direction
 - [holistic_planning/holistic_planning.md](./holistic_planning/holistic_planning.md) — north star, confirmed decisions, roadmap
-- [holistic_planning/holistic_tasks.md](./holistic_planning/holistic_tasks.md) — active work, review queue, next up
 
 ## What Not To Read By Default
 
 - `holistic_planning/archive/` — resolved history only
-- `holistic_planning/holistic_backlog.md` — medium/later work, not active
 - `holistic_planning/holistic_research.md` — references and candidates, not active task state
+- `PLAN.md`, `active_todo.md`, `general_issues_and_tasks.md`, `holistic_planning/holistic_tasks.md`,
+  `holistic_planning/holistic_backlog.md` — all folded into `todo.md` on 2026-07-28. History only.
 - `.agents/handoffs/` — dense proof and handoff detail, read only when the task is in that area
 - `.agents/skills/` — skill instructions, read only when using a specific skill
 

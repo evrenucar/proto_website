@@ -1,5 +1,8 @@
 # `.agents` Context-Minimization Restructure
 
+> **Superseded 2026-07-28.** Live tasks now live in [./todo.md](./todo.md).
+> Kept for its history and so existing links keep resolving. Do not add new work here.
+
 ## Summary
 
 - Adopt a `core plus index` startup model: fresh agents should read only `AGENTS.md`, `current_scratch_pad.md`, and a tiny `.agents/agents.md`.

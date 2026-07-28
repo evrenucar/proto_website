@@ -1,5 +1,8 @@
 # Active TODOs — Braindump markdown editor
 
+> **Superseded 2026-07-28.** Live tasks now live in [./todo.md](./todo.md).
+> Kept for its history and so existing links keep resolving. Do not add new work here.
+
 Status legend:
 - `[x]` user-confirmed working
 - `[A]` agent-confirmed via browser/Playwright test, not yet user-verified

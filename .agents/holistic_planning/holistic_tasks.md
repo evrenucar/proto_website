@@ -1,5 +1,8 @@
 # Holistic Tasks
 
+> **Superseded 2026-07-28.** Live tasks now live in [../todo.md](../todo.md).
+> Kept for its history and so existing links keep resolving. Do not add new work here.
+
 ## Purpose
 Active work, review queue, and next-up items for the Cosmoboard implementation.
 
