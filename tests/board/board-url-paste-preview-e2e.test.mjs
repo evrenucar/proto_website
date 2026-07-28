@@ -57,18 +57,21 @@ try {
       bubbles: true,
       cancelable: true
     }));
-  }, `${baseUrl}/content/boards/eurocrate-storage.html`);
+  }, `${baseUrl}/braindump.html`);
 
   await page.waitForFunction(() => {
     const state = JSON.parse(localStorage.getItem("board:cosmoboard") || "{}");
     return state.nodes?.some((node) =>
       node.type === "board-preview" &&
-      node.boardSlug === "eurocrate-storage" &&
-      node.boardSource === "content/boards/projects/eurocrate-storage/current.canvas"
+      node.boardSlug === "braindump" &&
+      node.boardSource === "content/boards/braindump/current.canvas"
     );
   });
 
-  const pastedPreview = page.locator(".bd-layer-board-preview", { hasText: "Eurocrate storage" }).last();
+  // Braindump rather than the eurocrate project board: that canvas has had zero
+  // nodes since before this test was written, so its preview correctly renders
+  // "Board is empty" and could never satisfy the assertions below.
+  const pastedPreview = page.locator(".bd-layer-board-preview", { hasText: "Braindump" }).last();
   await pastedPreview.locator(".bd-board-preview-stage svg").waitFor({ timeout: 5000 });
 
   const statusText = await pastedPreview.locator(".bd-board-preview-status").textContent().catch(() => "");

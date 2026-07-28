@@ -76,8 +76,8 @@ card there within seconds.
 Triaged 2026-07-28. Each was reproduced on unmodified `HEAD` first, so none is a regression from
 the review fixes.
 
-Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
-`tests/features/` 2/2, `tests/board/` 30/32.
+Current state, run one file at a time: every active suite green. `tests/build/` 4/4,
+`tests/preview/` 3/3, `tests/features/` 2/2, `tests/board/` 32/32.
 
 - [ ] **Shared entity model is half built.** `src/entities/`, `content/entities/index.json` and the
   base-data `entityRef` all exist, but the `entity` node was never added to
@@ -88,9 +88,14 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
   `tests/features/markdown-authoring-e2e.pending.mjs`, rewritten for the quick path and passing up
   to the point where it has to type into the note. Its header lists everything already ruled out,
   read that before retrying. It no longer litters note files.
-- [ ] Fix `tests/board/board-save-export-runtime.test.mjs`. It fails: asserts on `exportModalCanvasBtn`,
-  an identifier that no longer exists in `braindump.js`.
-- [ ] Fix `tests/board/board-url-paste-preview-e2e.test.mjs`. It fails: 30s `waitForSelector` timeout.
+- [A] Fixed `tests/board/board-save-export-runtime.test.mjs`, and it was flagging three real gaps:
+  the "Export .canvas" button had no listener at all, export size estimates silently counted zero
+  whenever a server omitted content-length on HEAD, and `serializeState` handed out live node
+  references because `stripTransientNodeFields` returns the original when it has nothing to strip.
+- [A] Fixed `tests/board/board-url-paste-preview-e2e.test.mjs`. Pasting a link to one of this
+  site's board pages now creates a live board-preview instead of a plain bookmark. The runtime never
+  read `data-board-index`, which the build has been emitting all along, so the feature was specced
+  and plumbed but never written.
 - [ ] Suites still flake when a whole directory runs in parallel, because concurrent builds write
   the same generated files while other tests read them. Cosmetic only: the destructive part is
   fixed, nothing gets deleted. Run one file at a time for a reliable result.
@@ -119,6 +124,11 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
 - [ ] Entering a markdown note takes two clicks: the first selects the node, the second focuses the
   editor. Undocumented, and it is what blocked the parked authoring e2e. Decide whether one click
   should enter directly.
+
+- [ ] The eurocrate project board is empty. `content/boards/projects/eurocrate-storage/current.canvas`
+  has zero nodes, and has since before this branch, yet it is linked from the projects page and the
+  registry as a working project board. A starter canvas with 7 nodes was once recorded as done for
+  it. Either build it out or stop presenting it as a board.
 
 ## Features and ideas
 

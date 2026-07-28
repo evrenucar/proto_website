@@ -224,6 +224,57 @@ async function resolveMarkdownSavePath(slugValue, pathValue, filenameValue) {
   };
 }
 
+// Sections of .agents/todo.md the tracker is allowed to file a new card into.
+// A fixed list rather than free text: this writes to a real file, and the board
+// only renders these headings anyway.
+const TODO_SECTIONS = ["Now", "Bugs", "Test failures", "Features and ideas", "Later"];
+
+// Append a card to .agents/todo.md so the board can file work without an editor.
+// Only that one file, only those sections, always as [ ] to do.
+async function handleAddTodo(request, response) {
+  let body = "";
+  request.setEncoding("utf8");
+  request.on("data", (chunk) => {
+    body += chunk;
+  });
+  request.on("end", async () => {
+    try {
+      const parsed = JSON.parse(body);
+      const text = String(parsed?.text || "").trim().replace(/\s+/g, " ");
+      const section = String(parsed?.section || "").trim();
+
+      if (!text) {
+        sendJson(response, 400, { success: false, error: "Write what needs doing first." });
+        return;
+      }
+      if (!TODO_SECTIONS.includes(section)) {
+        sendJson(response, 400, { success: false, error: `Unknown section "${section}".` });
+        return;
+      }
+
+      const todoPath = path.join(rootDir, ".agents", "todo.md");
+      const original = await readFile(todoPath, "utf8");
+      const heading = `## ${section}`;
+      const at = original.indexOf(`\n${heading}\n`);
+      if (at === -1) {
+        sendJson(response, 404, { success: false, error: `Section "${section}" is not in todo.md.` });
+        return;
+      }
+
+      // Insert directly under the heading, so new cards land at the top of their
+      // section where the priority ordering expects them.
+      const insertAt = at + 1 + heading.length + 1;
+      const card = `\n- [ ] ${text}\n`;
+      const next = original.slice(0, insertAt) + card + original.slice(insertAt);
+      await writeFile(todoPath, next, "utf8");
+
+      sendJson(response, 200, { success: true, section, text });
+    } catch (error) {
+      sendJson(response, 500, { success: false, error: String(error?.message || error) });
+    }
+  });
+}
+
 async function handleSaveMarkdown(request, response, parsedUrl) {
   let body = "";
   request.setEncoding("utf8");
@@ -509,6 +560,11 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "POST" && parsedUrl.pathname === "/api/save-markdown") {
     handleSaveMarkdown(request, response, parsedUrl);
+    return;
+  }
+
+  if (request.method === "POST" && parsedUrl.pathname === "/api/add-todo") {
+    handleAddTodo(request, response);
     return;
   }
 

@@ -34,10 +34,13 @@ assert.match(
   "export size estimates should fetch linked resources when HEAD does not expose content-length"
 );
 
+// Strip the transient fields AND deep clone. Stripping alone returns the live
+// node when there is nothing to remove, which is how a "copy" could still write
+// through to board state.
 assert.match(
   source,
-  /nodes:\s*nodes\.map\(\(node\) => JSON\.parse\(JSON\.stringify\(node\)\)\)/,
-  "serializing/exporting should clone node data so bundle export cannot rewrite the live board state"
+  /nodes:\s*nodes\.map\(\(node\) => JSON\.parse\(JSON\.stringify\(stripTransientNodeFields\(node\)\)\)\)/,
+  "serializing/exporting should deep clone node data so bundle export cannot rewrite the live board state"
 );
 
 console.log("board save/export runtime check passed");

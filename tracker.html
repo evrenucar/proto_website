@@ -93,6 +93,30 @@
   .feed-text { color: var(--ink-dim); min-width: 0; }
   li.feed-item:first-child .feed-text { color: var(--ink); }
 
+  /* ---- add a card ---- */
+  .addbar {
+    display: flex; gap: 9px; align-items: center; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 13px;
+  }
+  .addbar input[type="text"] {
+    flex: 1 1 320px; min-width: 0;
+    background: var(--ground); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px 11px;
+    font-family: var(--sans); font-size: 13.5px;
+  }
+  .addbar select {
+    background: var(--ground); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px 9px;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .addbar input:focus-visible, .addbar select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+  }
+  .add-msg { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); }
+  .add-msg.ok { color: var(--pass); }
+  .add-msg.err { color: var(--fail); }
+
   /* ---- kanban ---- */
   .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; }
   @media (max-width: 1180px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -235,6 +259,19 @@
     </div>
     <ul class="feed-list" id="feed"></ul>
   </section>
+
+  <form class="addbar" id="addbar" aria-label="Add a card">
+    <input id="add-text" type="text" placeholder="Something to do, a bug you hit, an idea…" autocomplete="off">
+    <select id="add-section" aria-label="Section">
+      <option value="Bugs">Bugs</option>
+      <option value="Now">Now</option>
+      <option value="Test failures">Test failures</option>
+      <option value="Features and ideas" selected>Features and ideas</option>
+      <option value="Later">Later</option>
+    </select>
+    <button type="submit" class="primary" id="add-btn">Add card</button>
+    <span class="add-msg" id="add-msg"></span>
+  </form>
 
   <section class="board" id="board" aria-label="Task board"></section>
 
@@ -497,6 +534,41 @@
       state = {}; notesValue = ""; document.getElementById("notes").value = ""; save(); paint();
     };
   }
+
+  document.getElementById("addbar").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("add-text");
+    var section = document.getElementById("add-section").value;
+    var msg = document.getElementById("add-msg");
+    var btn = document.getElementById("add-btn");
+    var text = input.value.trim();
+    if (!text) { input.focus(); return; }
+
+    btn.disabled = true;
+    msg.className = "add-msg";
+    msg.textContent = "saving…";
+    fetch("/api/add-todo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, section: section })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body.success) throw new Error(res.body.error || "Could not save.");
+        input.value = "";
+        msg.className = "add-msg ok";
+        msg.textContent = "added to " + section;
+        lastTodo = null; // force a redraw on the next poll
+        poll();
+        setTimeout(function () { msg.textContent = ""; msg.className = "add-msg"; }, 2600);
+      })
+      .catch(function (err) {
+        msg.className = "add-msg err";
+        // The board is readable from a plain static host, but adding needs the
+        // preview server's write endpoint. Say which, rather than just failing.
+        msg.textContent = String(err.message || err) + " · is npm run preview running?";
+      })
+      .finally(function () { btn.disabled = false; });
+  });
 
   document.getElementById("board").addEventListener("click", function (e) {
     var btn = e.target.closest(".more");

@@ -339,6 +339,7 @@ const exportModalSubpagesCheckbox = queryBoard("#braindump-export-subpages");
 const exportModalSizeEstimate = queryBoard("#braindump-export-size-estimate");
 const exportModalCancelBtn = queryBoard("#braindump-export-cancel");
 const exportModalConfirmBtn = queryBoard("#braindump-export-confirm");
+const exportModalCanvasBtn = queryBoard("#braindump-export-canvas");
 
 const boardMode = viewport?.dataset.boardMode || "full";
 const isPreviewMode = boardMode === "preview";
@@ -1361,7 +1362,12 @@ function serializeState() {
     canvasId: boardMeta.canvasId,
     createdAt: boardMeta.createdAt,
     updatedAt: boardMeta.updatedAt,
-    nodes: nodes.map(stripTransientNodeFields),
+    // Deep clone, not just strip. stripTransientNodeFields hands back the live
+    // node when it has nothing to remove, so callers were getting references
+    // into board state and anything that rewrote a path on its "copy" was
+    // rewriting the board. That is how export-bundle paths ended up frozen into
+    // committed canvases.
+    nodes: nodes.map((node) => JSON.parse(JSON.stringify(stripTransientNodeFields(node)))),
     edges,
     viewport: { x: camera.x, y: camera.y, z: camera.z }
   };
@@ -3105,6 +3111,25 @@ function closeExportModal() {
   if (exportModal) exportModal.hidden = true;
 }
 
+// Size of a linked resource, for the export estimate. HEAD is the cheap path,
+// but plenty of static servers omit content-length on HEAD, and the estimate was
+// silently counting those as zero. Fall back to reading the body when it does.
+async function fetchResourceSizeBytes(url) {
+  try {
+    const head = await fetch(url, { method: "HEAD" });
+    if (head.ok) {
+      const length = head.headers.get("content-length");
+      if (length) return parseInt(length, 10) || 0;
+    }
+  } catch (error) {}
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return 0;
+    return (await res.blob()).size;
+  } catch (error) {}
+  return 0;
+}
+
 async function updateExportSizeEstimate() {
   if (!exportModalSizeEstimate) return;
   exportModalSizeEstimate.textContent = "Calculating...";
@@ -3123,31 +3148,12 @@ async function updateExportSizeEstimate() {
         const base64Len = node.file.indexOf(",") > -1 ? node.file.split(",")[1].length : node.file.length;
         totalBytes += Math.round((base64Len * 3) / 4);
       } else {
-        try {
-          // Attempt to get Content-Length without downloading the whole file
-          const res = await fetch(node.file, { method: 'HEAD' });
-          if (res.ok) {
-            const length = res.headers.get("content-length");
-            if (length) totalBytes += parseInt(length, 10);
-          }
-        } catch(e) {} // ignore local fetch failures
+        totalBytes += await fetchResourceSizeBytes(node.file);
       }
     } else if (includeSubpages && node.type === "board-preview" && node.boardSource) {
-      try {
-        const res = await fetch(node.boardSource, { method: 'HEAD' });
-        if (res.ok) {
-          const length = res.headers.get("content-length");
-          if (length) totalBytes += parseInt(length, 10);
-        }
-      } catch(e) {}
+      totalBytes += await fetchResourceSizeBytes(node.boardSource);
     } else if (includeSubpages && node.type === "markdown" && node.file) {
-      try {
-        const res = await fetch(node.file, { method: 'HEAD' });
-        if (res.ok) {
-          const length = res.headers.get("content-length");
-          if (length) totalBytes += parseInt(length, 10);
-        }
-      } catch(e) {}
+      totalBytes += await fetchResourceSizeBytes(node.file);
     }
   }
 
@@ -3173,6 +3179,16 @@ if (exportModalConfirmBtn) {
   exportModalConfirmBtn.addEventListener("click", () => {
     const includeSubpages = exportModalSubpagesCheckbox?.checked ?? true;
     exportProjectBundle(includeSubpages);
+  });
+}
+
+// "Export .canvas" downloads the board file on its own, no zip and no linked
+// assets. The button existed in the markup with nothing bound to it, so it sat
+// there doing nothing.
+if (exportModalCanvasBtn) {
+  exportModalCanvasBtn.addEventListener("click", () => {
+    closeExportModal();
+    exportCanvas();
   });
 }
 
@@ -7972,6 +7988,12 @@ document.addEventListener("paste", (e) => {
     const urlRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/i;
     if (textMatch.match(urlRegex) && !textMatch.includes(" ")) {
       if (!textMatch.startsWith("http")) textMatch = "https://" + textMatch;
+      // A link to one of this site's own board pages becomes a live preview.
+      const board = resolveBoardReferenceFromUrl(textMatch);
+      if (board) {
+        createNode("board-preview", pos.x, pos.y, { ...board, width: 320, height: 260 });
+        return;
+      }
       createNode("bookmark", pos.x, pos.y, { url: textMatch, width: 300, height: 120 });
     } else {
       createNode("text", pos.x, pos.y, { text: textMatch, width: 300, height: 200 });
@@ -7994,6 +8016,46 @@ document.addEventListener("paste", (e) => {
     }
   }
 });
+
+// Every board page carries data-board-index: the slug, title, page file and
+// canvas source of every board on the site. Pasting a link to one of those pages
+// should therefore drop in a live board-preview rather than a plain bookmark,
+// because the target is a board this runtime already knows how to render.
+// Returns null for any other URL, which then falls through to the bookmark path.
+function resolveBoardReferenceFromUrl(rawUrl) {
+  let index = [];
+  try {
+    index = JSON.parse(viewport?.dataset.boardIndex || "[]");
+  } catch (error) {
+    return null;
+  }
+  if (!Array.isArray(index) || !index.length) return null;
+
+  let pathname;
+  try {
+    pathname = new URL(rawUrl, window.location.href).pathname;
+  } catch (error) {
+    return null;
+  }
+  // Compare on the page filename, so it matches whether the link is absolute,
+  // root-relative, or written relative to a board sitting in a subdirectory.
+  const target = pathname.replace(/^\/+/, "").toLowerCase();
+  if (!target) return null;
+
+  const entry = index.find((item) => {
+    const file = String(item?.file || "").replace(/^\/+/, "").replace(/^(\.\.\/)+/, "").toLowerCase();
+    return file && (file === target || target.endsWith("/" + file) || file.endsWith("/" + target));
+  });
+  if (!entry) return null;
+
+  return {
+    boardSlug: entry.slug || "",
+    boardSource: entry.source || "",
+    boardHref: entry.file || "",
+    title: entry.title || entry.slug || "Board",
+    description: entry.description || ""
+  };
+}
 
 function isFiniteViewport(v) {
   return (
