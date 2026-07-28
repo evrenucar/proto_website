@@ -57,10 +57,11 @@ card there within seconds.
 - [x] Wheel zoom ceiling raised from 3x to 5x so it matches touch pinch. At the ceiling the
   view stopped responding entirely, which read as broken zoom.
 
-- [~] @claude Select-all and delete inside an empty markdown window kills the active edit bar.
-  Everything falls back to preview, and a save then refresh loses the changes although normal
-  editing returns. This is the bug that emptied `content/boards/cosmoboard/direction.md`, so it has
-  already cost real content once.
+- [A] Select-all then delete no longer corrupts a markdown note. A selection spanning several lines
+  fell through to contenteditable, which merged or dropped the line divs the editor depends on. The
+  editor then found no active line, dropped to preview, and the next autosave wrote the damage to
+  disk. Multi-line deletes are handled explicitly now, and a normalizer repairs the structure on any
+  input as a backstop for paste, cut and drag-drop.
 - [ ] Text overflows in the feature request, bug report, and recommendation panels.
 - [ ] Save fails with HTTP 405 on GitHub Pages. Static hosting has no backend, so
   `POST /api/save-board` 405s. `saveBoard` degrades gracefully to localStorage, but once 405 fires
@@ -111,6 +112,13 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
 - [x] The markdown naming dialog is deleted, 98 lines of JS and 61 of CSS. Nothing called
   `ensureMarkdownPanel`, so its DOM never existed and the save and close handlers behind it were
   unreachable. The one-click timestamped note is untouched.
+
+- [ ] Shift plus arrow keys cannot extend a selection across markdown lines. The editor's own
+  ArrowUp and ArrowDown handlers move the caret and preventDefault without checking `shiftKey`.
+  Found while testing the select-all fix.
+- [ ] Entering a markdown note takes two clicks: the first selects the node, the second focuses the
+  editor. Undocumented, and it is what blocked the parked authoring e2e. Decide whether one click
+  should enter directly.
 
 ## Features and ideas
 

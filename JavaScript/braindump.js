@@ -4543,6 +4543,32 @@ function setMarkdownLineRaw(lineEl) {
   lineEl.style.paddingLeft = "";
 }
 
+// The editor's whole model is "every direct child is a .bd-md-line". A selection
+// that spans more than one of them hands contenteditable a delete it performs its
+// own way: it merges or drops our divs and can leave bare text nodes behind. The
+// editor then finds no active line, falls back to preview, and the next autosave
+// writes whatever readMarkdownEditorContent can still see, which has already cost
+// a real file. Rebuild the structure from the visible text instead of trusting it.
+// Returns true when it had to repair something.
+function normalizeMarkdownEditor(body) {
+  const children = Array.from(body.childNodes);
+  const intact =
+    children.length > 0 &&
+    children.every((n) => n.nodeType === 1 && n.classList?.contains("bd-md-line"));
+  if (intact) return false;
+
+  const text = children
+    .map((n) => (n.nodeType === 1 && n.classList?.contains("bd-md-line")
+      ? (n.dataset.raw ?? n.textContent ?? "")
+      : (n.textContent || "")))
+    .join("\n");
+
+  const lines = text.split(/\r?\n/);
+  body.textContent = "";
+  (lines.length ? lines : [""]).forEach((raw) => body.appendChild(buildMarkdownLineEl(raw)));
+  return true;
+}
+
 function readMarkdownEditorContent(body) {
   const lines = [];
   body.querySelectorAll(".bd-md-line").forEach((line) => {
@@ -4678,6 +4704,13 @@ function attachMarkdownEditor(nodeObj, body) {
   });
 
   body.addEventListener("input", () => {
+    // Backstop for every route that can wreck the line structure without going
+    // through the keydown handler: paste, cut, drag-drop, browser autocorrect.
+    // Repair before reading, otherwise the save below persists the damage.
+    if (normalizeMarkdownEditor(body)) {
+      const first = body.querySelector(".bd-md-line");
+      if (first) setMarkdownLineRaw(first);
+    }
     const active = body.querySelector(".bd-md-line--active");
     if (active) {
       active.dataset.raw = active.textContent || "";
@@ -4873,6 +4906,51 @@ function attachMarkdownEditor(nodeObj, body) {
       }
     };
 
+    // Every .bd-md-line the selection touches, in document order.
+    const linesTouchedBySelection = (sel) => {
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return [];
+      const range = sel.getRangeAt(0);
+      return Array.from(body.querySelectorAll(".bd-md-line"))
+        .filter((line) => range.intersectsNode(line));
+    };
+
+    // Where a caret sits in a line's raw markdown. The active line is already raw,
+    // so the offset is literal; rendered lines need the visible-to-raw mapping
+    // because their markers (**, backticks, list bullets) are not in the DOM text.
+    const rawOffsetIn = (lineEl, container, offset) => {
+      const raw = lineEl.dataset.raw ?? lineEl.textContent ?? "";
+      if (lineEl.classList.contains("bd-md-line--active")) return Math.min(offset, raw.length);
+      return visibleToRawOffset(raw, computeVisibleOffsetInLine(lineEl, container, offset));
+    };
+
+    // Replace a multi-line selection with a single line holding what survived on
+    // either side of it, and leave the caret at the join.
+    const collapseSelectionAcrossLines = (sel, touched) => {
+      const range = sel.getRangeAt(0);
+      const first = touched[0];
+      const last = touched[touched.length - 1];
+      const firstRaw = first.dataset.raw ?? first.textContent ?? "";
+      const lastRaw = last.dataset.raw ?? last.textContent ?? "";
+      const head = firstRaw.slice(0, rawOffsetIn(first, range.startContainer, range.startOffset));
+      const tail = lastRaw.slice(rawOffsetIn(last, range.endContainer, range.endOffset));
+
+      const merged = buildMarkdownLineEl(head + tail);
+      first.parentNode.insertBefore(merged, first);
+      touched.forEach((line) => line.remove());
+
+      setMarkdownLineRaw(merged);
+      const caret = document.createRange();
+      if (merged.firstChild) {
+        caret.setStart(merged.firstChild, Math.min(head.length, merged.firstChild.textContent.length));
+      } else {
+        caret.setStart(merged, 0);
+      }
+      caret.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(caret);
+      if (!body.contains(document.activeElement)) body.focus();
+    };
+
     const fullLineSelected = (sel) => {
       if (!sel || sel.rangeCount === 0) return false;
       const text = active.textContent || "";
@@ -4880,6 +4958,20 @@ function attachMarkdownEditor(nodeObj, body) {
       const selectedText = sel.getRangeAt(0).toString();
       return selectedText === text;
     };
+
+    // A selection spanning several lines (Ctrl+A being the usual way in) must be
+    // handled here. Left to contenteditable it corrupts the line structure, which
+    // is what made select-all then delete lose the file.
+    if (event.key === "Backspace" || event.key === "Delete") {
+      const sel = window.getSelection();
+      const touched = linesTouchedBySelection(sel);
+      if (touched.length > 1) {
+        event.preventDefault();
+        collapseSelectionAcrossLines(sel, touched);
+        scheduleMarkdownSave(nodeObj, body);
+        return;
+      }
+    }
 
     if (event.key === "Backspace") {
       const sel = window.getSelection();
