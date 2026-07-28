@@ -4,7 +4,11 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 
 const port = 4197;
 const baseUrl = `http://127.0.0.1:${port}`;
-const markdownPath = "content/boards/cosmoboard/markdown/preview-endpoint-test.md";
+// Sidecars land next to the canvas, not in a markdown/ subdirectory. That has
+// been resolveMarkdownSavePath's default since the endpoint was written, and it
+// matches where every note the app creates actually lives. The markdown/ folders
+// in the repo are export-bundle output, which is a different path entirely.
+const markdownPath = "content/boards/cosmoboard/preview-endpoint-test.md";
 
 let originalMarkdown = null;
 try {

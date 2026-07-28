@@ -63,27 +63,33 @@ Open tasks, known issues, review queue, backlog.
 Triaged 2026-07-28. Each was reproduced on unmodified `HEAD` first, so none is a regression from
 the review fixes.
 
-- [ ] **YouTube live URLs are not recognised.** `getYouTubeVideoId` does not handle
-  `youtube.com/live/<id>`, so a live link renders its raw watch URL inside the iframe instead of an
-  embed URL. This is what `tests/features/youtube-live-embed.test.mjs` now fails on, at its second
-  assertion block around line 147. Real bug, and the reason that test is still red.
+Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 3/3,
+`tests/features/` 2/2, `tests/board/` 30/32.
+
 - [ ] **Shared entity model is half built.** `src/entities/`, `content/entities/index.json` and the
   base-data `entityRef` all exist, but the `entity` node was never added to
   `content/boards/cosmoboard/current.canvas`, in any commit, despite the review-queue proof block
   claiming otherwise. The two tests are parked as
   `tests/features/shared-entity-*.pending.mjs`. Rename them back to `*.test.mjs` when the node lands.
-- [ ] `tests/features/markdown-authoring-e2e.test.mjs` fails: it drives the old markdown naming
-  dialog, which nothing can open any more. See the dead dialog note below. The test also litters
-  `content/boards/cosmoboard/` with `note-<timestamp>.md` files, because it cleans up the file it
-  names but not the one the quick path creates behind it.
-- [ ] `tests/preview/preview-markdown-endpoint.test.mjs` fails: the endpoint writes the sidecar to
-  the board root, the test expects it under `.../markdown/`. Sits in the markdown sidecar area.
+- [ ] **Markdown authoring e2e needs the inline editor interaction solved.** Parked as
+  `tests/features/markdown-authoring-e2e.pending.mjs`, rewritten for the quick path and passing up
+  to the point where it has to type into the note. Its header lists everything already ruled out,
+  read that before retrying. It no longer litters note files.
 - [ ] `tests/board/board-save-export-runtime.test.mjs` fails: asserts on `exportModalCanvasBtn`,
   an identifier that no longer exists in `braindump.js`.
 - [ ] `tests/board/board-url-paste-preview-e2e.test.mjs` fails: 30s `waitForSelector` timeout.
-- [ ] Build tests still flake occasionally when run in parallel, because two concurrent builds write
-  the same generated files. This is now cosmetic: the destructive part is fixed, nothing gets
-  deleted. Run them one file at a time if you want a reliable result.
+- [ ] Suites still flake when a whole directory runs in parallel, because concurrent builds write
+  the same generated files while other tests read them. Cosmetic only: the destructive part is
+  fixed, nothing gets deleted. Run one file at a time for a reliable result.
+- [ ] Node title and filename disagree on separator. The board shows
+  `note-2026-07-28_19-27-04`, the file on disk is `note-2026-07-28-19-27-04.md`, because
+  `sanitizeMarkdownFilename` flattens the underscore. Cosmetic, but it breaks the
+  board-matches-filesystem correspondence.
+- [x] `tests/features/youtube-live-embed.test.mjs` fixed, and it caught a real bug:
+  `getYouTubeVideoId` did not recognise `youtube.com/live/<id>`.
+- [x] `tests/preview/preview-markdown-endpoint.test.mjs` fixed. It asserted a `markdown/`
+  subdirectory that `resolveMarkdownSavePath` has never used by default, since its first commit.
+  Sidecars live beside the canvas. The `markdown/` folders in the repo are export-bundle output.
 - [x] `tests/features/recommendation-flow-e2e.test.mjs` fixed. The issue body was missing the board
   source version and the review framing.
 - [x] `tests/board/cosmoboard-initial-layout.test.mjs` now passes. Previously listed as failing.
@@ -101,8 +107,10 @@ the review fixes.
 ## Features and ideas
 
 - [ ] Inline image pasting inside markdown files.
-- [ ] Markdown download button, left of the fullscreen button, moving left when the markdown file
-  goes fullscreen. If the file references external images or canvases, export accordingly.
+- [ ] Markdown download button. **Partly built already:** markdown nodes carry a
+  `.bd-markdown-download-btn` ("Download markdown") next to `.bd-markdown-fullscreen-btn`. Check
+  what it currently does before rebuilding it. What may still be missing is the fullscreen
+  repositioning and exporting alongside referenced images and canvases.
 - [ ] IDs for `.md` and `.canvas` files so a rename does not break restore or reimport. Stamped per
   user and browser is possible but check the privacy side first.
 
