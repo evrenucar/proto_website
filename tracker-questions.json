@@ -1,0 +1,88 @@
+{
+  "updated": "2026-07-28",
+  "branch": "fix-markdown-sidecar-405-error",
+  "suites": [
+    { "name": "build", "pass": 4, "total": 4 },
+    { "name": "preview", "pass": 3, "total": 3 },
+    { "name": "features", "pass": 2, "total": 2 },
+    { "name": "board", "pass": 30, "total": 32 }
+  ],
+  "shipped": [
+    "Preview embeds stopped overwriting the repo",
+    "Build stopped wiping content/",
+    "Runtime versioned by content hash",
+    "YouTube /live/ URLs work",
+    "Recommendations carry the source version",
+    "defaultViewport on first load",
+    "Task tracking: 6 files to 1"
+  ],
+  "questions": [
+    {
+      "id": 1,
+      "label": "Zoom ceiling",
+      "title": "Wheel zoom stops at 3x, touch pinch allows 5x.",
+      "why": "At the ceiling, scrolling does nothing at all, which is what made zoom feel broken. The two ceilings disagree.",
+      "options": [
+        { "key": "A", "title": "Raise wheel to 5x", "note": "Matches touch pinch. One number.", "answer": "Raise the wheel zoom ceiling to 5x to match touch pinch", "rec": true },
+        { "key": "B", "title": "Leave it", "note": "3x is deliberate.", "answer": "Leave both zoom ceilings as they are" },
+        { "key": "C", "title": "Go higher than 5x", "note": "Tell me the number.", "answer": "Raise both zoom ceilings above 5x" }
+      ]
+    },
+    {
+      "id": 2,
+      "label": "Markdown dialog",
+      "title": "87 lines of unreachable markdown naming dialog.",
+      "why": "Nothing can open it. The one-click note you use is untouched either way.",
+      "options": [
+        { "key": "A", "title": "Delete it", "note": "It has been dead for a while.", "answer": "Delete the dead markdown naming dialog", "rec": true },
+        { "key": "B", "title": "Wire it back up", "note": "Name a file before creating it, quick path stays default.", "answer": "Wire the markdown naming dialog back up as an option" },
+        { "key": "C", "title": "Leave it", "note": "Decide later.", "answer": "Leave the dead markdown dialog alone for now" }
+      ]
+    },
+    {
+      "id": 3,
+      "label": "Shared entity",
+      "title": "Shared entity model, half built.",
+      "why": "Build side works. The canvas node it needs was never made.",
+      "options": [
+        { "key": "A", "title": "Finish it", "note": "Add the node, un-park both tests.", "answer": "Finish the shared entity feature and add the canvas node" },
+        { "key": "B", "title": "Drop it", "note": "Delete the parked tests too.", "answer": "Drop the shared entity feature and delete its parked tests" },
+        { "key": "C", "title": "Leave parked", "note": "Not blocking anything.", "answer": "Leave the shared entity feature parked", "rec": true }
+      ]
+    },
+    {
+      "id": 4,
+      "label": "Red board tests",
+      "title": "Two board tests have been red since before this branch.",
+      "why": "A suite that is permanently red cannot warn you about a real regression.",
+      "options": [
+        { "key": "A", "title": "Fix them", "note": "Then every suite is green and meaningful.", "answer": "Fix the two failing board tests", "rec": true },
+        { "key": "B", "title": "Park them", "note": "Same treatment as the others.", "answer": "Park the two failing board tests as pending" },
+        { "key": "C", "title": "Leave red", "note": "Lower priority than features.", "answer": "Leave the two board tests red" }
+      ]
+    },
+    {
+      "id": 5,
+      "label": "cosmoboard/ folder",
+      "title": "Move the engine into a cosmoboard/ folder?",
+      "why": "You already said no repo split. This is the cheap version: one git mv, visible boundary, reversible.",
+      "options": [
+        { "key": "A", "title": "Do it now", "note": "Makes a future split mechanical.", "answer": "Do the cosmoboard/ directory boundary now" },
+        { "key": "B", "title": "Not yet", "note": "Nothing depends on it. Features first.", "answer": "Hold off on the cosmoboard/ directory boundary", "rec": true }
+      ]
+    },
+    {
+      "id": 6,
+      "label": "Next up",
+      "title": "What do I work on next?",
+      "why": "Pick one. This is the one that actually sets my direction.",
+      "options": [
+        { "key": "A", "title": "The markdown data-loss bug", "note": "It has already destroyed a file once.", "answer": "NEXT: fix the empty-markdown data loss bug", "rec": true },
+        { "key": "B", "title": "Panel text overflow", "note": "Small, visible, quick.", "answer": "NEXT: fix text overflow in the issue panels" },
+        { "key": "C", "title": "Paste images into markdown", "note": "New capability.", "answer": "NEXT: inline image pasting in markdown" },
+        { "key": "D", "title": "Markdown download button", "note": "I check what already exists first.", "answer": "NEXT: finish the markdown download button" },
+        { "key": "E", "title": "Verify the caret mapping", "note": "Code landed, never checked.", "answer": "NEXT: verify the caret offset mapping" }
+      ]
+    }
+  ]
+}
