@@ -366,6 +366,27 @@ export const onboardingPage = {
   title: "Onboarding | Evren Ucar",
   description:
     "Guided onboarding board introducing the Cosmoboard node types, editing model, and feedback flow.",
+  // A board dropped on someone with no framing is just a wall of boxes. The panel
+  // gives a first-time visitor one sentence of context and a way out to the written
+  // explanation on the landing page.
+  introPanel: {
+    eyebrow: "Cosmoboard",
+    title: "A local-first place for canvases, notes, and files",
+    copy: [
+      "This board is the tour. Every node on it is a real one, of the kind you would use yourself, and you can drag, open and edit them.",
+      "Nothing here is saved to a server. Your changes stay in your own browser."
+    ],
+    highlights: [
+      "Click a node once to select it, twice to open it",
+      "Markdown notes are real .md files on disk",
+      "Boards can hold other boards, and notes can hold boards"
+    ],
+    actions: [
+      { label: "What Cosmoboard is", href: "cosmoboard-landing.html" },
+      { label: "Open the full board", href: "cosmoboard.html" }
+    ],
+    note: "Found something broken, or want something? Use the toolbar to send it straight to GitHub."
+  },
   board: {
     slug: "onboarding",
     title: "Onboarding",
