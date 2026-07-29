@@ -1,5 +1,35 @@
 [
   {
+    "at": "2026-07-29T13:15:00Z",
+    "agent": "claude",
+    "text": "Review is on the board now: works / issue buttons and a feedback field per card, and drag between columns to move it. Both write straight into todo.md."
+  },
+  {
+    "at": "2026-07-29T12:30:00Z",
+    "agent": "claude",
+    "text": "Eurocrate project board is no longer empty: 15 nodes built from the project's own content, crate sizes with supplier links, design notes and open questions."
+  },
+  {
+    "at": "2026-07-29T11:40:00Z",
+    "agent": "user",
+    "text": "Overflow answers: it is the issue panel row itself, seen on phone and on tablet. Eurocrate board: build out a starter canvas."
+  },
+  {
+    "at": "2026-07-29T11:20:00Z",
+    "agent": "claude",
+    "text": "Markdown authoring e2e is un-parked and green. The blocker was the two-click entry into a note; the test now checks focus landed before it types."
+  },
+  {
+    "at": "2026-07-29T10:35:00Z",
+    "agent": "claude",
+    "text": "Caret mapping verified and fixed. It was wrong four ways, worst of them: any word with an underscore threw the caret off. Board suite 33/33."
+  },
+  {
+    "at": "2026-07-29T09:10:00Z",
+    "agent": "claude",
+    "text": "Picking up the caret offset mapping card. Verifying the visible-to-raw map against what the renderer actually produces."
+  },
+  {
     "at": "2026-07-29T01:45:00Z",
     "agent": "claude",
     "text": "Could not reproduce the panel text overflow. Two questions posted above; answer them and I will fix it."

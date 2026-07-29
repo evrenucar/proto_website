@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
-const port = Number(process.env.PORT || 4173);
+// 4174, not 4173: the aide-board project owns 4173 on this machine.
+const port = Number(process.env.PORT || 4174);
 
 const mimeTypes = {
   ".canvas": "application/json; charset=utf-8",
@@ -273,6 +274,132 @@ async function handleAddTodo(request, response) {
       sendJson(response, 500, { success: false, error: String(error?.message || error) });
     }
   });
+}
+
+const REVIEW_VERDICTS = ["works", "issue", "partly"];
+const TODO_STATUSES = [" ", "~", "A", "x"];
+
+function readJsonBody(request) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    request.on("error", reject);
+  });
+}
+
+// Moves a card between columns and records the user's verdict on it.
+//
+// The board addresses a card by its line number in todo.md, which is only valid
+// for as long as the file has not shifted underneath it. `expect` is the start of
+// the line the board believed it was acting on; if that no longer matches, the
+// write is refused rather than applied to whatever moved into that slot.
+async function handleTodoUpdate(request, response) {
+  try {
+    const parsed = await readJsonBody(request);
+    const line = Number(parsed?.line);
+    const expect = String(parsed?.expect || "");
+    const status = parsed?.status == null ? null : String(parsed.status);
+    const verdict = parsed?.verdict == null ? null : String(parsed.verdict);
+    const note = String(parsed?.note || "").trim();
+
+    if (!Number.isInteger(line) || line < 0) {
+      sendJson(response, 400, { success: false, error: "Missing line number." });
+      return;
+    }
+    if (status !== null && !TODO_STATUSES.includes(status)) {
+      sendJson(response, 400, { success: false, error: `Unknown status "${status}".` });
+      return;
+    }
+    if (verdict !== null && !REVIEW_VERDICTS.includes(verdict)) {
+      sendJson(response, 400, { success: false, error: `Unknown verdict "${verdict}".` });
+      return;
+    }
+    if (status === null && verdict === null && !note) {
+      sendJson(response, 400, { success: false, error: "Nothing to record." });
+      return;
+    }
+
+    const todoPath = path.join(rootDir, ".agents", "todo.md");
+    const original = await readFile(todoPath, "utf8");
+    const eol = original.includes("\r\n") ? "\r\n" : "\n";
+    const lines = original.split(/\r?\n/);
+
+    if (line >= lines.length) {
+      sendJson(response, 409, { success: false, error: "todo.md changed, reload the board." });
+      return;
+    }
+
+    const current = lines[line];
+    const marker = /^-\s+\[([ xA~])\]\s+/.exec(current);
+    if (!marker) {
+      sendJson(response, 409, { success: false, error: "That line is not a card any more, reload the board." });
+      return;
+    }
+    // Compare the card's text, not the whole line. The marker is the thing being
+    // rewritten, so including it here would make the guard fire on the board's
+    // own successful writes.
+    const currentText = current.replace(/^-\s+\[[ xA~]\]\s+/, "");
+    if (expect && !currentText.startsWith(expect)) {
+      sendJson(response, 409, { success: false, error: "todo.md changed, reload the board." });
+      return;
+    }
+
+    const statusFrom = marker[1];
+    let statusTo = statusFrom;
+
+    if (status !== null && status !== statusFrom) {
+      statusTo = status;
+      lines[line] = current.replace(/^(-\s+)\[[ xA~]\]/, `$1[${status}]`);
+      await writeFile(todoPath, lines.join(eol), "utf8");
+    }
+
+    if (verdict !== null || note) {
+      // Title without the status marker or the @owner tag, so it matches how the
+      // board keys a card and survives the line moving later.
+      const title = current
+        .replace(/^-\s+\[[ xA~]\]\s+/, "")
+        .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
+        .trim();
+
+      const feedbackPath = path.join(rootDir, ".agents", "review-feedback.json");
+      let entries = [];
+      if (existsSync(feedbackPath)) {
+        try {
+          const existing = JSON.parse(await readFile(feedbackPath, "utf8"));
+          if (Array.isArray(existing)) entries = existing;
+        } catch {
+          // A corrupt log should not block the user from recording a verdict.
+          entries = [];
+        }
+      }
+
+      entries.unshift({
+        at: new Date().toISOString(),
+        lane: String(parsed?.lane || ""),
+        title: title.slice(0, 200),
+        verdict,
+        note,
+        statusFrom,
+        statusTo
+      });
+
+      await writeFile(feedbackPath, `${JSON.stringify(entries.slice(0, 300), null, 2)}\n`, "utf8");
+    }
+
+    sendJson(response, 200, { success: true, statusFrom, statusTo });
+  } catch (error) {
+    sendJson(response, 500, { success: false, error: String(error?.message || error) });
+  }
 }
 
 async function handleSaveMarkdown(request, response, parsedUrl) {
@@ -565,6 +692,11 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "POST" && parsedUrl.pathname === "/api/add-todo") {
     handleAddTodo(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && parsedUrl.pathname === "/api/todo-update") {
+    handleTodoUpdate(request, response);
     return;
   }
 

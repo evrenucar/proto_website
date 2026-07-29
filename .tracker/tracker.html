@@ -181,6 +181,47 @@
 
   .empty-col { color: var(--ink-faint); font-size: 12.5px; padding: 8px 2px; font-family: var(--mono); }
 
+  /* ---- drag to move a card between columns ---- */
+  .card { cursor: grab; }
+  .card:active { cursor: grabbing; }
+  .card.dragging { opacity: 0.45; }
+  .card.busy { opacity: 0.5; pointer-events: none; }
+  .col-body.over { background: color-mix(in srgb, var(--accent) 9%, transparent); outline: 1px dashed var(--accent); outline-offset: -4px; }
+
+  /* ---- per-card review ---- */
+  .verdict {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 3px; padding: 0 5px; color: var(--ink-faint);
+  }
+  .verdict.works { color: #5cc47f; }
+  .verdict.issue { color: #e0655f; }
+
+  .said {
+    font-size: 11.5px; line-height: 1.4; color: var(--ink-dim);
+    border-left: 2px solid var(--line); padding-left: 8px;
+  }
+  .said span {
+    display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px;
+  }
+
+  .review { display: flex; gap: 5px; align-items: center; margin-top: 2px; }
+  .vb {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+    background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 7px;
+    color: var(--ink-faint); cursor: pointer; flex: none;
+  }
+  .vb:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .vb.works:hover { color: #5cc47f; border-color: #5cc47f; }
+  .vb.issue:hover { color: #e0655f; border-color: #e0655f; }
+  .vb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rnote {
+    flex: 1; min-width: 0; background: var(--ground); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px; padding: 3px 7px; font: inherit; font-size: 11.5px;
+    cursor: text;
+  }
+  .rnote:focus-visible { outline: none; border-color: var(--accent); }
+
   /* ---- questions ---- */
   .qpanel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
   .qpanel-head { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); display: flex; gap: 10px; align-items: baseline; }
@@ -293,8 +334,9 @@
   var KEY = "cosmoboard-tracker-v1";
   var POLL_MS = 4000;
   var state = {}, notesValue = "", questions = [], lastOk = 0;
-  var lastTodo = null, lastMeta = null, lastFeed = null;
+  var lastTodo = null, lastMeta = null, lastFeed = null, lastReview = null;
   var expanded = {};
+  var feedbackIndex = {}, noteDrafts = {};
 
   try {
     var raw = localStorage.getItem(KEY);
@@ -368,7 +410,9 @@
         var owner = null;
         var at = /(^|\s)@([a-z0-9][a-z0-9._-]*)/i.exec(text);
         if (at) { owner = at[2]; text = text.replace(at[0], "").trim(); }
-        item = { status: m[1], lane: section, owner: owner, text: text, extra: [] };
+        // `line` and `raw` are what the write endpoint uses to find this card
+        // again, and to refuse the write if the file moved underneath us.
+        item = { status: m[1], lane: section, owner: owner, text: text, extra: [], line: i, raw: line };
         continue;
       }
       if (item && /^\s{2,}\S/.test(line)) { item.extra.push(line.trim()); continue; }
@@ -380,6 +424,20 @@
 
   function cardId(c) { return c.lane + "|" + c.text.slice(0, 60); }
 
+  // Feedback is keyed by lane and title rather than by line number, so a card
+  // keeps what you said about it after the file shifts around it.
+  function feedbackFor(id) { return feedbackIndex[id] || null; }
+
+  function indexFeedback(entries) {
+    var out = {};
+    // Newest first in the file, so the first hit for a card is the current one.
+    (entries || []).forEach(function (e) {
+      var key = (e.lane || "") + "|" + String(e.title || "").slice(0, 60);
+      if (!out[key]) out[key] = e;
+    });
+    feedbackIndex = out;
+  }
+
   function renderBoard(cards) {
     var host = document.getElementById("board");
     var html = "";
@@ -387,7 +445,7 @@
       var mine = cards.filter(function (c) { return c.status === col.key; });
       html += '<div class="col"><div class="col-head"><span class="col-mark">' + esc(col.mark) + "</span>" +
         "<h2>" + esc(col.title) + '</h2><span class="col-count">' + mine.length + "</span></div>";
-      html += '<div class="col-body">';
+      html += '<div class="col-body" data-status="' + esc(col.key) + '">';
       if (!mine.length) html += '<div class="empty-col">empty</div>';
       mine.forEach(function (c) {
         var lane = LANES[c.lane] || "#5f5c5a";
@@ -399,15 +457,29 @@
         var note = c.extra.join(" ");
         var long = note.length > 150;
         var open = expanded[id];
-        html += '<article class="' + cls + '" style="' + styles + '">';
+        var said = feedbackFor(id);
+        html += '<article class="' + cls + '" style="' + styles + '" draggable="true"' +
+          ' data-line="' + c.line + '" data-lane="' + esc(c.lane) + '"' +
+          ' data-expect="' + esc(c.raw.replace(/^-\s+\[[ xA~]\]\s+/, "").slice(0, 40)) + '"' +
+          ' data-id="' + esc(id) + '">';
         html += '<div class="card-top"><span class="lane">' + esc(c.lane) + "</span>";
         if (c.owner) html += '<span class="owner"><i></i>' + esc(c.owner) + "</span>";
+        if (said) html += '<span class="verdict ' + esc(said.verdict || "note") + '">' + esc(said.verdict || "note") + "</span>";
         html += "</div>";
         html += '<div class="card-title">' + inline(c.text) + "</div>";
         if (note) {
           html += '<div class="card-note' + (long && !open ? " clamped" : "") + '">' + inline(note) + "</div>";
           if (long) html += '<button type="button" class="more" data-id="' + esc(id) + '">' + (open ? "less" : "more") + "</button>";
         }
+        if (said && said.note) {
+          html += '<div class="said"><span>you said</span>' + esc(said.note) + "</div>";
+        }
+        html += '<div class="review">';
+        html += '<button type="button" class="vb works" data-verdict="works" title="Verified, moves to Done">works</button>';
+        html += '<button type="button" class="vb issue" data-verdict="issue" title="Still wrong, moves back to To do">issue</button>';
+        html += '<input type="text" class="rnote" placeholder="feedback…" value="' + esc(noteDrafts[id] || "") + '">';
+        html += '<button type="button" class="vb send" data-verdict="">send</button>';
+        html += "</div>";
         html += "</article>";
       });
       html += "</div></div>";
@@ -585,6 +657,117 @@
     poll();
   });
 
+  // ---- writing back to todo.md ----
+
+  // One endpoint for both gestures. `status` moves the card, `verdict`/`note`
+  // record what you thought of it. `expect` lets the server refuse the write if
+  // todo.md shifted since this board last read it.
+  function sendUpdate(card, payload, flash) {
+    var body = {
+      line: Number(card.getAttribute("data-line")),
+      lane: card.getAttribute("data-lane"),
+      expect: card.getAttribute("data-expect")
+    };
+    for (var k in payload) body[k] = payload[k];
+
+    card.classList.add("busy");
+    return fetch("/api/todo-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body.success) throw new Error(res.body.error || "Could not save.");
+        delete noteDrafts[card.getAttribute("data-id")];
+        lastTodo = null; lastReview = null; // force a redraw
+        poll();
+      })
+      .catch(function (err) {
+        card.classList.remove("busy");
+        setLive("down", String(err.message || err));
+        if (flash) flash();
+      });
+  }
+
+  var dragging = null;
+
+  document.getElementById("board").addEventListener("dragstart", function (e) {
+    var card = e.target.closest(".card");
+    if (!card) return;
+    // Selecting text in the feedback field must not drag the card out from under it.
+    if (e.target.closest(".review")) { e.preventDefault(); return; }
+    dragging = card;
+    card.classList.add("dragging");
+    // Firefox will not start a drag without payload on the transfer.
+    try { e.dataTransfer.setData("text/plain", card.getAttribute("data-id")); } catch (err) {}
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  document.getElementById("board").addEventListener("dragend", function () {
+    if (dragging) dragging.classList.remove("dragging");
+    dragging = null;
+    Array.prototype.forEach.call(document.querySelectorAll(".col-body.over"), function (b) {
+      b.classList.remove("over");
+    });
+  });
+
+  document.getElementById("board").addEventListener("dragover", function (e) {
+    var body = e.target.closest(".col-body");
+    if (!body || !dragging) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    body.classList.add("over");
+  });
+
+  document.getElementById("board").addEventListener("dragleave", function (e) {
+    var body = e.target.closest(".col-body");
+    if (body && !body.contains(e.relatedTarget)) body.classList.remove("over");
+  });
+
+  document.getElementById("board").addEventListener("drop", function (e) {
+    var body = e.target.closest(".col-body");
+    if (!body || !dragging) return;
+    e.preventDefault();
+    body.classList.remove("over");
+    var status = body.getAttribute("data-status");
+    var card = dragging;
+    dragging = null;
+    card.classList.remove("dragging");
+    sendUpdate(card, { status: status });
+  });
+
+  document.getElementById("board").addEventListener("input", function (e) {
+    var input = e.target.closest(".rnote");
+    if (!input) return;
+    noteDrafts[input.closest(".card").getAttribute("data-id")] = input.value;
+  });
+
+  document.getElementById("board").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var input = e.target.closest(".rnote");
+    if (!input) return;
+    e.preventDefault();
+    var card = input.closest(".card");
+    if (input.value.trim()) sendUpdate(card, { note: input.value.trim() });
+  });
+
+  document.getElementById("board").addEventListener("click", function (e) {
+    var btn = e.target.closest(".vb");
+    if (!btn) return;
+    var card = btn.closest(".card");
+    var verdict = btn.getAttribute("data-verdict");
+    var note = (card.querySelector(".rnote") || {}).value || "";
+    var payload = { note: note.trim() };
+
+    // A verdict is also a decision about where the card belongs: something that
+    // works is verified and done, something with an issue goes back to the queue.
+    if (verdict === "works") { payload.verdict = "works"; payload.status = "x"; }
+    else if (verdict === "issue") { payload.verdict = "issue"; payload.status = " "; }
+    else if (!payload.note) { return; }
+
+    sendUpdate(card, payload);
+  });
+
   function setLive(kind, text) {
     document.getElementById("live").className = "live" + (kind ? " " + kind : "");
     document.getElementById("live-text").textContent = text;
@@ -602,11 +785,17 @@
     };
     Promise.all([
       get("/.agents/todo.md", false),
-      get("/tracker-questions.json", true),
-      get("/tracker-feed.json", true).catch(function () { return []; })
+      get("/.tracker/tracker-questions.json", true),
+      get("/.tracker/tracker-feed.json", true).catch(function () { return []; }),
+      get("/.agents/review-feedback.json", true).catch(function () { return []; })
     ]).then(function (res) {
-      var md = res[0], meta = res[1], feed = res[2] || [];
-      if (md !== lastTodo) { lastTodo = md; cardsCache = parseTodo(md); renderBoard(cardsCache); }
+      var md = res[0], meta = res[1], feed = res[2] || [], review = res[3] || [];
+      var reviewStr = JSON.stringify(review);
+      var reviewChanged = reviewStr !== lastReview;
+      if (reviewChanged) { lastReview = reviewStr; indexFeedback(review); }
+      if (md !== lastTodo || reviewChanged) {
+        lastTodo = md; cardsCache = parseTodo(md); renderBoard(cardsCache);
+      }
       var metaStr = JSON.stringify(meta);
       if (metaStr !== lastMeta) {
         lastMeta = metaStr; renderMeta(meta);

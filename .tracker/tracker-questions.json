@@ -3,32 +3,60 @@
   "branch": "fix-markdown-sidecar-405-error",
   "suites": [
     { "name": "build", "pass": 4, "total": 4 },
-    { "name": "preview", "pass": 3, "total": 3 },
-    { "name": "features", "pass": 2, "total": 2 },
-    { "name": "board", "pass": 32, "total": 32 }
+    { "name": "preview", "pass": 4, "total": 4 },
+    { "name": "features", "pass": 3, "total": 3 },
+    { "name": "board", "pass": 33, "total": 33 },
+    { "name": "export", "pass": 2, "total": 3 }
   ],
-  "questions": [
+  "answered": [
+    { "q": "Underscores", "a": "Add underscore emphasis, word boundaries only" },
+    { "q": "Shared entity", "a": "Add the entity node, un-park both tests" },
+    { "q": "Orphan node", "a": "Delete it from the cosmoboard canvas" },
+    { "q": "Preview port", "a": "Move to 4174 permanently, update the docs" }
+  ],
+  "questions": [],
+  "archivedQuestions": [
     {
       "id": 1,
-      "label": "Panel overflow",
-      "title": "Where exactly does the text overflow?",
-      "why": "I could not reproduce it. At a 312px viewport the three issue panels wrap cleanly, the GitHub modal keeps its long filename inside the box, and the toast wraps. Your note pointed at a screenshot that did not come through. Tell me the surface and I will fix it; pick Other to describe it.",
+      "label": "Underscores",
+      "title": "Should _underscore_ render as italic?",
+      "why": "It does not today. The renderer handles **bold**, *em*, `code` and links, but has no underscore rule, so _word_ shows its underscores. I found this while fixing the caret mapping, which had wrongly assumed the opposite. The caret is correct either way now, so this is purely your call on rendering.",
       "options": [
-        { "key": "A", "title": "The issue panels themselves", "note": "The row with the input, the checkbox and the send button.", "answer": "Overflow is in the recommendation/feature/bug panel row itself" },
-        { "key": "B", "title": "The GitHub confirmation modal", "note": "The 'Before GitHub review' dialog with the downloaded filename.", "answer": "Overflow is in the Before GitHub review modal" },
-        { "key": "C", "title": "The toast message", "note": "The little status message near the toolbar.", "answer": "Overflow is in the toolbar toast" },
-        { "key": "D", "title": "The GitHub issue page itself", "note": "The body text once GitHub opens, not the board UI.", "answer": "Overflow is in the generated GitHub issue body, not the board UI" }
+        { "key": "A", "title": "Add the rule", "note": "Match standard markdown. _word_ becomes italic.", "answer": "Add underscore emphasis to the renderer" },
+        { "key": "B", "title": "Leave it as is", "note": "Keeps snake_case identifiers safe from accidental italics.", "answer": "Leave underscores literal, protects snake_case" },
+        { "key": "C", "title": "Only when spaced", "note": "Italic for _word_ but never inside a word, so file_name_here stays literal.", "answer": "Add underscore emphasis but only at word boundaries" }
       ]
     },
     {
       "id": 2,
-      "label": "Repro width",
-      "title": "What were you on when you saw it?",
-      "why": "The panels change layout at a breakpoint, so the width matters more than anything else here.",
+      "label": "Shared entity",
+      "title": "Build the missing shared-entity node?",
+      "why": "src/entities/, content/entities/index.json and the base-data entityRef all exist, but the entity node was never added to the cosmoboard canvas, in any commit, despite a proof block once claiming it was. Two tests sit parked on this: shared-entity-build.pending.mjs and shared-entity-runtime-e2e.pending.mjs. This is the last thing keeping anything parked.",
       "options": [
-        { "key": "A", "title": "Phone", "note": "Narrow portrait screen.", "answer": "Overflow seen on a phone" },
-        { "key": "B", "title": "Tablet", "note": "Mid width, or a half-screen window.", "answer": "Overflow seen on a tablet or half-width window" },
-        { "key": "C", "title": "Desktop, full width", "note": "Normal laptop or monitor window.", "answer": "Overflow seen on a full width desktop window" }
+        { "key": "A", "title": "Add the node", "note": "Put an entity node on the cosmoboard canvas and un-park both tests.", "answer": "Add the entity node to the cosmoboard canvas and un-park the two tests" },
+        { "key": "B", "title": "Drop the feature", "note": "Delete the half-built entity plumbing and the two parked tests with it.", "answer": "Drop the shared-entity feature and its parked tests" },
+        { "key": "C", "title": "Leave parked", "note": "Not now. The tests stay out of the suite.", "answer": "Leave shared entities parked for now" }
+      ]
+    },
+    {
+      "id": 3,
+      "label": "Orphan node",
+      "title": "What about the orphan markdown node?",
+      "why": "The cosmoboard canvas has node hgr0v5cjqam pointing at note-2026-07-28-15-37-36.md, a file two earlier commits deleted on purpose as test litter. Its content was empty, so nothing was lost, but loading the board recreates the file as an empty sidecar and it shows up untracked every time.",
+      "options": [
+        { "key": "A", "title": "Delete the node", "note": "Remove it from the canvas. Nothing was in it.", "answer": "Delete the orphan markdown node from the cosmoboard canvas" },
+        { "key": "B", "title": "Keep and fill it", "note": "The node stays, I commit a real file for it. Tell me what it should say.", "answer": "Keep the node and commit a real markdown file for it" }
+      ]
+    },
+    {
+      "id": 4,
+      "label": "Preview port",
+      "title": "Which port should the preview server use?",
+      "why": "Your aide-board serve.mjs is holding 4173, so I started proto_website's preview on 4174 rather than killing your other project. Every doc in this repo still says 4173.",
+      "options": [
+        { "key": "A", "title": "Stay on 4174", "note": "I update AGENTS.md and the docs to say 4174.", "answer": "Move proto_website preview to 4174 permanently and update the docs" },
+        { "key": "B", "title": "Take 4173 back", "note": "You stop aide-board when working here, I keep the docs as they are.", "answer": "Keep 4173 for proto_website, aide-board moves instead" },
+        { "key": "C", "title": "Leave it ad hoc", "note": "Whichever is free at the time. No doc change.", "answer": "No fixed port, use whatever is free" }
       ]
     }
   ]
