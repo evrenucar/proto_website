@@ -4473,61 +4473,82 @@ function computeVisibleOffsetInLine(lineEl, container, offset) {
   return visible;
 }
 
-// Build a per-visible-char map back to raw-string offsets for a markdown line.
-// Mirrors what `renderMarkdownLineToHtml` strips: leading bullet/heading/quote
-// prefix and inline `**bold**`, `*em*`, `_em_`, `` `code` ``, `[text](url)`.
+// Map every visible character of a rendered markdown line back to its offset in
+// the raw source, so a click on a rendered line can be translated before the line
+// swaps into raw mode.
+//
+// This has to stay in lockstep with `renderMarkdownLineToHtml`: the same prefix
+// rules, then the same inline rules in the same order. Rather than re-deriving
+// which characters survive, it replays that pipeline and carries an offset per
+// surviving character. A second, hand-written parser is what broke this before:
+// it stripped `_em_`, which the renderer does not touch, so every caret after an
+// underscore landed short, and it never recursed into nested markers.
 function buildVisibleToRawMap(raw) {
-  let prefixRawLen = 0;
-  const bullet = raw.match(/^(\s*)([-*+])\s+/);
-  const ordered = raw.match(/^(\s*)(\d+)\.\s+/);
-  const heading = raw.match(/^(#{1,6})\s+/);
-  const quote = raw.match(/^>\s?/);
-  if (bullet) prefixRawLen = bullet[0].length;
-  else if (ordered) prefixRawLen = ordered[0].length;
-  else if (heading) prefixRawLen = heading[0].length;
-  else if (quote) prefixRawLen = quote[0].length;
+  const noVisibleText = { prefixRawLen: 0, visible: "", rawOffsets: [] };
+  if (!raw.trim()) return noVisibleText;
 
-  const body = raw.slice(prefixRawLen);
-  const rawOffsets = [];
-  let visible = "";
-  let i = 0;
-  const pushSlice = (from, to) => {
-    for (let j = from; j < to; j++) {
-      visible += body[j];
-      rawOffsets.push(prefixRawLen + j);
-    }
-  };
-  while (i < body.length) {
-    const c = body[i];
-    if (c === "*" && body[i + 1] === "*") {
-      const close = body.indexOf("**", i + 2);
-      if (close !== -1) { pushSlice(i + 2, close); i = close + 2; continue; }
-    }
-    if (c === "*" || c === "_") {
-      const close = body.indexOf(c, i + 1);
-      if (close !== -1 && close !== i + 1) { pushSlice(i + 1, close); i = close + 1; continue; }
-    }
-    if (c === "`") {
-      const close = body.indexOf("`", i + 1);
-      if (close !== -1) { pushSlice(i + 1, close); i = close + 1; continue; }
-    }
-    if (c === "[") {
-      const closeBracket = body.indexOf("]", i + 1);
-      if (closeBracket !== -1 && body[closeBracket + 1] === "(") {
-        const closeParen = body.indexOf(")", closeBracket + 2);
-        if (closeParen !== -1) { pushSlice(i + 1, closeBracket); i = closeParen + 1; continue; }
+  // Block-level prefix. Each pattern matches the renderer's, including its
+  // requirement of content after the marker: `- ` on its own is not a list item
+  // there, so its dash and spaces stay visible here too.
+  let prefixRawLen = 0;
+  const heading = raw.match(/^(#{1,6})\s+(.+)$/);
+  const bullet = raw.match(/^(\s*)([-*+])\s+(.+)$/);
+  const ordered = raw.match(/^(\s*)(\d+)\.\s+(.+)$/);
+  const quote = raw.match(/^>\s?(.*)$/);
+  if (heading) prefixRawLen = raw.length - heading[2].length;
+  else if (bullet) prefixRawLen = raw.length - bullet[3].length;
+  else if (ordered) prefixRawLen = raw.length - ordered[3].length;
+  else if (quote) prefixRawLen = raw.length - quote[1].length;
+  else if (/^[-*_]{3,}$/.test(raw.trim())) return noVisibleText;
+
+  let text = raw.slice(prefixRawLen);
+  let offsets = [];
+  for (let i = 0; i < text.length; i++) offsets.push(prefixRawLen + i);
+
+  // Drop one rule's marker characters, keeping capture group `keep` along with
+  // the raw offset of each character it holds.
+  const applyRule = (pattern, keep) => {
+    let out = "";
+    const nextOffsets = [];
+    let last = 0;
+    for (const match of text.matchAll(pattern)) {
+      const [matchStart, matchEnd] = match.indices[0];
+      const [keepStart, keepEnd] = match.indices[keep];
+      for (let i = last; i < matchStart; i++) {
+        out += text[i];
+        nextOffsets.push(offsets[i]);
       }
+      for (let i = keepStart; i < keepEnd; i++) {
+        out += text[i];
+        nextOffsets.push(offsets[i]);
+      }
+      last = matchEnd;
     }
-    visible += c;
-    rawOffsets.push(prefixRawLen + i);
-    i++;
-  }
-  return { prefixRawLen, visible, rawOffsets };
+    for (let i = last; i < text.length; i++) {
+      out += text[i];
+      nextOffsets.push(offsets[i]);
+    }
+    text = out;
+    offsets = nextOffsets;
+  };
+
+  // Same rules, same order as `escapeAndInline` in `renderMarkdownLineToHtml`.
+  // Applying them in sequence is what handles nesting: the inner `` `code` ``
+  // of a bolded run is gone by the time the `**` rule sees the line.
+  applyRule(/`([^`]+)`/gd, 1);
+  applyRule(/\*\*([^*]+)\*\*/gd, 1);
+  applyRule(/\*([^*]+)\*/gd, 1);
+  applyRule(/\[([^\]]+)\]\(([^)]+)\)/gd, 1);
+
+  return { prefixRawLen, visible: text, rawOffsets: offsets };
 }
 
 function visibleToRawOffset(raw, visibleOffset) {
   const { prefixRawLen, rawOffsets } = buildVisibleToRawMap(raw);
-  if (visibleOffset <= 0) return prefixRawLen;
+  if (!rawOffsets.length) return prefixRawLen;
+  // Not prefixRawLen: on a line that opens with an inline marker the first
+  // visible character sits after it, e.g. `**bold**` starts two chars in.
+  if (visibleOffset <= 0) return rawOffsets[0];
   if (visibleOffset >= rawOffsets.length) return raw.length;
   return rawOffsets[visibleOffset];
 }
