@@ -70,8 +70,10 @@ html:has(body.page-board) {
   backdrop-filter: blur(12px);
 }
 
+/* Both clear the close button pinned in the top right corner. */
 .board-page-panel-eyebrow {
   margin: 0 0 10px;
+  padding-right: 32px;
   color: #3fdaca;
   font-size: 11px;
   font-weight: 700;
@@ -81,6 +83,7 @@ html:has(body.page-board) {
 
 .board-page-panel-title {
   margin: 0 0 12px;
+  padding-right: 32px;
   color: #fafafa;
   font-size: clamp(1.35rem, 2vw, 1.7rem);
   line-height: 1.15;
@@ -141,6 +144,67 @@ html:has(body.page-board) {
 .board-page-panel-note {
   color: rgba(250, 250, 250, 0.62);
   font-size: 12px;
+}
+
+/* Two ways out of the intro panel: the x where a window close belongs, and a
+   plain "close" at the end of the actions row for anyone reading top to bottom. */
+.board-page-panel-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: rgba(250, 250, 250, 0.55);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.board-page-panel-dismiss:hover {
+  border-color: rgba(63, 218, 202, 0.35);
+  background: rgba(63, 218, 202, 0.12);
+  color: #3fdaca;
+}
+
+.board-page-panel-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(250, 250, 250, 0.16);
+  border-radius: 999px;
+  background: none;
+  color: rgba(250, 250, 250, 0.7);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.board-page-panel-close:hover {
+  border-color: rgba(250, 250, 250, 0.34);
+  background: rgba(250, 250, 250, 0.08);
+  color: #fafafa;
+}
+
+.board-page-panel-dismiss:focus-visible,
+.board-page-panel-close:focus-visible {
+  outline: 2px solid #3fdaca;
+  outline-offset: 2px;
+}
+
+.board-page-panel[hidden] {
+  display: none;
 }
 
 

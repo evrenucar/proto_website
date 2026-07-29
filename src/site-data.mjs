@@ -381,10 +381,7 @@ export const onboardingPage = {
       "Markdown notes are real .md files on disk",
       "Boards can hold other boards, and notes can hold boards"
     ],
-    actions: [
-      { label: "What Cosmoboard is", href: "cosmoboard-landing.html" },
-      { label: "Open the full board", href: "cosmoboard.html" }
-    ],
+    actions: [{ label: "what is cosmoboard", href: "cosmoboard-landing.html" }],
     note: "Found something broken, or want something? Use the toolbar to send it straight to GitHub."
   },
   board: {

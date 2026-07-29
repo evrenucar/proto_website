@@ -92,7 +92,7 @@ function getBoardSourceVersion(sourcePath) {
 // standing trap: change braindump.js, forget the bump, and every returning
 // visitor keeps the stale file until they hard-reload. Content hashes cannot
 // drift out of sync with what they version.
-let boardAssetVersions = { js: "0", css: "0" };
+let boardAssetVersions = { js: "0", css: "0", site: "0" };
 
 async function buildBoardAssetVersions() {
   const read = async (relativePath) => {
@@ -104,7 +104,11 @@ async function buildBoardAssetVersions() {
   };
   return {
     js: await read(path.join("JavaScript", "braindump.js")),
-    css: await read(path.join("CSS", "braindump.css"))
+    css: await read(path.join("CSS", "braindump.css")),
+    // site.js was pinned at a hand-edited ?v=5 and had the same trap: change it,
+    // forget the bump, and returning visitors keep the stale file. It carries the
+    // board intro panel's close behaviour, so a stale copy is a visibly broken page.
+    site: await read(path.join("JavaScript", "site.js"))
   };
 }
 
@@ -515,7 +519,7 @@ function renderShell({
     <link rel="manifest" href="${relativeHref(currentFile, "favicon/site.webmanifest")}" />
     ${renderInitialNavigationStateScript()}
     ${schemaBlocks}
-    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=5" defer></script>
+    <script src="${relativeHref(currentFile, "JavaScript/site.js")}?v=${boardAssetVersions.site}" defer></script>
   </head>
   <body class="${escapeHtml(bodyClass)}">
     <a class="skip-link" href="#content">Skip to content</a>
@@ -1270,7 +1274,8 @@ function renderBoardIntroPanel(currentFile, panel) {
     .join("");
 
   return `
-    <aside class="board-page-panel" aria-label="${escapeHtml(panel.title || "Board intro")}">
+    <aside class="board-page-panel" data-board-intro aria-label="${escapeHtml(panel.title || "Board intro")}">
+      <button type="button" class="board-page-panel-dismiss" data-board-intro-close aria-label="Close this panel">&times;</button>
       <p class="board-page-panel-eyebrow">${escapeHtml(panel.eyebrow || "Board")}</p>
       <h1 class="board-page-panel-title">${escapeHtml(panel.title || "")}</h1>
       ${renderParagraphs(panel.copy || [], "board-page-panel-copy")}
@@ -1279,6 +1284,7 @@ function renderBoardIntroPanel(currentFile, panel) {
       </ul>
       <div class="board-page-panel-actions">
         ${actions}
+        <button type="button" class="board-page-panel-close" data-board-intro-close>close</button>
       </div>
       <p class="board-page-panel-note">${escapeHtml(panel.note || "")}</p>
     </aside>

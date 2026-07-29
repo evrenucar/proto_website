@@ -25,6 +25,48 @@ let copyToastTimer = 0;
 let lockedNavigationScrollY = 0;
 let isNavigationScrollLocked = false;
 
+// The board intro panel sits over the canvas, so it needs a way out. Dismissal is
+// remembered per board, otherwise it nags on every visit. Keyed by board slug so
+// closing one board's intro does not silently hide another's.
+const boardIntroPanel = document.querySelector("[data-board-intro]");
+
+function getBoardIntroStorageKey() {
+  const slug = document.querySelector("[data-board-slug]")?.dataset.boardSlug || "board";
+  return `evren-site:board-intro-dismissed:${slug}`;
+}
+
+function hideBoardIntroPanel() {
+  if (!boardIntroPanel) {
+    return;
+  }
+
+  boardIntroPanel.hidden = true;
+  try {
+    window.localStorage.setItem(getBoardIntroStorageKey(), "1");
+  } catch (error) {
+    // Private mode or storage disabled. Hiding it for this visit is still correct.
+  }
+}
+
+if (boardIntroPanel) {
+  let alreadyDismissed = false;
+  try {
+    alreadyDismissed = window.localStorage.getItem(getBoardIntroStorageKey()) === "1";
+  } catch (error) {
+    alreadyDismissed = false;
+  }
+
+  if (alreadyDismissed) {
+    boardIntroPanel.hidden = true;
+  }
+
+  // Deliberately no Escape binding: Escape already deselects on a board, and
+  // stealing it would permanently dismiss the intro as a side effect of that.
+  boardIntroPanel.querySelectorAll("[data-board-intro-close]").forEach((button) => {
+    button.addEventListener("click", hideBoardIntroPanel);
+  });
+}
+
 function getScrollbarCompensation() {
   return Math.max(0, window.innerWidth - document.documentElement.clientWidth);
 }
