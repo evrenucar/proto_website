@@ -111,9 +111,35 @@ Answered on the board. Held until the direction review says they are worth doing
   `AGENTS.md`, `.agents/agents.md`, `tests/README.md`, and the `preview` script in `package.json`.
   `aide-board/serve.mjs` owns 4173.
 
+### Objective status, checked live 2026-07-29
+
+Four of the five criteria are met on `evrenucar.com`. The fifth is yours.
+
+| # | Criterion | State |
+| --- | --- | --- |
+| 1 | `onboarding.html` reachable | met, 200 |
+| 2 | live boards serve real nodes | met, 51 nodes |
+| 3 | a stranger can say what it is | met, intro panel plus the landing page |
+| 4 | download / upload / commit route works from the live site | met, walked end to end |
+| 5 | one real person has done it | **not yet, this is the part only you can do** |
+
+Criterion 4 was walked on the live site without submitting anything: the recommend panel opens, the
+summary posts, the modal reports the downloaded `onboarding_<stamp>.canvas.diff`, and the flow
+builds a prefilled GitHub issue URL carrying the board slug, repo path and source version. The only
+wart is a `405` console error from `POST /api/save-board`, which is the known static-host limit. It
+degrades without losing anything and is not visible to a visitor.
+
 ### Shipped 2026-07-29
 
 Merged to `main` and live. First deploy since 2026-06-22.
+
+- [A] The onboarding board opens with an intro panel: what Cosmoboard is in two sentences, how to
+  interact with a node, and that nothing leaves the visitor's browser. It links to
+  `cosmoboard-landing.html`, the written explanation, and to the full working board. The panel slot
+  and its CSS already existed in the generator and had never been used by any page.
+- [ ] `cosmoboard-landing.html` is `noindex,nofollow`, absent from the sitemap, and has no site nav.
+  It is the best page to send someone, so decide whether it should be indexed, listed, and given the
+  nav rather than `onboarding.html`.
 
 - [A] `onboarding.html` is live at `evrenucar.com/onboarding.html`, having 404'd since it was
   written. The nav's **Cosmoboard** entry opens it, and **Braindump** is unlisted: it stays built
