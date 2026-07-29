@@ -62,7 +62,12 @@ card there within seconds.
   editor then found no active line, dropped to preview, and the next autosave wrote the damage to
   disk. Multi-line deletes are handled explicitly now, and a normalizer repairs the structure on any
   input as a backstop for paste, cut and drag-drop.
-- [ ] Text overflows in the feature request, bug report, and recommendation panels.
+- [ ] Text overflows in the feature request, bug report, and recommendation panels. **Blocked, cannot
+  reproduce.** Ruled out at a 312px viewport: the three panels wrap cleanly and nothing escapes the
+  viewport, the "Before GitHub review" modal keeps a full-length `cosmoboard_<stamp>.canvas.json`
+  inside its box, the toast wraps, and `code` already carries `word-break: break-word`. The original
+  report pointed at a screenshot that did not come through. Question posted on the board asking which
+  surface and what width; do not guess at CSS before that is answered.
 - [ ] Save fails with HTTP 405 on GitHub Pages. Static hosting has no backend, so
   `POST /api/save-board` 405s. `saveBoard` degrades gracefully to localStorage, but once 405 fires
   `autosaveRepositorySupported = false` and only manual save retries, and there is still no path to

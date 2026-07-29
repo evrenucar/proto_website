@@ -415,7 +415,13 @@
     host.innerHTML = html;
   }
 
-  function renderFeed(feed) {
+  function renderFeed(rawFeed) {
+    // Sort rather than trusting file order. Agents are told to prepend, but two
+    // entries written in one pass are easy to get backwards, and a status feed
+    // showing an older line above a newer one is worse than useless.
+    var feed = rawFeed.slice().sort(function (a, b) {
+      return new Date(b.at || 0) - new Date(a.at || 0);
+    });
     var list = document.getElementById("feed");
     if (!feed.length) { list.innerHTML = '<li class="feed-item"><span class="feed-when"></span><span class="feed-agent"></span><span class="feed-text">No updates yet.</span></li>'; return; }
     list.innerHTML = feed.slice(0, 40).map(function (f) {

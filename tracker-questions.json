@@ -7,5 +7,29 @@
     { "name": "features", "pass": 2, "total": 2 },
     { "name": "board", "pass": 32, "total": 32 }
   ],
-  "questions": []
+  "questions": [
+    {
+      "id": 1,
+      "label": "Panel overflow",
+      "title": "Where exactly does the text overflow?",
+      "why": "I could not reproduce it. At a 312px viewport the three issue panels wrap cleanly, the GitHub modal keeps its long filename inside the box, and the toast wraps. Your note pointed at a screenshot that did not come through. Tell me the surface and I will fix it; pick Other to describe it.",
+      "options": [
+        { "key": "A", "title": "The issue panels themselves", "note": "The row with the input, the checkbox and the send button.", "answer": "Overflow is in the recommendation/feature/bug panel row itself" },
+        { "key": "B", "title": "The GitHub confirmation modal", "note": "The 'Before GitHub review' dialog with the downloaded filename.", "answer": "Overflow is in the Before GitHub review modal" },
+        { "key": "C", "title": "The toast message", "note": "The little status message near the toolbar.", "answer": "Overflow is in the toolbar toast" },
+        { "key": "D", "title": "The GitHub issue page itself", "note": "The body text once GitHub opens, not the board UI.", "answer": "Overflow is in the generated GitHub issue body, not the board UI" }
+      ]
+    },
+    {
+      "id": 2,
+      "label": "Repro width",
+      "title": "What were you on when you saw it?",
+      "why": "The panels change layout at a breakpoint, so the width matters more than anything else here.",
+      "options": [
+        { "key": "A", "title": "Phone", "note": "Narrow portrait screen.", "answer": "Overflow seen on a phone" },
+        { "key": "B", "title": "Tablet", "note": "Mid width, or a half-screen window.", "answer": "Overflow seen on a tablet or half-width window" },
+        { "key": "C", "title": "Desktop, full width", "note": "Normal laptop or monitor window.", "answer": "Overflow seen on a full width desktop window" }
+      ]
+    }
+  ]
 }

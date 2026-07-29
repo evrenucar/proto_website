@@ -1,13 +1,18 @@
 [
   {
-    "at": "2026-07-29T00:05:00Z",
+    "at": "2026-07-29T01:45:00Z",
     "agent": "claude",
-    "text": "You can add cards from the board now: type, pick a section, Add card. Writes straight into .agents/todo.md."
+    "text": "Could not reproduce the panel text overflow. Two questions posted above; answer them and I will fix it."
   },
   {
     "at": "2026-07-29T00:20:00Z",
     "agent": "claude",
     "text": "Board suite is 32/32. Wiring the dead Export .canvas button and implementing board-URL paste were the two real fixes behind it."
+  },
+  {
+    "at": "2026-07-29T00:05:00Z",
+    "agent": "claude",
+    "text": "You can add cards from the board now: type, pick a section, Add card. Writes straight into .agents/todo.md."
   },
   {
     "at": "2026-07-28T21:35:00Z",
