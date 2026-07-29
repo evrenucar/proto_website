@@ -1,5 +1,15 @@
 [
   {
+    "at": "2026-07-29T14:05:00Z",
+    "agent": "claude",
+    "text": "Shipped. 31 commits merged to main, first deploy since 22 June. onboarding.html is live and the nav points at it. Runtime went from v=58 to current."
+  },
+  {
+    "at": "2026-07-29T13:50:00Z",
+    "agent": "claude",
+    "text": "Pre-merge audit stopped two things: third-party Maker Faire material on the onboarding board, and the tracker publishing itself. Both handled before the push."
+  },
+  {
     "at": "2026-07-29T13:15:00Z",
     "agent": "claude",
     "text": "Review is on the board now: works / issue buttons and a feedback field per card, and drag between columns to move it. Both write straight into todo.md."

@@ -111,6 +111,27 @@ Answered on the board. Held until the direction review says they are worth doing
   `AGENTS.md`, `.agents/agents.md`, `tests/README.md`, and the `preview` script in `package.json`.
   `aide-board/serve.mjs` owns 4173.
 
+### Shipped 2026-07-29
+
+Merged to `main` and live. First deploy since 2026-06-22.
+
+- [A] `onboarding.html` is live at `evrenucar.com/onboarding.html`, having 404'd since it was
+  written. The nav's **Cosmoboard** entry opens it, and **Braindump** is unlisted: it stays built
+  and reachable at its URL, but a first-time visitor no longer lands in the scratch pad.
+- [A] The live runtime moved from `?v=58` to the current content hash, so the public site finally
+  has the select-all fix, the preview-embed write guard, and the non-destructive build.
+- [ ] **`npm run sync:notion` has been failing on CI for days**, and it fails at the first step so
+  `npm run build` never runs. `Error: Could not load the Notion page metadata for
+  "https://evrenucar.notion.site/Project-Box-system-293312b0d17d8098827ce1ee98ceeb3e"`. This is why
+  `main` stopped receiving content updates after 2026-06-22. Pages still deploys, because that is a
+  separate workflow, so the site is current. Pre-existing, not caused by the merge. Either the page
+  moved, was unshared, or Notion changed its metadata shape.
+- [ ] The Maker Faire exhibitor PDF is still public under `content/boards/braindump/`, in two
+  copies. It was removed from the onboarding board but that is not where it originated. It names
+  119 people with their zone and set-up assignments. Decide whether it should be there at all.
+- [ ] `.playwright-mcp/` is 31 tracked test-dump files served publicly. Pre-existing, and
+  `.gitignore` does not cover it.
+
 ## Bugs
 
 - [x] Wheel zoom ceiling raised from 3x to 5x so it matches touch pinch. At the ceiling the
