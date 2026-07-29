@@ -23,8 +23,11 @@ export const navigation = [
   { label: "Photography", href: "photography.html" },
   { label: "Open-Quests", href: "open-quests.html" },
   { label: "Cool bookmarks", href: "cool-bookmarks.html" },
-  { label: "Braindump", href: "braindump.html" },
-  { label: "Cosmoboard", href: "cosmoboard.html" }
+  // Cosmoboard points at the guided onboarding board, not the working one. A
+  // first-time visitor needs the tour; the full board is reachable from inside it.
+  // Braindump is deliberately absent: it is the scratch pad, and it answers
+  // "what is this?" with a wall of test scribbles.
+  { label: "Cosmoboard", href: "onboarding.html" }
 ];
 
 export const homePage = {

@@ -31,7 +31,12 @@ await access(homePath);
 
 const html = await readFile(cosmoboardPath, "utf8");
 const homeHtml = await readFile(homePath, "utf8");
-assert.match(html, /aria-current="page">Cosmoboard<\/a>/);
+// The nav's "Cosmoboard" entry points at the guided onboarding board, not this
+// working one, so onboarding.html is what carries aria-current. cosmoboard.html
+// is reachable from inside the tour rather than from the nav.
+const onboardingHtml = await readFile(path.join(rootDir, "onboarding.html"), "utf8");
+assert.match(onboardingHtml, /aria-current="page">Cosmoboard<\/a>/);
+assert.doesNotMatch(html, /aria-current="page"/);
 assert.match(html, /class="sidenav"/);
 assert.match(html, /data-board-app="true"/);
 assert.match(html, /data-board-slug="cosmoboard"/);
