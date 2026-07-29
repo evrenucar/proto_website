@@ -51,6 +51,20 @@
       "file": "content/boards/cosmoboard/direction.md",
       "description": "Overview of the Cosmoboard system — file-first, local-first, spatial orientation.",
       "tags": ["meta", "direction"]
+    },
+    {
+      "slug": "eurocrate-design-notes",
+      "title": "Eurocrate design notes",
+      "file": "content/boards/projects/eurocrate-storage/design-notes.md",
+      "description": "Frame, sliding surfaces, ballast, and crate sizes for the 600x400 storage system.",
+      "tags": ["project", "storage"]
+    },
+    {
+      "slug": "eurocrate-open-questions",
+      "title": "Eurocrate open questions",
+      "file": "content/boards/projects/eurocrate-storage/open-questions.md",
+      "description": "Unresolved decisions on the storage system: anti-tip interlock, sourcing, weight budget.",
+      "tags": ["project", "storage"]
     }
   ],
 

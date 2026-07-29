@@ -1,12 +1,184 @@
 {
   "canvasId": "5a31825d-5261-4aaa-a433-79c9299b23a5",
   "createdAt": "2026-04-28T12:06:45.268Z",
-  "updatedAt": "2026-04-28T12:06:45.268Z",
-  "nodes": [],
+  "updatedAt": "2026-07-29T09:30:36.440Z",
+  "nodes": [
+    {
+      "id": "eu-title",
+      "x": 100,
+      "y": 80,
+      "width": 1520,
+      "height": 100,
+      "type": "text",
+      "text": "Eurocrate storage, universal solution\n\nA steel frame that turns standard 600x400 eurocrates into drawers. Standard footprint, so the crates stay cheap and replaceable."
+    },
+    {
+      "id": "eu-sizes-head",
+      "x": 100,
+      "y": 260,
+      "width": 600,
+      "height": 56,
+      "type": "text",
+      "text": "Crate sizes, and where to buy them"
+    },
+    {
+      "id": "eu-link-75",
+      "x": 100,
+      "y": 340,
+      "width": 300,
+      "height": 300,
+      "type": "link",
+      "url": "https://www.emtrade.nl/60x40x75-kunststof-bak-grijs-pp-gesloten-gebruikt.html?id=266599261",
+      "title": "600x400x75mm",
+      "description": "Shallowest of the three. Used, grey PP, closed sides.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "eu-link-170",
+      "x": 420,
+      "y": 340,
+      "width": 300,
+      "height": 300,
+      "type": "link",
+      "url": "https://www.emtrade.nl/stapelbak-600x400x170-donkergrijs-gesloten-gebruik.html?id=270597353",
+      "title": "600x400x170mm",
+      "description": "Mid height. Likely the one most drawer bays get sized around.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "eu-link-270",
+      "x": 740,
+      "y": 340,
+      "width": 300,
+      "height": 300,
+      "type": "link",
+      "url": "https://www.emtrade.nl/stapelbak-600x400x270mm-pp-grijs-gebruikt.html",
+      "title": "600x400x270mm",
+      "description": "Deepest. Watch the loaded mass against the base ballast.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "eu-link-400",
+      "x": 1060,
+      "y": 340,
+      "width": 300,
+      "height": 300,
+      "type": "link",
+      "url": "https://www.emtrade.nl/stapelbak-40x30x12-cm-gebruikt.html?id=309630939",
+      "title": "400x300x120mm",
+      "description": "Half footprint, for lighter things. Two sit in one 600x400 bay.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "eu-notes-head",
+      "x": 100,
+      "y": 700,
+      "width": 600,
+      "height": 56,
+      "type": "text",
+      "text": "Notes"
+    },
+    {
+      "id": "eu-design-md",
+      "x": 100,
+      "y": 780,
+      "width": 420,
+      "height": 480,
+      "type": "markdown",
+      "file": "/content/boards/projects/eurocrate-storage/design-notes.md",
+      "href": "/content/boards/projects/eurocrate-storage/design-notes.md",
+      "title": "Design notes",
+      "_rawMarkdown": "# Design notes\n\nA steel welded frame carrying eurocrates as drawers. The crates stay standard\n600x400, so they remain cheap to source second hand and easy to replace.\n\n## Sliding\n\n- HDPE strips on the sliding surfaces\n- Teflon on the friction points if HDPE alone is not slippery enough\n- A thin sheet over the top surface so dust does not settle into an open crate\n\n## Stability\n\n- Ballast in the base, sand or klinker blocks\n- The base has to outweigh the loaded drawers: 6 crates, 20kg maximum each\n- Heavy duty castors, locking\n\n## Small parts\n\nEuroPlus flex organizers inside a crate for anything too small to sit loose.\n\n## Sizes in use\n\nThe 600x400 footprint comes in three heights, 75mm, 170mm and 270mm. The\n400x300x120 is the half-footprint for lighter things. Supplier links are on the\nboard next to this note.\n",
+      "markdownId": "cosmo-note-eu-design-notes",
+      "markdownUpdatedAt": "2026-07-29T11:00:00.000Z"
+    },
+    {
+      "id": "eu-open-md",
+      "x": 540,
+      "y": 780,
+      "width": 420,
+      "height": 480,
+      "type": "markdown",
+      "file": "/content/boards/projects/eurocrate-storage/open-questions.md",
+      "href": "/content/boards/projects/eurocrate-storage/open-questions.md",
+      "title": "Open questions",
+      "_rawMarkdown": "# Open questions\n\n## Anti-tip interlock\n\nWorth building at all? The failure case is several loaded drawers open at once\npulling the whole frame over.\n\n- Engages once a crate moves even slightly out\n- Releases when the crate is removed completely, since a crate that is out of\n  the frame cannot tip it\n- Is \"only one open at a time\" the right rule, or too restrictive to live with?\n\n## Sourcing\n\nSecond hand supply is the whole reason for standardising on 600x400. Are\nMarktplaats and liquidation sales reliable enough to count on, or does emtrade\nend up being the default anyway?\n\n## Weight budget\n\nConfirm the base ballast beats a fully loaded, fully extended set of drawers\nbefore committing to a frame design. That number decides how much mass goes in\nthe base, which decides whether it can be moved at all.\n\n## Why not just boxes\n\nWorth answering honestly before building anything. Stacked boxes are free. The\nframe only earns its place if getting to the bottom crate stops being a chore.\n",
+      "markdownId": "cosmo-note-eu-open-questions",
+      "markdownUpdatedAt": "2026-07-29T11:00:00.000Z"
+    },
+    {
+      "id": "eu-refs-head",
+      "x": 1000,
+      "y": 700,
+      "width": 620,
+      "height": 56,
+      "type": "text",
+      "text": "Reference"
+    },
+    {
+      "id": "eu-img-1",
+      "x": 1000,
+      "y": 780,
+      "width": 300,
+      "height": 172,
+      "type": "file",
+      "file": "/notion_assets/eurocrate-storage-universal-solution/image-343312b0-d17d-8038-b402-e2512e6f6f9b.png",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "eu-img-2",
+      "x": 1320,
+      "y": 780,
+      "width": 300,
+      "height": 230,
+      "type": "file",
+      "file": "/notion_assets/eurocrate-storage-universal-solution/image-343312b0-d17d-8061-bb6e-e84466ebfb25.png",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "eu-sourcing",
+      "x": 1000,
+      "y": 1040,
+      "width": 620,
+      "height": 220,
+      "type": "text",
+      "text": "Second hand sourcing\n\nThe 600x400 footprint was picked because used crates are everywhere. Marktplaats and liquidation sales are worth checking before paying supplier prices. Reliability of that supply is still an open question."
+    },
+    {
+      "id": "eu-project-link",
+      "x": 95.14269443509943,
+      "y": 1564.0796046362507,
+      "width": 320,
+      "height": 300,
+      "type": "link",
+      "url": "/content/projects/eurocrate-storage-universal-solution.html",
+      "title": "Project page",
+      "description": "The case study this board works against.",
+      "embedMode": "preview"
+    },
+    {
+      "id": "eu-cosmoboard",
+      "x": 435.14269443509943,
+      "y": 1564.0796046362507,
+      "width": 320,
+      "height": 260,
+      "type": "board-preview",
+      "boardSlug": "cosmoboard",
+      "boardSource": "/content/boards/cosmoboard/current.canvas",
+      "boardHref": "/cosmoboard.html",
+      "title": "Cosmoboard",
+      "description": "The main working board. This project is referenced from it."
+    }
+  ],
   "edges": [],
   "viewport": {
-    "x": -525.8690784871372,
-    "y": -194.44354612806268,
-    "z": 2.105931201717543
+    "x": 367.54186874827974,
+    "y": -192.00611975676566,
+    "z": 1.0077818268648158
+  },
+  "defaultViewport": {
+    "x": 290,
+    "y": 40,
+    "z": 0.5
   }
 }
