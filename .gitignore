@@ -23,3 +23,7 @@ NUL
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Cygwin/MSYS crash dumps
+bash.exe.stackdump
+*.stackdump

@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-const BASE_URL = 'http://127.0.0.1:4173';
+const BASE_URL = 'http://127.0.0.1:4174';
 const OUT_DIR = path.join(
   'C:\\Users\\evren\\Documents\\GitHub\\proto_website',
   '.agents', 'skills', 'whiteboard-automated-testing-skill',

@@ -39,7 +39,7 @@ These tests spawn their own server process via `node:child_process` — no manua
 - `tests/preview/preview-server-routes.test.mjs`
 - `tests/preview/preview-markdown-endpoint.test.mjs`
 - `tests/preview/preview-save-endpoint.test.mjs`
-- `tests/preview/preview-mode-smoke.mjs` (Playwright smoke; needs preview server already on `:4173`)
+- `tests/preview/preview-mode-smoke.mjs` (Playwright smoke; needs preview server already on `:4174`)
 - `tests/board/board-save-reload-e2e.test.mjs`
 - `tests/board/board-url-paste-preview-e2e.test.mjs`
 - `tests/board/board-save-export-runtime.test.mjs`
