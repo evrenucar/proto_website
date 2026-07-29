@@ -537,29 +537,6 @@
       "description": "The first onboarding board for the broader Cosmoboard direction inside evrenucar.com.",
       "image": "https://evrenucar.com/image/masked_photo.png",
       "hasAdjustedRatio": true
-    },
-    {
-      "id": "olh8va5zrbs",
-      "x": 2907.0879873733875,
-      "y": 971.6121252799677,
-      "width": 481.39367835318734,
-      "height": 267.3275870055472,
-      "url": "/content/boards/onboarding/maker-list-with-zones-and-set-up.pdf",
-      "title": "Maker List with Zones and Set Up",
-      "embedMode": "live",
-      "originalFilename": "Maker List with Zones and Set Up.pdf",
-      "type": "link"
-    },
-    {
-      "id": "z9zsr3qjc0j",
-      "x": 3157.422766967579,
-      "y": 1200.2110446795084,
-      "width": 266.79597722742574,
-      "height": 150.21169342856635,
-      "file": "/content/boards/onboarding/plan-for-makers.jpg",
-      "originalFilename": "Plan for Makers.jpg",
-      "type": "file",
-      "hasAdjustedRatio": true
     }
   ],
   "edges": [],
