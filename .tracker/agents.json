@@ -1,0 +1,69 @@
+{
+  "comment": "Declared identity for every agent working this board. The tracker reads this for card border colours, the who-strip, and the feed. An agent not listed here still works: the tracker falls back to a hashed colour from its name. The id is what goes in todo.md as @id.",
+  "updated": "2026-07-31",
+  "agents": [
+    {
+      "id": "opus5-0",
+      "n": 0,
+      "model": "opus 5",
+      "goal": "orchestrator, sole writer of braindump.js",
+      "color": "#e0b054"
+    },
+    {
+      "id": "opus5-1",
+      "n": 1,
+      "model": "opus 5",
+      "goal": "tracker multi-agent view",
+      "color": "#4c8dff"
+    },
+    {
+      "id": "opus5-2",
+      "n": 2,
+      "model": "opus 5",
+      "goal": "alt-drag copy undo on drawings",
+      "color": "#c98bf0"
+    },
+    {
+      "id": "opus5-3",
+      "n": 3,
+      "model": "opus 5",
+      "goal": "embed resize and overflow",
+      "color": "#f0a05a"
+    },
+    {
+      "id": "opus5-4",
+      "n": 4,
+      "model": "opus 5",
+      "goal": "mobile fast-zoom crash",
+      "color": "#5ad1a0"
+    },
+    {
+      "id": "opus5-5",
+      "n": 5,
+      "model": "sonnet 5",
+      "goal": "shift-constrained drag",
+      "color": "#7fd4e8"
+    },
+    {
+      "id": "opus5-6",
+      "n": 6,
+      "model": "sonnet 5",
+      "goal": "toolbar auto-hide and page lock",
+      "color": "#e88ba8"
+    },
+    {
+      "id": "opus5-7",
+      "n": 7,
+      "model": "opus 5",
+      "goal": "light mode and custom theme",
+      "color": "#b8e05a"
+    },
+    {
+      "id": "opus5-8",
+      "n": 8,
+      "model": "opus 5",
+      "goal": "pin items to viewport",
+      "color": "#9a8cff"
+    }
+  ]
+}

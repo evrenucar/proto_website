@@ -119,6 +119,27 @@ async function handleSaveBoard(request, response, parsedUrl) {
       try {
         existingMeta = JSON.parse(await readFile(safePath, "utf8"));
       } catch { /* no existing file */ }
+
+      // Stale-tab guard: a client that loaded the board earlier and missed a
+      // newer on-disk save must not silently overwrite it. Clients send the
+      // updatedAt they loaded against as ?base=; when the file has moved past
+      // it, the save is refused and the client tells the user to reload.
+      // Clients that send no base (old runtimes, scripts) keep old behavior.
+      const baseParam = parsedUrl.searchParams.get("base");
+      if (
+        baseParam &&
+        existingMeta &&
+        typeof existingMeta.updatedAt === "string" &&
+        existingMeta.updatedAt !== baseParam &&
+        new Date(existingMeta.updatedAt).getTime() > new Date(baseParam).getTime()
+      ) {
+        sendJson(response, 409, {
+          success: false,
+          stale: true,
+          error: `Board changed on disk (${existingMeta.updatedAt}) after this tab loaded it (${baseParam}). Reload the page to pick up the newer state.`
+        });
+        return;
+      }
       if (existingMeta && typeof existingMeta === "object") {
         if (!parsed.canvasId && typeof existingMeta.canvasId === "string") {
           parsed.canvasId = existingMeta.canvasId;
@@ -181,10 +202,14 @@ async function handleSaveBoard(request, response, parsedUrl) {
 function sanitizeMarkdownFilename(value) {
   const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "note";
   const withoutExtension = raw.replace(/\.md$/i, "");
+  // Same character set as the client-side sanitizer in braindump.js, so the
+  // filename on disk matches the node title on the board. Underscores used to
+  // be flattened here (and only here), which made `note-..._19-27-04` on the
+  // board turn into `note-...-19-27-04.md` on disk.
   const safeBase = withoutExtension
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "note";
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "") || "note";
 
   return `${safeBase}.md`;
 }
@@ -268,6 +293,7 @@ async function handleAddTodo(request, response) {
       const card = `\n- [ ] ${text}\n`;
       const next = original.slice(0, insertAt) + card + original.slice(insertAt);
       await writeFile(todoPath, next, "utf8");
+      await updateCardMeta({ title: text, by: String(parsed?.by || "board"), created: true });
 
       sendJson(response, 200, { success: true, section, text });
     } catch (error) {
@@ -277,7 +303,44 @@ async function handleAddTodo(request, response) {
 }
 
 const REVIEW_VERDICTS = ["works", "issue", "partly"];
-const TODO_STATUSES = [" ", "~", "A", "x"];
+const TODO_STATUSES = [".", " ", "~", "A", "x"];
+
+// Card timestamps live beside the tracker, keyed by the card title (first 60
+// chars, like the feedback log), so they survive the todo file shifting. Only
+// writes that flow through these endpoints stamp; direct file edits do not.
+const CARD_META_KEY_LENGTH = 60;
+
+function cardMetaKey(title) {
+  return String(title || "").slice(0, CARD_META_KEY_LENGTH);
+}
+
+async function updateCardMeta({ title, newTitle = null, by = "board", created = false }) {
+  const metaPath = path.join(rootDir, ".tracker", "card-meta.json");
+  let meta = {};
+  if (existsSync(metaPath)) {
+    try {
+      const parsed = JSON.parse(await readFile(metaPath, "utf8"));
+      if (parsed && typeof parsed === "object") meta = parsed;
+    } catch {
+      meta = {};
+    }
+  }
+
+  const now = new Date().toISOString();
+  const oldKey = cardMetaKey(title);
+  const key = newTitle ? cardMetaKey(newTitle) : oldKey;
+  const entry = meta[oldKey] || {};
+  if (newTitle && oldKey !== key) delete meta[oldKey];
+
+  meta[key] = {
+    createdAt: created ? now : entry.createdAt || null,
+    updatedAt: now,
+    updatedBy: by
+  };
+  if (created && !entry.createdAt) meta[key].createdAt = now;
+
+  await writeFile(metaPath, `${JSON.stringify(meta, null, 2)}\n`, "utf8");
+}
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
@@ -311,9 +374,15 @@ async function handleTodoUpdate(request, response) {
     const status = parsed?.status == null ? null : String(parsed.status);
     const verdict = parsed?.verdict == null ? null : String(parsed.verdict);
     const note = String(parsed?.note || "").trim();
+    const priority = parsed?.priority == null ? null : Number(parsed.priority);
+    const text = parsed?.text == null ? null : String(parsed.text).replace(/\s+/g, " ").trim();
 
     if (!Number.isInteger(line) || line < 0) {
       sendJson(response, 400, { success: false, error: "Missing line number." });
+      return;
+    }
+    if (text !== null && !text) {
+      sendJson(response, 400, { success: false, error: "Card text cannot be empty." });
       return;
     }
     if (status !== null && !TODO_STATUSES.includes(status)) {
@@ -324,7 +393,11 @@ async function handleTodoUpdate(request, response) {
       sendJson(response, 400, { success: false, error: `Unknown verdict "${verdict}".` });
       return;
     }
-    if (status === null && verdict === null && !note) {
+    if (priority !== null && (!Number.isInteger(priority) || priority < 0 || priority > 5)) {
+      sendJson(response, 400, { success: false, error: `Priority must be 0 to 5, got "${parsed.priority}".` });
+      return;
+    }
+    if (status === null && verdict === null && priority === null && text === null && !note) {
       sendJson(response, 400, { success: false, error: "Nothing to record." });
       return;
     }
@@ -340,7 +413,7 @@ async function handleTodoUpdate(request, response) {
     }
 
     const current = lines[line];
-    const marker = /^-\s+\[([ xA~])\]\s+/.exec(current);
+    const marker = /^-\s+\[([ xA~.])\]\s+/.exec(current);
     if (!marker) {
       sendJson(response, 409, { success: false, error: "That line is not a card any more, reload the board." });
       return;
@@ -348,7 +421,7 @@ async function handleTodoUpdate(request, response) {
     // Compare the card's text, not the whole line. The marker is the thing being
     // rewritten, so including it here would make the guard fire on the board's
     // own successful writes.
-    const currentText = current.replace(/^-\s+\[[ xA~]\]\s+/, "");
+    const currentText = current.replace(/^-\s+\[[ xA~.]\]\s+/, "");
     if (expect && !currentText.startsWith(expect)) {
       sendJson(response, 409, { success: false, error: "todo.md changed, reload the board." });
       return;
@@ -356,19 +429,57 @@ async function handleTodoUpdate(request, response) {
 
     const statusFrom = marker[1];
     let statusTo = statusFrom;
+    let updatedLine = current;
 
     if (status !== null && status !== statusFrom) {
       statusTo = status;
-      lines[line] = current.replace(/^(-\s+)\[[ xA~]\]/, `$1[${status}]`);
+      updatedLine = updatedLine.replace(/^(-\s+)\[[ xA~.]\]/, `$1[${status}]`);
+    }
+
+    // A text edit replaces the title while keeping the marker, the @owner tag,
+    // and the priority token, since the board never shows those in the title.
+    if (text !== null) {
+      const parts = /^(-\s+\[[ xA~.]\]\s+)(.*)$/.exec(updatedLine);
+      const rest = parts[2];
+      const ownerTag = /(^|\s)@[a-z0-9][a-z0-9._-]*/i.exec(rest);
+      const prioTag = /(^|\s)!p[1-5]\b/i.exec(rest);
+      updatedLine = `${parts[1]}${text}`;
+      if (ownerTag) updatedLine += ` ${ownerTag[0].trim()}`;
+      if (prioTag) updatedLine += ` ${prioTag[0].trim()}`;
+    }
+
+    // Priority rides in the line itself as a trailing `!p<n>` token, so it
+    // survives every tool that reads todo.md as plain markdown. 0 clears it.
+    if (priority !== null) {
+      updatedLine = updatedLine.replace(/\s*!p[1-5]\b/i, "");
+      if (priority >= 1) updatedLine = `${updatedLine.replace(/\s+$/, "")} !p${priority}`;
+    }
+
+    if (updatedLine !== current) {
+      lines[line] = updatedLine;
       await writeFile(todoPath, lines.join(eol), "utf8");
+
+      // Stamp the card's timestamps. Title keys exclude the owner tag and
+      // priority token, matching how the board and the feedback log key cards.
+      const stripLine = (value) => value
+        .replace(/^-\s+\[[ xA~.]\]\s+/, "")
+        .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
+        .replace(/\s*!p[1-5]\b/i, "")
+        .trim();
+      await updateCardMeta({
+        title: stripLine(current),
+        newTitle: text !== null ? stripLine(updatedLine) : null,
+        by: String(parsed?.by || "board")
+      });
     }
 
     if (verdict !== null || note) {
-      // Title without the status marker or the @owner tag, so it matches how the
-      // board keys a card and survives the line moving later.
+      // Title without the status marker, the @owner tag, or the priority token,
+      // so it matches how the board keys a card and survives the line moving later.
       const title = current
-        .replace(/^-\s+\[[ xA~]\]\s+/, "")
+        .replace(/^-\s+\[[ xA~.]\]\s+/, "")
         .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
+        .replace(/\s*!p[1-5]\b/i, "")
         .trim();
 
       const feedbackPath = path.join(rootDir, ".agents", "review-feedback.json");
@@ -629,6 +740,75 @@ function handleGetVideoMeta(request, response, parsedUrl) {
   });
 }
 
+// GET /api/frame-check?url=… — reports whether a site's response headers let
+// it render inside an iframe here. Browsers enforce X-Frame-Options and CSP
+// frame-ancestors but hide the refusal from page JS, so a doomed live embed
+// only ever shows a grey error box. The server can read the headers; the
+// board asks it before trusting an iframe, and falls back to a preview card.
+async function handleFrameCheck(request, response, parsedUrl) {
+  const target = parsedUrl.searchParams.get("url") || "";
+  let targetUrl;
+  try {
+    targetUrl = new URL(target);
+  } catch {
+    return sendJson(response, 400, { error: "Invalid url parameter" });
+  }
+  if (targetUrl.protocol !== "http:" && targetUrl.protocol !== "https:") {
+    return sendJson(response, 400, { error: "Only http and https urls can be checked" });
+  }
+
+  const probe = async (method) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+      return await fetch(targetUrl, {
+        method,
+        redirect: "follow",
+        signal: controller.signal,
+        headers: { "user-agent": "Mozilla/5.0 (cosmoboard frame-check)" }
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    let res = null;
+    try {
+      res = await probe("HEAD");
+    } catch {
+      res = null;
+    }
+    if (!res || res.status >= 400) res = await probe("GET");
+    try {
+      res.body?.cancel?.();
+    } catch {}
+
+    const xfo = String(res.headers.get("x-frame-options") || "").toLowerCase();
+    const csp = String(res.headers.get("content-security-policy") || "").toLowerCase();
+    const ancestors = /frame-ancestors\s+([^;]+)/.exec(csp)?.[1]?.trim() || "";
+
+    let framable = true;
+    let reason = "";
+    if (xfo.includes("deny") || xfo.includes("sameorigin")) {
+      framable = false;
+      reason = `x-frame-options: ${xfo}`;
+    }
+    if (ancestors) {
+      // frame-ancestors overrides X-Frame-Options when both are present. Only
+      // a wildcard or bare scheme source can match an arbitrary local origin.
+      const tokens = ancestors.split(/\s+/);
+      framable = tokens.some((t) => t === "*" || t === "http:" || t === "https:");
+      reason = framable ? "" : `frame-ancestors ${ancestors}`;
+    }
+    sendJson(response, 200, { framable, status: res.status, reason });
+  } catch (error) {
+    // An unreachable or slow site is not evidence of refusal; let the browser
+    // show whatever the embed produces rather than falsely downgrading it.
+    sendJson(response, 200, { framable: true, reason: `probe failed: ${String((error && error.message) || error)}` });
+  }
+}
+
 function resolveRequestPath(urlPath) {
   const cleanPath = urlPath.split("?")[0];
   const target = cleanPath === "/" ? "index.html" : cleanPath.replace(/^\/+/, "");
@@ -715,6 +895,11 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (request.method === "GET" && parsedUrl.pathname === "/api/frame-check") {
+    handleFrameCheck(request, response, parsedUrl);
+    return;
+  }
+
   if (request.method !== "GET" && request.method !== "HEAD") {
     sendText(response, 405, "Method Not Allowed");
     return;
@@ -741,10 +926,16 @@ const server = http.createServer((request, response) => {
   }
 
   const extension = path.extname(finalPath).toLowerCase();
-  const size = statSync(finalPath).size;
+  const stats = statSync(finalPath);
   response.writeHead(200, {
     "Content-Type": mimeTypes[extension] || "application/octet-stream",
-    "Content-Length": size
+    "Content-Length": stats.size,
+    // Lets long-lived pages (the tracker) notice their own file changed on
+    // disk and offer a reload instead of running stale code silently.
+    "Last-Modified": stats.mtime.toUTCString(),
+    // Lets the board runtime detect a write-capable host with a silent HEAD
+    // probe, instead of discovering it via a 405 on the first save attempt.
+    "X-Cosmoboard-Server": "1"
   });
   if (request.method === "HEAD") {
     response.end();

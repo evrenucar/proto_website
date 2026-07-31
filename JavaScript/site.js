@@ -607,6 +607,14 @@ if (lightbox && lightboxImage && lightboxCaption) {
   lightbox.addEventListener("click", (event) => {
     if (!event.target.closest("[data-lightbox-image]")) {
       closeLightbox();
+      return;
+    }
+
+    // The photo itself dismisses too, so the whole screen is the exit and not
+    // just the backdrop margins. Only unzoomed and only with a mouse: zoomed
+    // clicks belong to panning, and touch taps belong to double-tap zoom.
+    if (!isMobileViewport() && lightboxState.scale <= 1.01) {
+      closeLightbox();
     }
   });
 

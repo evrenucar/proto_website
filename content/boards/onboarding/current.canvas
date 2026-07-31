@@ -1,12 +1,7 @@
 {
   "canvasId": "c8d5f7a2-3e1b-4d9f-a6c8-7b2e5d4f1a3c",
   "createdAt": "2026-04-30T12:00:00.000Z",
-  "updatedAt": "2026-04-30T10:20:58.821Z",
-  "defaultViewport": {
-    "x": 40,
-    "y": 30,
-    "z": 0.55
-  },
+  "updatedAt": "2026-07-30T14:34:37.230Z",
   "nodes": [
     {
       "id": "ob-title",
@@ -82,8 +77,8 @@
     },
     {
       "id": "ob-demo-link",
-      "x": 2366.74067060169,
-      "y": 1723.5647896438036,
+      "x": 2367.5120543039707,
+      "y": 1724.3361733460843,
       "width": 321.6276223026923,
       "height": 312.76810284139697,
       "type": "link",
@@ -96,8 +91,8 @@
       "id": "ob-demo-markdown",
       "x": 2706.74067060169,
       "y": 1720.9991456097273,
-      "width": 320,
-      "height": 320,
+      "width": 309.0179629449349,
+      "height": 309.0179629449349,
       "type": "markdown",
       "file": "/content/boards/onboarding/onboarding-markdown-demo.md",
       "href": "/content/boards/onboarding/onboarding-markdown-demo.md",
@@ -165,8 +160,8 @@
       "id": "ob-projects-base",
       "x": 2081.0438878339114,
       "y": 3190.92868214102,
-      "width": 720,
-      "height": 380,
+      "width": 725.9800594744972,
+      "height": 375.34180477771446,
       "type": "base",
       "source": "/content/base-data/items.json",
       "collection": "",
@@ -253,8 +248,8 @@
       "id": "ob-nested-explainer",
       "x": 2421.043887833911,
       "y": 4192.836016191212,
-      "width": 600,
-      "height": 320,
+      "width": 555.6973018459013,
+      "height": 325.778612802708,
       "type": "text",
       "text": "Why nest boards\nOne board cannot hold every project. A board-preview node is a live minimap that links to another .canvas file. Use it to break a big workspace into smaller, named boards without losing the overview."
     },
@@ -319,13 +314,15 @@
       "id": "ob-direction-md",
       "x": 2941.043887833911,
       "y": 4952.8360161912115,
-      "width": 380,
-      "height": 400,
+      "width": 380.0000000000002,
+      "height": 302.4897701102616,
       "type": "markdown",
       "file": "/content/boards/cosmoboard/direction.md",
       "href": "/content/boards/cosmoboard/direction.md",
       "title": "Cosmoboard direction",
-      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n",
+      "markdownId": "cosmo-note-u8o24iwd1q",
+      "markdownUpdatedAt": "2026-07-30T10:22:39.870Z"
     },
     {
       "id": "jx3jppha179",
@@ -496,8 +493,8 @@
       "id": "bgyhjemikof",
       "x": 2104.147763608258,
       "y": 998.7128244396109,
-      "width": 420.72414097220167,
-      "height": 390.9047883856283,
+      "width": 721.6574421900848,
+      "height": 466.13811369009915,
       "type": "base",
       "source": "/content/base-data/items.json",
       "collection": "",
@@ -512,14 +509,14 @@
     },
     {
       "id": "x7xjsxl485",
-      "x": 1336.7972267183738,
-      "y": 1012.4990853079,
+      "x": 1331.225600221038,
+      "y": 1031.442615398842,
       "width": 380,
       "height": 420,
       "title": "note-2026-04-30_11-05-40",
-      "_rawMarkdown": "",
+      "_rawMarkdown": "\n",
       "markdownId": "cosmo-note-pfbmeb3ipv",
-      "markdownUpdatedAt": "2026-04-30T09:05:40.197Z",
+      "markdownUpdatedAt": "2026-07-30T10:12:24.654Z",
       "file": "/content/boards/onboarding/note-2026-04-30-11-05-40.md",
       "href": "/content/boards/onboarding/note-2026-04-30-11-05-40.md",
       "type": "markdown"
@@ -537,12 +534,31 @@
       "description": "The first onboarding board for the broader Cosmoboard direction inside evrenucar.com.",
       "image": "https://evrenucar.com/image/masked_photo.png",
       "hasAdjustedRatio": true
+    },
+    {
+      "id": "9jdrwyjwtar",
+      "x": 4081.7838104454527,
+      "y": 4505.715458247202,
+      "width": 324.4020172271458,
+      "height": 660.1784988709969,
+      "title": "note-2026-07-30_11-56-40",
+      "_rawMarkdown": "\n",
+      "markdownId": "cosmo-note-489uc0bpbwu",
+      "markdownUpdatedAt": "2026-07-30T10:12:17.788Z",
+      "file": "/content/boards/onboarding/note-2026-07-30_11-56-40.md",
+      "href": "/content/boards/onboarding/note-2026-07-30_11-56-40.md",
+      "type": "markdown"
     }
   ],
   "edges": [],
   "viewport": {
-    "x": -1656.050381598713,
-    "y": -3315.574514138854,
-    "z": 0.6897352651828297
+    "x": 346.38905615527614,
+    "y": 398.42327156250747,
+    "z": 0.1195780374112222
+  },
+  "defaultViewport": {
+    "x": 40,
+    "y": 30,
+    "z": 0.55
   }
 }

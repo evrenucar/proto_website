@@ -18,7 +18,7 @@ Only expand into the full checklist when the change is broad, risky, or explicit
 ## Environment
 
 - Server
-  - Prefer `http://127.0.0.1:4173/braindump.html` from `scripts/preview-server.mjs` for read-only checks.
+  - Prefer `http://127.0.0.1:4174/braindump.html` from `scripts/preview-server.mjs` for read-only checks.
   - Use `http://127.0.0.1:3000/braindump.html` from `scripts/dev-server.mjs` only when `Save` must be verified.
 - Viewports
   - Primary: `1440x960`

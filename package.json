@@ -10,6 +10,7 @@
     "extract-assets": "node scripts/extract-assets.mjs"
   },
   "devDependencies": {
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "ws": "^8.21.1"
   }
 }

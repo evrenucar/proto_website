@@ -1391,7 +1391,30 @@ async function main() {
     const pageMeta = await loadPageMetaBlock(pageId);
 
     if (!pageMeta) {
-      throw new Error(`Could not load the Notion page metadata for "${sharedUrl}".`);
+      // The anonymous API answers role "none" when a page stops being publicly
+      // shared. One unreadable page must not kill the whole sync and block the
+      // site build behind it: reuse the cached copy when one exists, skip with
+      // a loud warning when not. Re-sharing the page in Notion restores it.
+      const staleCachedItem = cachedItemsByPageId.get(pageId);
+      const staleCachedSource = getCachedSourceData(staleCachedItem);
+      if (staleCachedSource) {
+        console.warn(
+          `[sync-notion] WARNING: "${sharedUrl}" is not publicly readable (re-share it in Notion). Reusing the cached copy.`
+        );
+        items.push(
+          buildItemFromSource(entry, {
+            ...staleCachedSource,
+            pageId,
+            lastUpdated: staleCachedItem?.lastUpdated || ""
+          })
+        );
+        reusedCount += 1;
+        continue;
+      }
+      console.warn(
+        `[sync-notion] WARNING: "${sharedUrl}" is not publicly readable and has no cache. Skipping it.`
+      );
+      continue;
     }
 
     const lastUpdated = formatLastUpdated(pageMeta.last_edited_time);

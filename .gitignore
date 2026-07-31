@@ -27,3 +27,6 @@ Thumbs.db
 # Cygwin/MSYS crash dumps
 bash.exe.stackdump
 *.stackdump
+
+# Browser-MCP session dumps (screenshots, snapshots, canvas dumps)
+.playwright-mcp/

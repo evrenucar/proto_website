@@ -8,20 +8,29 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..", "..");
 
 const { build } = await import(new URL(`../../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
+const { acquireBuildLockForProcess } = await import(new URL("../helpers/build-lock.mjs", import.meta.url));
 const { boardPages } = await import(new URL(`../../src/site-data.mjs?test=${Date.now()}`, import.meta.url));
 
 assert.ok(Array.isArray(boardPages));
 assert.equal(boardPages.length >= 2, true);
 assert.deepEqual(
   boardPages.map((page) => page.file),
-  ["braindump.html", "cosmoboard.html", "onboarding.html", "content/boards/eurocrate-storage.html"]
+  [
+    "braindump.html",
+    "cosmoboard.html",
+    "onboarding.html",
+    "content/boards/eurocrate-storage.html",
+    "content/boards/test-board.html",
+    "content/boards/dev.html"
+  ]
 );
 assert.deepEqual(
   boardPages.map((page) => page.board.slug),
-  ["braindump", "cosmoboard", "onboarding", "eurocrate-storage"]
+  ["braindump", "cosmoboard", "onboarding", "eurocrate-storage", "test-board", "dev"]
 );
 assert.equal(boardPages.every((page) => !("pagePath" in page.board)), true);
 
+await acquireBuildLockForProcess();
 await build();
 
 const cosmoboardPath = path.join(rootDir, "cosmoboard.html");
@@ -31,11 +40,11 @@ await access(homePath);
 
 const html = await readFile(cosmoboardPath, "utf8");
 const homeHtml = await readFile(homePath, "utf8");
-// The nav's "Cosmoboard" entry points at the guided onboarding board, not this
-// working one, so onboarding.html is what carries aria-current. cosmoboard.html
-// is reachable from inside the tour rather than from the nav.
+// The nav's "Cosmoboard" entry points at the landing page since 2026-07-30;
+// the landing page is standalone (no shell nav), so no generated board page
+// carries aria-current for it. Every generated page links the landing page.
 const onboardingHtml = await readFile(path.join(rootDir, "onboarding.html"), "utf8");
-assert.match(onboardingHtml, /aria-current="page">Cosmoboard<\/a>/);
+assert.match(onboardingHtml, /href="cosmoboard-landing\.html">Cosmoboard<\/a>/);
 assert.doesNotMatch(html, /aria-current="page"/);
 assert.match(html, /class="sidenav"/);
 assert.match(html, /data-board-app="true"/);

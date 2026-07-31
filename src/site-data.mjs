@@ -23,11 +23,11 @@ export const navigation = [
   { label: "Photography", href: "photography.html" },
   { label: "Open-Quests", href: "open-quests.html" },
   { label: "Cool bookmarks", href: "cool-bookmarks.html" },
-  // Cosmoboard points at the guided onboarding board, not the working one. A
-  // first-time visitor needs the tour; the full board is reachable from inside it.
-  // Braindump is deliberately absent: it is the scratch pad, and it answers
-  // "what is this?" with a wall of test scribbles.
-  { label: "Cosmoboard", href: "onboarding.html" }
+  // Cosmoboard points at the written landing page, the best first touch: it
+  // explains the idea and links onward to the onboarding tour and the working
+  // board. Braindump is deliberately absent: it is the scratch pad, and it
+  // answers "what is this?" with a wall of test scribbles.
+  { label: "Cosmoboard", href: "cosmoboard-landing.html" }
 ];
 
 export const homePage = {
@@ -432,4 +432,40 @@ export const eurocrateBoardPage = {
   }
 };
 
-export const boardPages = [braindumpPage, cosmoboardPage, onboardingPage, eurocrateBoardPage];
+export const testBoardPage = {
+  file: "content/boards/test-board.html",
+  title: "Test board | Evren Ucar",
+  description: "Sandbox board for testing basic Cosmoboard functionality. Disposable content.",
+  robots: "noindex,nofollow",
+  board: {
+    slug: "test-board",
+    title: "Test board",
+    sourcePath: "content/boards/test-board/current.canvas",
+    legacySourcePath: "",
+    storageKey: "board:test-board",
+    legacyStorageKey: "",
+    saveEndpoint: "/api/save-board",
+    autosaveSeconds: 20,
+    allowRecommendations: false
+  }
+};
+
+export const devBoardPage = {
+  file: "content/boards/dev.html",
+  title: "Development board | Evren Ucar",
+  description: "Everything about building Cosmoboard: tracker, sandbox, benchmarks, standing analyses.",
+  robots: "noindex,nofollow",
+  board: {
+    slug: "dev",
+    title: "Development board",
+    sourcePath: "content/boards/dev/current.canvas",
+    legacySourcePath: "",
+    storageKey: "board:dev",
+    legacyStorageKey: "",
+    saveEndpoint: "/api/save-board",
+    autosaveSeconds: 20,
+    allowRecommendations: false
+  }
+};
+
+export const boardPages = [braindumpPage, cosmoboardPage, onboardingPage, eurocrateBoardPage, testBoardPage, devBoardPage];

@@ -50,6 +50,34 @@ try {
 
   const written = JSON.parse(await readFile(boardPath, "utf8"));
   assert.equal(written.nodes?.[0]?.text, "saved through preview server");
+
+  // --- stale-tab guard: a save whose base predates the file is refused ---
+  const staleResponse = await fetch(
+    `${baseUrl}/api/save-board?slug=cosmoboard&base=${encodeURIComponent("2000-01-01T00:00:00.000Z")}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...savedState, nodes: [{ ...savedState.nodes[0], text: "stale overwrite attempt" }] })
+    }
+  );
+  assert.equal(staleResponse.status, 409, "a stale base must be refused");
+  const staleBody = await staleResponse.json();
+  assert.equal(staleBody.stale, true, "the refusal must be marked stale so the client can react");
+  const afterStale = JSON.parse(await readFile(boardPath, "utf8"));
+  assert.equal(afterStale.nodes?.[0]?.text, "saved through preview server", "the stale save must not touch the file");
+
+  // --- a matching base saves normally ---
+  const freshResponse = await fetch(
+    `${baseUrl}/api/save-board?slug=cosmoboard&base=${encodeURIComponent(afterStale.updatedAt)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...savedState, nodes: [{ ...savedState.nodes[0], text: "fresh save with base" }] })
+    }
+  );
+  assert.equal(freshResponse.status, 200, "a current base must save");
+  const afterFresh = JSON.parse(await readFile(boardPath, "utf8"));
+  assert.equal(afterFresh.nodes?.[0]?.text, "fresh save with base");
 } finally {
   child.kill();
   await writeFile(boardPath, original, "utf8");

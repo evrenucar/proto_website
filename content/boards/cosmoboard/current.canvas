@@ -1,7 +1,7 @@
 {
   "canvasId": "bfca6ad2-3592-424a-a463-533da7c29720",
   "createdAt": "2026-04-28T15:42:09.615Z",
-  "updatedAt": "2026-07-28T13:38:36.902Z",
+  "updatedAt": "2026-07-31T18:37:33.602Z",
   "nodes": [
     {
       "id": "cosmo-title",
@@ -46,7 +46,7 @@
       "width": 260,
       "height": 180,
       "type": "text",
-      "text": "Boards\nBoards map a topic or project spatially.\nUse the canvas for orientation, grouping, and navigation."
+      "text": "Boards\n\n\nBoards map a topic or project spatially.\n\n\nUse the canvas for orientation, grouping, and navigation."
     },
     {
       "id": "cosmo-markdown",
@@ -80,7 +80,7 @@
       "x": 120.87614896828896,
       "y": 789.1238510317111,
       "width": 320,
-      "height": 315,
+      "height": 260,
       "type": "board-preview",
       "boardSlug": "braindump",
       "boardSource": "/content/boards/braindump/current.canvas",
@@ -122,7 +122,8 @@
       "file": "/markdown/cosmo-direction-md_direction.md",
       "title": "Cosmoboard direction",
       "href": "/content/boards/cosmoboard/direction.md",
-      "_rawMarkdown": ""
+      "_rawMarkdown": "",
+      "markdownId": "cosmo-note-cosmo-direction-md"
     },
     {
       "id": "cosmo-projects-base",
@@ -193,10 +194,10 @@
     },
     {
       "id": "cosmo-yt-test-1",
-      "x": 1260,
-      "y": 1380,
-      "width": 600,
-      "height": 400,
+      "x": 1455.6233306656427,
+      "y": 1488.34522929174,
+      "width": 871.0693824616665,
+      "height": 309.3649779276812,
       "type": "link",
       "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       "embedMode": "preview",
@@ -207,15 +208,17 @@
     },
     {
       "id": "yguys2k736",
-      "x": 1022.2433082280037,
-      "y": 1818.435868148439,
+      "x": 1046.4487542846964,
+      "y": 1811.1742343314315,
       "width": 380,
       "height": 420,
       "file": "/content/boards/cosmoboard/note-2026-04-28-16-03-01.md",
       "href": "/content/boards/cosmoboard/note-2026-04-28-16-03-01.md",
       "title": "name",
       "type": "markdown",
-      "_rawMarkdown": "\n- testing\n- testing\n- "
+      "_rawMarkdown": "\n- testing\n- testing\n- ",
+      "markdownId": "cosmo-note-yguys2k736",
+      "markdownUpdatedAt": "2026-07-31T02:11:07.734Z"
     },
     {
       "id": "2w1038jprlt",
@@ -227,11 +230,13 @@
       "href": "/content/boards/cosmoboard/direction.md",
       "title": "direction",
       "type": "markdown",
-      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n"
+      "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n",
+      "markdownId": "cosmo-note-2w1038jprlt",
+      "markdownUpdatedAt": "2026-07-31T01:56:25.375Z"
     },
     {
       "id": "nfw8czu22uq",
-      "x": -1152.4953295721964,
+      "x": -1166.4925732826543,
       "y": 1974.459135161894,
       "width": 780.5871776961721,
       "height": 947.2123234865269,
@@ -239,16 +244,6 @@
       "title": "Participant information",
       "embedMode": "live",
       "type": "link"
-    },
-    {
-      "id": "qu2ftm9gnkh",
-      "x": 690.9985282085648,
-      "y": 2483.290208783412,
-      "width": 400,
-      "height": 399.0772779700115,
-      "file": "/content/boards/cosmoboard/screenshot-4.png",
-      "type": "file",
-      "hasAdjustedRatio": true
     },
     {
       "id": "fjam96so57",
@@ -265,21 +260,318 @@
       "id": "0t81eff6u5n",
       "x": 1529.8642560737335,
       "y": 1965.7629904621867,
-      "width": 409.58399451963163,
-      "height": 500.12331849066913,
+      "width": 414.4025832986642,
+      "height": 863.926771307626,
       "title": "meow note",
-      "_rawMarkdown": "\n- I made notes\n- gotta work\n  - but first tea!\n  - with friends\n- added on typedown\n- saved\n\n\n\n\n\nupdated on my pc now\n\n\n",
+      "_rawMarkdown": "\n- I made notes\n- gotta work\n  - but first tea!\n  - with friends\n- added on typedown\n- saved\n\n\n\n![pasted-2026-07-30_15-23-53.png](/content/boards/cosmoboard/pasted-2026-07-30-15-23-53.png)\n\n\nupdated on my pc now\n\n[{\"id\":\"7d0272o3ryx\",\"x\":2119.8854093828786,\"y\":1651.8135513081083,\"width\":600,\"height\":400,\"url\":\"https://www.youtube.com/watch?v=AW8jSu5KCxg\",\"type\":\"link\",\"embedMode\":\"live\",\"title\":\"How to fix the fan noise coming from laptop | Laptop fan vibration | Asus F571GT\",\"description\":\"Video recommendation\",\"image\":\"https://i.ytimg.com/vi/AW8jSu5KCxg/hqdefault.jpg\",\"hasAdjustedRatio\":true}]\n",
       "markdownId": "bd-note-xcw4cuat5l",
-      "markdownUpdatedAt": "2026-04-30T01:32:20.141Z",
+      "markdownUpdatedAt": "2026-07-31T16:12:34.185Z",
       "file": "/content/boards/cosmoboard/note-2026-04-30-02-41-01.md",
       "href": "/content/boards/cosmoboard/note-2026-04-30-02-41-01.md",
       "type": "markdown"
+    },
+    {
+      "id": "cosmo-entity-eurocrate",
+      "x": 1328.7639444177094,
+      "y": 878.8179407225351,
+      "width": 380,
+      "height": 300,
+      "type": "entity",
+      "entityRef": "eurocrate-storage-system",
+      "source": "/content/entities/index.json",
+      "title": "Eurocrate storage system"
+    },
+    {
+      "id": "ocymwsevj6",
+      "x": 3320.745033114901,
+      "y": 984.8726849209108,
+      "width": 392.48041934129924,
+      "height": 179.13772698855007,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2464.1625595910614 1004.2086324045184 392.48041934129924 179.13772698855007\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2469.1625595910614 1178.3463593930685 L 2721.497397534886 1009.9973889370543\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "s1r5e7nx14",
+      "x": 3315.6009414704986,
+      "y": 1150.9239569228187,
+      "width": 20,
+      "height": 202.07986412029982,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2459.018467946659 1170.2599044064268 20 202.07986412029982\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2464.018467946659 1175.2599044064268 L 2464.018467946659 1367.3397685267266\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "funa41jy7b",
+      "x": 3313.548842565246,
+      "y": 1150.5124358706753,
+      "width": 265.83284537965346,
+      "height": 202.80054855280196,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2455.9320129600173 1169.8483833542834 265.83284537965346 202.80054855280196\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2460.9320129600173 1367.6489319070854 L 2715.976101807135 1174.8483833542834\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "qyi60l879pe",
+      "x": 3567.6614320462277,
+      "y": 979.3513577961158,
+      "width": 21.72855406687313,
+      "height": 181.57259912670338,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2711.078958522388 998.6873052797234 21.72855406687313 181.57259912670338\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2716.078958522388 1175.2599044064268 L 2727.807512589261 1003.6873052797234\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "ew7uticzl7",
+      "x": 3390.87617013162,
+      "y": 914.6729767606898,
+      "width": 198.10226353229382,
+      "height": 74.43831923908078,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2534.29369660778 934.008924244298 198.10226353229382 74.43831923908078\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2727.395960140074 1003.4472434833788 L 2539.29369660778 939.008924244298\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "nhf04hsebpf",
+      "x": 3124.275017870472,
+      "y": 914.2957412802974,
+      "width": 276.4296616083052,
+      "height": 173.65071683254962,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2267.692544346632 933.6316887639056 276.4296616083052 173.65071683254962\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2539.1222059549373 938.6316887639056 L 2272.692544346632 1102.2824055964552\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "6v7itowo0ux",
+      "x": 3124.2407322987206,
+      "y": 1077.8778555723013,
+      "width": 206.43572967267892,
+      "height": 101.564831270367,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2267.658258774881 1097.2138030559095 206.43572967267892 101.564831270367\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2272.658258774881 1102.2138030559095 L 2469.0939884475597 1178.003409484427\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "e6vnmjvtrg",
+      "x": 3131.4424606008843,
+      "y": 1066.5608539546156,
+      "width": 33.594250420750086,
+      "height": 216.20950379704345,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2274.8599870770445 1085.8968014382237 33.594250420750086 216.20950379704345\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2279.8599870770445 1090.8968014382237 L 2279.8599870770445 1278.3079297633217\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "l7lilk2nx3q",
+      "x": 3138.644188903048,
+      "y": 1253.8057898108714,
+      "width": 199.1310818611746,
+      "height": 97.58676303593643,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2282.061715379208 1273.1417372944795 199.1310818611746 97.58676303593643\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2287.061715379208 1278.1417372944795 L 2458.8400907305054 1360.207141808577\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "r3k1hfuvuoh",
+      "x": 3192.1084564330845,
+      "y": 1150.5124358706753,
+      "width": 69.94581044316601,
+      "height": 93.60863200741824,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2335.5259829092447 1169.8483833542834 69.94581044316601 93.60863200741824\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2349.8196334409204 1178.3463593930685 L 2344.469765571924 1185.1022810713378 L 2342.8922525068524 1190.623576799089 L 2340.5259829092447 1199.2999614510716 L 2340.5259829092447 1207.1875581734741 L 2342.1034959743165 1216.6526993579926 L 2347.624791702068 1225.3290526129313 L 2353.1461502239067 1234.7941937974497 L 2361.8225348758892 1241.8930339873166 L 2365.7663175385687 1244.2593349819679 L 2368.9213436687123 1247.4143611121117 L 2374.4427021905512 1247.4143611121117 L 2380.7527544508384 1245.048091514504 L 2385.485356440141 1244.2593349819679 L 2389.429139102821 1241.1042774547807 L 2391.7954087004287 1237.1604633950574 L 2393.3729217655005 1233.2166807323779 L 2394.9504348305722 1227.6953536075828 L 2394.9504348305722 1220.5965134177159 L 2394.1616782980363 1213.4976418308052 L 2391.7954087004287 1205.6100451084023 L 2387.0628695052133 1198.5112049185354 L 2381.5415109833743 1189.8348202665532 L 2376.020215255623 1183.5247366092221 L 2372.0764325929435 1178.003409484427 L 2366.5550740711046 1174.8483833542834 L 2359.456202484194 1174.8483833542834 L 2353.9349067564426 1178.003409484427 L 2349.991124093763 1181.1584670116144 L 2347.624791702068 1188.2573072014814 L 2346.047278636996 1196.1449039238842 L 2346.047278636996 1204.8212885758664 L 2346.047278636996 1215.8639428254567 L 2346.836035169532 1225.3290526129313 L 2350.779880626299 1234.7941937974497 L 2354.7236632889785 1240.3155209222448 L 2358.667445951658 1244.2593349819679 L 2361.8225348758892 1247.4143611121117 L 2365.7663175385687 1249.7806307097194 L 2369.710100201248 1251.3581751718348 L 2372.8651891254794 1254.5132013019786 L 2378.3864848532307 1256.8795022966299 L 2382.3302675159102 1258.4570153617017 L 2387.851626037749 1258.4570153617017 L 2394.9504348305722 1257.6682588291658 L 2397.316767222267 1253.7244447694427 L 2398.894280287339 1248.2031176446476 L 2400.4717933524107 1242.6817905198525 L 2400.4717933524107 1234.0054372649138 L 2399.683036819875 1226.1178091454672 L 2397.316767222267 1219.0189689556003 L 2394.1616782980363 1211.1313722331975 L 2388.640382570285 1204.0325320433305 L 2384.696599907605 1196.9336918534636 L 2377.597728320695 1191.4123647286688 L 2370.498856733784 1185.8910376038737 L 2364.977561006033 1181.9472235441503 L 2361.0337783433533 1178.792166016963 L 2355.5124198215144 1185.1022810713378 L 2353.9349067564426 1193.7786343262765 L 2353.9349067564426 1203.2437755107946 L 2356.3011763540503 1210.3426157006616 L 2358.667445951658 1214.286398363341\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "j0kft0d9laj",
+      "x": 3215.8055635690876,
+      "y": 953.3222509357336,
+      "width": 230.81873662596445,
+      "height": 143.81496959649257,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2359.223090045248 972.6581984193417 230.81873662596445 143.81496959649257\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2364.223090045248 1111.4731680158343 L 2577.942955084302 977.6581984193417\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "d0cs0urzrrg",
+      "x": 3429.7997759762375,
+      "y": 953.3908377777574,
+      "width": 73.61524573774977,
+      "height": 29.65043636102689,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2573.2173024523977 972.7267852613655 73.61524573774977 29.65043636102689\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2578.2173024523977 977.7267852613655 L 2641.8325481901475 997.3772216223924\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "lfk7iar598",
+      "x": 3265.4631907234484,
+      "y": 972.9383860264876,
+      "width": 238.1233216433816,
+      "height": 153.6573305628815,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2408.8807171996086 992.2743335100956 238.1233216433816 153.6573305628815\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2642.00403884299 997.2743335100956 L 2436.754782231325 1135.410336948182\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "cgpc3pm9wt7",
+      "x": 3203.1511106826747,
+      "y": 1073.2138875205878,
+      "width": 95.7005542369302,
+      "height": 47.586154575890305,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2346.568637158835 1092.549835004196 95.7005542369302 47.586154575890305\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2437.269191395765 1135.1359895800863 L 2365.7663175385687 1106.2261882591347\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "h7gnj4ukk4",
+      "x": 3350.5807646524368,
+      "y": 1183.8461434469957,
+      "width": 20,
+      "height": 98.95389428174394,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2493.998291128597 1203.1820909306039 20 98.95389428174394\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2498.998291128597 1208.1820909306039 L 2498.998291128597 1297.1359852123478\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "8a7jrpw7nbn",
+      "x": 3348.5231279946756,
+      "y": 1122.9058002467,
+      "width": 206.16138230458273,
+      "height": 159.41871948402104,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2491.940654470836 1142.2417477303081 206.16138230458273 159.41871948402104\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2496.940654470836 1296.6604672143292 L 2693.1020367754186 1147.2417477303081\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "za0j0d8mc5e",
+      "x": 3539.951908309956,
+      "y": 1038.5084117067456,
+      "width": 20.253897717054315,
+      "height": 95.66626866517936,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2683.369434786116 1057.8443591903538 20.253897717054315 95.66626866517936\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2693.4449552870165 1148.5106278555331 L 2698.6233325031703 1062.8443591903538\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "3ef933vxs7i",
+      "x": 3341.1841946114205,
+      "y": 1038.7827590748414,
+      "width": 218.98732584383833,
+      "height": 159.59017873981975,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2484.6017210875807 1058.1187065584495 218.98732584383833 159.59017873981975\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2698.589046931419 1063.1187065584495 L 2495.9118361419555 1205.6100451084023\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "c9p0c4gxud",
+      "x": 3646.4988978743622,
+      "y": 1030.845043152617,
+      "width": 20,
+      "height": 20,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2789.9164243505224 1050.1809906362253 20 20\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><circle cx=\"2794.9164243505224\" cy=\"1055.1809906362253\" r=\"3\" fill=\"#3fdaca\"></circle></svg>",
+      "type": "text"
+    },
+    {
+      "id": "bq2xbujs00v",
+      "x": 2464.1625595910614,
+      "y": 1004.2086324045184,
+      "width": 392.48041934129924,
+      "height": 179.13772698855007,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2464.1625595910614 1004.2086324045184 392.48041934129924 179.13772698855007\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2469.1625595910614 1178.3463593930685 L 2721.497397534886 1009.9973889370543\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "bw1s0ym43ol",
+      "x": 2459.018467946659,
+      "y": 1170.2599044064268,
+      "width": 20,
+      "height": 202.07986412029982,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2459.018467946659 1170.2599044064268 20 202.07986412029982\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2464.018467946659 1175.2599044064268 L 2464.018467946659 1367.3397685267266\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "s1gq0bozx0s",
+      "x": 2456.9663690414063,
+      "y": 1169.8483833542834,
+      "width": 265.83284537965346,
+      "height": 202.80054855280196,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2455.9320129600173 1169.8483833542834 265.83284537965346 202.80054855280196\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2460.9320129600173 1367.6489319070854 L 2715.976101807135 1174.8483833542834\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "by2yc216tsc",
+      "x": 2711.078958522388,
+      "y": 998.6873052797234,
+      "width": 21.72855406687313,
+      "height": 181.57259912670338,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2711.078958522388 998.6873052797234 21.72855406687313 181.57259912670338\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2716.078958522388 1175.2599044064268 L 2727.807512589261 1003.6873052797234\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "rvxp5ujyn7",
+      "x": 2534.29369660778,
+      "y": 934.008924244298,
+      "width": 198.10226353229382,
+      "height": 74.43831923908078,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2534.29369660778 934.008924244298 198.10226353229382 74.43831923908078\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2727.395960140074 1003.4472434833788 L 2539.29369660778 939.008924244298\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "nmjt1n60g49",
+      "x": 2267.692544346632,
+      "y": 933.6316887639056,
+      "width": 276.4296616083052,
+      "height": 173.65071683254962,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2267.692544346632 933.6316887639056 276.4296616083052 173.65071683254962\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2539.1222059549373 938.6316887639056 L 2272.692544346632 1102.2824055964552\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "abpg50e4vt5",
+      "x": 2267.658258774881,
+      "y": 1097.2138030559095,
+      "width": 206.43572967267892,
+      "height": 101.564831270367,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2267.658258774881 1097.2138030559095 206.43572967267892 101.564831270367\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2272.658258774881 1102.2138030559095 L 2469.0939884475597 1178.003409484427\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "95ydfkoxu4o",
+      "x": 2274.8599870770445,
+      "y": 1085.8968014382237,
+      "width": 33.594250420750086,
+      "height": 216.20950379704345,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2274.8599870770445 1085.8968014382237 33.594250420750086 216.20950379704345\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2279.8599870770445 1090.8968014382237 L 2279.8599870770445 1278.3079297633217\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "y62u45ecdtq",
+      "x": 2282.061715379208,
+      "y": 1273.1417372944795,
+      "width": 199.1310818611746,
+      "height": 97.58676303593643,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"2282.061715379208 1273.1417372944795 199.1310818611746 97.58676303593643\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 2287.061715379208 1278.1417372944795 L 2458.8400907305054 1360.207141808577\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "kmp62p0bd6k",
+      "x": 3488.6813909816274,
+      "y": 1194.7122049482077,
+      "width": 186.69609131038715,
+      "height": 168.41720789350416,
+      "text": "<svg class=\"bd-drawing\" viewBox=\"3488.6813909816274 1194.7122049482077 186.69609131038715 168.41720789350416\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" style=\"overflow:visible; display:block;\"><path d=\"M 3534.848660294192 1206.3350056668287 L 3530.848500010732 1207.6330714062306 L 3519.271871421367 1213.1167388566346 L 3512.5695923404583 1214.9446441756966 L 3507.69519432522 1216.1632315528107 L 3505.2580195709925 1218.6004063070386 L 3500.992963751093 1220.4283116261006 L 3496.727859424412 1221.6468990032147 L 3493.6813909816274 1222.8654863803285 L 3496.118565735855 1225.9119790765046 L 3499.7743278671974 1227.1305664536185 L 3504.6487258824354 1228.9584717726805 L 3510.13241758623 1230.1770591497946 L 3515.616060783243 1232.0049402154655 L 3518.6625777328104 1233.2235518459706 L 3521.709046175595 1236.2700202887556 L 3524.1462209298234 1238.7072192963744 L 3525.364808306937 1241.7537119925505 L 3525.364808306937 1246.0187678124496 L 3523.5369272412663 1258.8140080323194 L 3521.099752487038 1263.0790881056093 L 3519.271871421367 1269.7813671865183 L 3516.834648160357 1275.8743283254794 L 3516.834648160357 1281.3579957758834 L 3517.443941848914 1287.4509811682353 L 3521.709046175595 1291.7160612415253 L 3525.974101995494 1294.1532359957532 L 3532.6763810764032 1295.3718233728673 L 3545.471597042882 1295.9811170614244 L 3555.829686761915 1295.9811170614244 L 3564.359846908495 1295.3718233728673 L 3575.327181809303 1294.7625296843103 L 3585.685223021554 1291.1067675529682 L 3584.46663564444 1294.1532359957532 L 3580.810825006316 1297.1997044385382 L 3577.764356563531 1299.6369276995483 L 3574.717888120746 1303.9019835194472 L 3569.234196416951 1308.1670878461282 L 3559.485448893257 1331.3203450248582 L 3568.624902728394 1352.645721137917 L 3576.545769186417 1355.692238087484 L 3582.638754578769 1356.910825464598 L 3589.340985152896 1358.1294128417119 L 3596.6525579223617 1358.1294128417119 L 3610.6664097727366 1357.520119153155 L 3614.931465592636 1355.0829443989269 L 3617.9779340354207 1353.255014826474 L 3622.2430383621017 1350.208546383689 L 3623.461625739216 1346.552784252347 L 3625.2895068048865 1343.50626730278 L 3626.5080941820006 1337.41333041721 L 3627.7266815591147 1331.9296387134152 L 3628.336023754454 1325.2273596325062 L 3627.7266815591147 1317.9158353698222 L 3627.1173878705576 1311.8228499774702 L 3621.6337446735447 1302.0741024537763 L 3617.3686403468637 1299.0276340109913 L 3608.838480200284 1294.7625296843103 L 3601.5269559375997 1292.3253549300823 L 3593.606089479577 1290.4974738644112 L 3582.02941238343 1290.4974738644112 L 3573.499300743632 1291.1067675529682 L 3566.187727974166 1294.1532359957532 L 3563.141211024599 1298.4182918156523 L 3560.704036270371 1303.9019835194472 L 3559.485448893257 1309.994968911799 L 3558.8761552047 1316.6971994859261 L 3559.485448893257 1322.790184878278 L 3561.313329958928 1329.492463959187 L 3566.797021662723 1336.804036728653 L 3572.280664859736 1339.850505171438 L 3575.327181809303 1342.287679925666 L 3596.6525579223617 1340.459798859995 L 3599.699026365147 1338.0226241057671 L 3602.745543314714 1336.194743040096 L 3606.4013054460556 1333.7575197790861 L 3608.2291865117268 1329.492463959187 L 3609.447773888841 1326.445995516402 L 3611.2757034612937 1313.6507310431411 L 3610.6664097727366 1305.1205708965613 L 3608.838480200284 1299.6369276995483 L 3605.7920117574986 1295.3718233728673 L 3601.5269559375997 1292.3253549300823 L 3594.824676856691 1290.4974738644112 L 3589.340985152896 1289.2788622339062 L 3583.248048267326 1289.2788622339062 L 3578.982943940645 1289.8881801758544 L 3576.545769186417 1294.1532359957532 L 3576.545769186417 1301.4648087652192 L 3577.1550628749737 1308.1670878461282 L 3580.810825006316 1313.041437354584 L 3585.685223021554 1319.743716435493 L 3591.168866218567 1322.790184878278 L 3595.433970545248 1325.2273596325062 L 3605.182718068942 1327.055289204959 L 3611.2757034612937 1327.055289204959 L 3617.9779340354207 1327.055289204959 L 3628.336023754454 1325.2273596325062 L 3633.819666951467 1322.1808911897213 L 3638.084771278148 1319.1344227469363 L 3641.1312397209326 1311.8228499774702 L 3642.3498270980467 1308.1670878461282 L 3641.7405334094897 1270.9999545636324 L 3639.9126523438185 1265.5162871132284 L 3635.6475480171375 1256.9861269666485 L 3627.1173878705576 1245.4094741238926 L 3618.587227723978 1239.3165129849315 L 3614.931465592636 1236.8793139773124 L 3605.7920117574986 1235.6607266001986 L 3600.308320053704 1236.2700202887556 L 3592.99679579102 1261.2512070399384 L 3592.99679579102 1265.5162871132284 L 3593.606089479577 1269.7813671865183 L 3595.433970545248 1272.8278356293033 L 3598.480438988033 1274.6557409483653 L 3602.1362496261568 1275.8743283254794 L 3608.2291865117268 1275.8743283254794 L 3613.712878215522 1274.0464472598085 L 3617.9779340354207 1270.9999545636324 L 3632.6010795743528 1258.2047143437624 L 3641.1312397209326 1245.4094741238926 L 3646.6149314247277 1225.3026853879476 L 3646.6149314247277 1219.8190179375435 L 3646.6149314247277 1215.5539378642536 L 3646.0055892293885 1211.2888577909637 L 3642.9591207866038 1205.8051903405596 L 3639.9126523438185 1202.7586976443838 L 3635.6475480171375 1200.9308165787127 L 3631.3824921972387 1199.7122049482077 L 3627.7266815591147 1199.7122049482077 L 3623.461625739216 1204.5865787100547 L 3616.1500529697496 1221.6468990032147 L 3616.1500529697496 1230.1770591497946 L 3616.1500529697496 1234.4421392230845 L 3616.7593466583066 1238.7072192963744 L 3619.8058636078736 1241.7537119925505 L 3633.819666951467 1244.1908867467785 L 3643.568414475161 1243.5815930582214 L 3650.8799872446266 1241.1443940506026 L 3653.926455687412 1239.3165129849315 L 3657.582266325536 1238.0979256078176 L 3660.6287347683206 1235.0514329116415 L 3664.8938390950016 1230.7863528383516 L 3666.7217201606727 1226.5212727650617 L 3667.9403075377863 1222.8654863803285 L 3669.1588949149004 1218.6004063070386 L 3670.3774822920145 1213.7260325451916 L 3670.3774822920145 1210.0702704138496\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg>",
+      "type": "text"
+    },
+    {
+      "id": "5yi43sgvmpm",
+      "x": 2663.0620897006743,
+      "y": 1605.7745309666104,
+      "width": 600,
+      "height": 400,
+      "url": "https://www.youtube.com/watch?v=IgMg1XYAcAQ",
+      "type": "link",
+      "embedMode": "live",
+      "title": "I Gave a ROS 2 Robot an LLM Brain | AT-Bot x Claude",
+      "description": "Video recommendation",
+      "image": "https://i.ytimg.com/vi/IgMg1XYAcAQ/hqdefault.jpg",
+      "hasAdjustedRatio": true,
+      "youtubeResumeSeconds": 214
+    },
+    {
+      "id": "u7wnxqdda7a",
+      "x": 433.4769735048916,
+      "y": 2501.684605547959,
+      "width": 400,
+      "height": 399.0772779700115,
+      "file": "/content/boards/cosmoboard/screenshot-4.png",
+      "type": "file",
+      "hasAdjustedRatio": true
     }
   ],
   "edges": [],
   "viewport": {
-    "x": 438.5862987850285,
-    "y": -714.4976659255917,
-    "z": 0.7820227919797041
+    "x": 84.59974079738151,
+    "y": -280.0368761563212,
+    "z": 0.3485688216653457
   }
 }

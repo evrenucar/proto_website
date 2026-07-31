@@ -8,7 +8,9 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..", "..");
 
 const { build } = await import(new URL(`../../scripts/build-site.mjs?test=${Date.now()}`, import.meta.url));
+const { acquireBuildLockForProcess } = await import(new URL("../helpers/build-lock.mjs", import.meta.url));
 
+await acquireBuildLockForProcess();
 await build();
 
 const fullBoardFiles = [

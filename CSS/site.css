@@ -1694,6 +1694,11 @@ html.nav-pos-left .mobile-menu {
   cursor: grab;
 }
 
+/* Unzoomed, the whole view is the exit, and the cursor says so. */
+.lightbox:not(.is-zoomed) .lightbox-figure img {
+  cursor: zoom-out;
+}
+
 .lightbox-figure {
   margin: 0;
   width: min(100%, 1200px);

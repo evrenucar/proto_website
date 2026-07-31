@@ -1,0 +1,83 @@
+{
+  "canvasId": "7f2c9b41-5e83-4d16-9a02-c4e8f0a61d55",
+  "createdAt": "2026-07-30T02:00:00.000Z",
+  "updatedAt": "2026-07-30T21:15:00.000Z",
+  "nodes": [
+    {
+      "id": "test-title",
+      "x": 120,
+      "y": 80,
+      "width": 900,
+      "height": 110,
+      "type": "text",
+      "text": "Test board. A sandbox for checking basic functionality. Nothing here is real content, break it freely."
+    },
+    {
+      "id": "test-instructions",
+      "x": 120,
+      "y": 240,
+      "width": 420,
+      "height": 400,
+      "type": "text",
+      "text": "Things to try:\n\n1. Drag this node around, then resize it by the corner handle.\n2. Wheel to zoom, hold Shift and drag to pan (middle or right drag pans too).\n3. Double click the text node on the right and type.\n4. Click into the markdown note, edit a line, click away. It saves to a real .md file beside the canvas.\n5. Paste a screenshot into the markdown note; it uploads and renders inline.\n6. Gear icon, tick Developer mode: FPS, camera, pointer and selection readouts appear bottom left.\n7. Select several nodes with a drag rectangle, move them together.\n8. Ctrl+Z to undo everything you just did.\n9. The VNC node on the right connects to any VNC server that speaks RFB over WebSocket (KasmVNC, x11vnc with websockets, or websockify in front of a plain one). Paste its address, tick remember, and it comes back by itself on the next reload. The password stays in this browser, never in the canvas file."
+    },
+    {
+      "id": "test-text",
+      "x": 600,
+      "y": 240,
+      "width": 340,
+      "height": 170,
+      "type": "text",
+      "text": "A plain text node. Double click to edit."
+    },
+    {
+      "id": "test-link",
+      "x": 600,
+      "y": 460,
+      "width": 340,
+      "height": 150,
+      "type": "link",
+      "url": "https://example.com",
+      "title": "A link node",
+      "embedMode": "preview"
+    },
+    {
+      "id": "test-note-md",
+      "x": 1060,
+      "y": 240,
+      "width": 420,
+      "height": 430,
+      "type": "markdown",
+      "file": "/content/boards/test-board/notes.md",
+      "href": "/content/boards/test-board/notes.md",
+      "title": "Markdown test note",
+      "_rawMarkdown": "# Markdown test note\n\nEdit this note to test markdown authoring. It is a real file at\n`content/boards/test-board/notes.md`.\n\n## Caret check line\n\nClick mid-word after the underscore: **bold**, an _underscore_ word, and a snake_case word. The\ncaret should land exactly where you clicked.\n\n## Lists\n\n- one item\n- another with `inline code`\n- a [link](https://example.com)\n",
+      "markdownId": "cosmo-note-test-board-notes",
+      "markdownUpdatedAt": "2026-07-30T14:30:00.000Z"
+    },
+    {
+      "id": "test-vnc",
+      "x": 1540,
+      "y": 240,
+      "width": 640,
+      "height": 480,
+      "type": "vnc",
+      "title": "Remote desktop",
+      "url": "",
+      "autoConnect": true,
+      "scaleViewport": true,
+      "viewOnly": false
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 40,
+    "y": 100,
+    "z": 0.9
+  },
+  "defaultViewport": {
+    "x": 40,
+    "y": 100,
+    "z": 0.9
+  }
+}

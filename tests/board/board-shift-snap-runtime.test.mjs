@@ -95,13 +95,20 @@ test("draw tool short-circuits the Shift+drag pan shortcut on mousedown", () => 
   // Without this, holding Shift while clicking with the draw tool selected
   // would trigger the Shift+drag pan shortcut instead of starting a stroke,
   // and the snap branch would never engage.
-  const mousedownBlock = source.match(
-    /viewport\.addEventListener\("mousedown",[\s\S]*?\}\);/
-  );
-  assert.ok(mousedownBlock, "expected the viewport mousedown handler in the source");
+  // There is more than one viewport mousedown handler now: the pin-to-viewport
+  // chord registers its own, earlier in the file. Taking the FIRST match used to
+  // work by accident and broke the moment an unrelated handler landed above the
+  // tool-routing one, so select the block by what it contains rather than by
+  // where it sits. Both handlers close their brace at column 0, one of them with
+  // a capture-phase `, true`.
+  const blocks = [...source.matchAll(
+    /viewport\.addEventListener\("mousedown",[\s\S]*?\n\}(?:, true)?\);/g
+  )].map((m) => m[0]);
+  const mousedownBlock = blocks.find((b) => b.includes('activeTool === "draw"'));
+  assert.ok(mousedownBlock, "expected a viewport mousedown handler carrying the draw-tool branch");
   // The draw branch must appear before the Shift+pan branch.
-  const drawIdx = mousedownBlock[0].indexOf('activeTool === "draw"');
-  const panIdx = mousedownBlock[0].indexOf("e.shiftKey");
+  const drawIdx = mousedownBlock.indexOf('activeTool === "draw"');
+  const panIdx = mousedownBlock.indexOf("e.shiftKey");
   assert.ok(drawIdx >= 0 && panIdx >= 0, "both branches must exist");
   assert.ok(
     drawIdx < panIdx,

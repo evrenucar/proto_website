@@ -1,0 +1,347 @@
+{
+  "Generate `cosmoboard-landing.html` through the build like ev": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T03:30:58.185Z",
+    "updatedBy": "you"
+  },
+  "Cosmoboard: developer mode toggle in the board settings pane": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:00:42.389Z",
+    "updatedBy": "board"
+  },
+  "Orphan markdown node `hgr0v5cjqam` is gone. Your own live se": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:01:11.953Z",
+    "updatedBy": "board"
+  },
+  "Preview port 4174 is permanent. Most of it was already true:": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:01:14.504Z",
+    "updatedBy": "board"
+  },
+  "The Maker Faire exhibitor PDFs are deleted, both copies unde": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:01:19.286Z",
+    "updatedBy": "board"
+  },
+  "Shared entity is fully built now, not half. The runtime neve": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:02:00.906Z",
+    "updatedBy": "board"
+  },
+  "240hz and zoom spikes, answered in three parts. **Tracking:*": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:02:39.347Z",
+    "updatedBy": "board"
+  },
+  "Inline image pasting inside markdown files works. Paste a sc": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:03:49.766Z",
+    "updatedBy": "board"
+  },
+  "IDs for `.md` and `.canvas` files: verified already built, a": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:13:13.724Z",
+    "updatedBy": "board"
+  },
+  "Timestamps on tracker cards: small text under a card shows c": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:13:20.518Z",
+    "updatedBy": "board"
+  },
+  "Realtime collaboration, assessed rather than built: the arch": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:15:33.907Z",
+    "updatedBy": "board"
+  },
+  "`.playwright-mcp/` is untracked and gitignored now. All 31 t": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:16:11.377Z",
+    "updatedBy": "board"
+  },
+  "The recommendation panel no longer escapes the viewport at 1": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:16:26.839Z",
+    "updatedBy": "board"
+  },
+  "**Shared entity model is complete** as of 2026-07-30; this c": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:17:50.160Z",
+    "updatedBy": "board"
+  },
+  "Test board is live at `/content/boards/test-board.html`: a s": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:17:52.065Z",
+    "updatedBy": "board"
+  },
+  "Board runtime: node drag and resize no longer add ten window": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:17:55.844Z",
+    "updatedBy": "board"
+  },
+  "Tracker: card text is editable in place. The pencil on a car": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:08.014Z",
+    "updatedBy": "board"
+  },
+  "The onboarding board opens with an intro panel: what Cosmobo": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:20.206Z",
+    "updatedBy": "board"
+  },
+  "`cosmoboard-landing.html` is promoted to the public Cosmoboa": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:22.116Z",
+    "updatedBy": "board"
+  },
+  "`onboarding.html` is live at `evrenucar.com/onboarding.html`": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:23.990Z",
+    "updatedBy": "board"
+  },
+  "The live runtime moved from `?v=58` to the current content h": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:26.942Z",
+    "updatedBy": "board"
+  },
+  "Select-all then delete no longer corrupts a markdown note. A": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:31.735Z",
+    "updatedBy": "board"
+  },
+  "The 405 on GitHub Pages is gone at the source: the runtime n": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:34.086Z",
+    "updatedBy": "board"
+  },
+  "**`tests/export/export-bundling-e2e.test.mjs` passes for the": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:36.210Z",
+    "updatedBy": "board"
+  },
+  "**Markdown authoring e2e is un-parked and green**, back to": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:46.872Z",
+    "updatedBy": "board"
+  },
+  "Fixed `tests/board/board-save-export-runtime.test.mjs`, and ": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:52.354Z",
+    "updatedBy": "board"
+  },
+  "Fixed `tests/board/board-url-paste-preview-e2e.test.mjs`. Pa": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:55.135Z",
+    "updatedBy": "board"
+  },
+  "Node title and filename agree on separator now. The flatteni": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:20:57.159Z",
+    "updatedBy": "board"
+  },
+  "Shift plus arrow keys extend a selection across markdown lin": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:21:14.800Z",
+    "updatedBy": "board"
+  },
+  "The eurocrate project board is built out, 15 nodes, from the": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:21:23.127Z",
+    "updatedBy": "board"
+  },
+  "Multiple boards per page, including nested board and embed c": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:22:13.222Z",
+    "updatedBy": "board"
+  },
+  "Stage-gate suite: `tests/board/test-board-basics.test.mjs`, ": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:23:10.845Z",
+    "updatedBy": "board"
+  },
+  "GitHub recommendation and versioning flows.": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:26:38.345Z",
+    "updatedBy": "board"
+  },
+  "Image focus-view dismissal hit area fixed. Clicking the unzo": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:28:10.988Z",
+    "updatedBy": "board"
+  },
+  "Dual portable import and export for `.canvas`, Git-friendly ": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:28:17.579Z",
+    "updatedBy": "board"
+  },
+  "Filesystem-first content registry for boards, markdown, base": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T10:28:29.808Z",
+    "updatedBy": "board"
+  },
+  "done column on right can be even more compact. Or lets make ": {
+    "createdAt": "2026-07-30T10:41:28.401Z",
+    "updatedAt": "2026-07-30T12:58:57.232Z",
+    "updatedBy": "you"
+  },
+  "The ones claude is working on actively should be brought to ": {
+    "createdAt": "2026-07-30T10:41:57.711Z",
+    "updatedAt": "2026-07-30T10:41:57.711Z",
+    "updatedBy": "you"
+  },
+  "Text no longer stays pixelated after zooming. The permanent ": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T11:12:34.322Z",
+    "updatedBy": "you"
+  },
+  "Tracker: **more** responds instantly now, measured 4.4ms. Th": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T11:12:52.649Z",
+    "updatedBy": "you"
+  },
+  "`npm run sync:notion` is diagnosed and unblocked. Root cause": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T11:14:46.773Z",
+    "updatedBy": "you"
+  },
+  "Markdown-to-canvas and canvas-to-markdown embedding and refe": {
+    "createdAt": null,
+    "updatedAt": "2026-07-30T11:14:57.585Z",
+    "updatedBy": "you"
+  },
+  "top bar of firefox opens and closes as i click alt. Its a bi": {
+    "createdAt": "2026-07-30T14:48:26.871Z",
+    "updatedAt": "2026-07-30T14:48:26.871Z",
+    "updatedBy": "you"
+  },
+  "In youtube videos I cant skip around with clicking on the ti": {
+    "createdAt": "2026-07-30T14:49:35.901Z",
+    "updatedAt": "2026-07-30T14:49:35.901Z",
+    "updatedBy": "you"
+  },
+  "add and demonstrate the vnc support. Add it to the test boar": {
+    "createdAt": "2026-07-30T14:55:52.666Z",
+    "updatedAt": "2026-07-30T20:53:57.815Z",
+    "updatedBy": "you"
+  },
+  "Would be nice to have the ability to pin some items yo your ": {
+    "createdAt": "2026-07-30T20:28:51.656Z",
+    "updatedAt": "2026-07-30T20:28:51.656Z",
+    "updatedBy": "you"
+  },
+  "Ability to have the buttom tool bar auto hide. It sohuld be ": {
+    "createdAt": "2026-07-30T20:31:23.147Z",
+    "updatedAt": "2026-07-30T20:31:23.147Z",
+    "updatedBy": "you"
+  },
+  "CRashing on mobile if you zoom out and in too fast.": {
+    "createdAt": "2026-07-30T20:33:18.552Z",
+    "updatedAt": "2026-07-30T20:44:59.054Z",
+    "updatedBy": "you"
+  },
+  "ability to ahve the page \"locked\" so until its unlocked it c": {
+    "createdAt": "2026-07-30T20:34:18.870Z",
+    "updatedAt": "2026-07-30T20:34:18.870Z",
+    "updatedBy": "you"
+  },
+  "For youtube videos. It should remember where I left off on t": {
+    "createdAt": "2026-07-30T20:35:45.553Z",
+    "updatedAt": "2026-07-30T20:45:08.230Z",
+    "updatedBy": "you"
+  },
+  "For pdf's when I'M navigating around if my cursor lands on p": {
+    "createdAt": "2026-07-30T20:40:09.329Z",
+    "updatedAt": "2026-07-30T20:44:49.191Z",
+    "updatedBy": "you"
+  },
+  "PDF's should have a fullscreen button on top right just like": {
+    "createdAt": "2026-07-30T20:42:57.398Z",
+    "updatedAt": "2026-07-30T20:45:00.530Z",
+    "updatedBy": "you"
+  },
+  "WHile dragging items if you hold down shift it should restri": {
+    "createdAt": "2026-07-30T20:47:22.042Z",
+    "updatedAt": "2026-07-30T20:47:22.042Z",
+    "updatedBy": "you"
+  },
+  "Ontop of a youtube video there is a youtube.com link display": {
+    "createdAt": "2026-07-30T20:50:46.920Z",
+    "updatedAt": "2026-07-30T20:50:46.920Z",
+    "updatedBy": "you"
+  },
+  "With previews if you try to make them as compact as possible": {
+    "createdAt": "2026-07-30T20:53:46.161Z",
+    "updatedAt": "2026-07-30T20:53:46.161Z",
+    "updatedBy": "you"
+  },
+  "When in settings if I try to scroll it zooms in and out on t": {
+    "createdAt": "2026-07-30T20:55:33.508Z",
+    "updatedAt": "2026-07-30T20:55:33.508Z",
+    "updatedBy": "you"
+  },
+  "Add a light mode. And also add a custom theme group in setti": {
+    "createdAt": "2026-07-30T20:57:40.059Z",
+    "updatedAt": "2026-07-30T20:57:40.059Z",
+    "updatedBy": "you"
+  },
+  "SOme websites refuse to be embedded. \"https://www.youtube.co": {
+    "createdAt": "2026-07-30T21:04:56.798Z",
+    "updatedAt": "2026-07-30T21:04:56.798Z",
+    "updatedBy": "you"
+  },
+  "When I alt drag multiple items then ctrl z it sohuld reverse": {
+    "createdAt": "2026-07-30T21:17:32.367Z",
+    "updatedAt": "2026-07-30T21:17:32.367Z",
+    "updatedBy": "you"
+  },
+  "I still cant zoom in and out if im ontop of a markdown fine ": {
+    "createdAt": "2026-07-31T00:51:50.910Z",
+    "updatedAt": "2026-07-31T00:51:50.910Z",
+    "updatedBy": "you"
+  },
+  "Section \"Test failures\" is not in todo.md. · is npm run prev": {
+    "createdAt": "2026-07-31T01:55:09.225Z",
+    "updatedAt": "2026-07-31T01:55:09.225Z",
+    "updatedBy": "you"
+  },
+  "Videos remember where you left off.": {
+    "createdAt": null,
+    "updatedAt": "2026-07-31T01:56:14.640Z",
+    "updatedBy": "you"
+  },
+  "Zooming works over a markdown note again. You were right, an": {
+    "createdAt": null,
+    "updatedAt": "2026-07-31T01:56:28.864Z",
+    "updatedBy": "you"
+  },
+  "PDFs have a fullscreen button on the top right, and so does ": {
+    "createdAt": null,
+    "updatedAt": "2026-07-31T01:56:59.623Z",
+    "updatedBy": "you"
+  },
+  "I don't like how the pinning just snaps to my face currently": {
+    "createdAt": "2026-07-31T18:17:12.875Z",
+    "updatedAt": "2026-07-31T18:17:12.875Z",
+    "updatedBy": "you"
+  },
+  "When nothing is selected the arrow keys should serve to brow": {
+    "createdAt": "2026-07-31T18:38:03.434Z",
+    "updatedAt": "2026-07-31T18:38:03.434Z",
+    "updatedBy": "you"
+  },
+  "Lets have a option to embed the images and other assets that": {
+    "createdAt": "2026-07-31T18:43:54.025Z",
+    "updatedAt": "2026-07-31T18:43:54.025Z",
+    "updatedBy": "you"
+  },
+  "[runtime] Alt-drag copy, now a live modifier per your refine": {
+    "createdAt": null,
+    "updatedAt": "2026-07-31T19:16:48.056Z",
+    "updatedBy": "you"
+  },
+  "Markdown download button: verified complete, nothing to rebu": {
+    "createdAt": null,
+    "updatedAt": "2026-07-31T19:17:01.007Z",
+    "updatedBy": "you"
+  }
+}

@@ -1,0 +1,307 @@
+{
+  "canvasId": "3e6a1c88-2b47-4f09-b7d1-92a5c40de711",
+  "createdAt": "2026-07-30T06:30:00.000Z",
+  "updatedAt": "2026-07-31T01:57:09.721Z",
+  "nodes": [
+    {
+      "id": "dev-title",
+      "x": 104.23647479329847,
+      "y": -208.45481654369044,
+      "width": 980,
+      "height": 100,
+      "type": "text",
+      "text": "Development board. Everything about building Cosmoboard, in one place: the tracker, the sandbox, the benchmarks, and the standing analyses."
+    },
+    {
+      "id": "dev-tracker",
+      "x": -2471.720992563386,
+      "y": -103.45223649811587,
+      "width": 1885.0236912372932,
+      "height": 1171.2503640890234,
+      "type": "link",
+      "url": "/.tracker/tracker.html",
+      "title": "Task tracker (kanban over todo.md)",
+      "embedMode": "live"
+    },
+    {
+      "id": "dev-commands",
+      "x": 864.2364747932985,
+      "y": -58.45481654369033,
+      "width": 380,
+      "height": 260,
+      "type": "text",
+      "text": "Stage gates:\n\nnode tests/board/test-board-basics.test.mjs\nnode tests/board/markdown-caret-offset-mapping.test.mjs\nnode tests/benchmarks/machine-readability.mjs\n\nRun after any board change. First two must pass; the benchmark is a score, not a gate."
+    },
+    {
+      "id": "dev-benchmark-doc",
+      "x": 127.31932215659754,
+      "y": 301.9118622595431,
+      "width": 420,
+      "height": 480,
+      "type": "markdown",
+      "title": "Machine-readability benchmark (definition)",
+      "file": "/.agents/research/machine_readability_benchmark.md",
+      "href": "/.agents/research/machine_readability_benchmark.md",
+      "_rawMarkdown": "# Machine-readability benchmark for boards, canvases, and markdown\n\nWritten 2026-07-30. \"Machine readable\" gets a concrete meaning here, and a score that can be\nwatched over time. The benchmark is runnable: `node tests/benchmarks/machine-readability.mjs`\nprints a per-board table and a total score. It never fails a build; it measures.\n\n## What machine-readable means here, five properties\n\n1. **Parseable**: every `.canvas` in the registry is valid JSON with a `nodes` array; every\n   registered `.md` reads as UTF-8 text.\n2. **Identifiable**: canvases carry a `canvasId`; every node has a unique `id` and a known\n   `type`; markdown nodes carry `markdownId`.\n3. **Addressable**: every file a node references (`file`, `href`, `boardSource`) resolves to a\n   real file in the repo, no dangling pointers.\n4. **Textual**: markdown sidecars start with a heading; text nodes carry non-empty text; link\n   nodes carry a `title`, so an agent reading the data sees words, not blanks.\n5. **Indexed**: the registry knows every board and note that exists on disk, and everything the\n   registry lists exists. An agent starting from `src/registry.json` can reach all content.\n\n## Why these five\n\nAn agent (or any tool) working a board needs to load it (1), refer to things in it stably (2),\nfollow references without 404s (3), read meaning without rendering pixels (4), and discover\ncontent without crawling HTML (5). Together they make the file tree the API. This is also the\ngroundwork the GitHub-sync and operation-level-write plans build on: ops address node ids, sync\naddresses files, both need 2 and 3 to hold.\n\n## Current known gaps the benchmark will show\n\n- Draw strokes are SVG blobs inside text nodes: renderable, not meaningful. Acceptable; scored\n  but not weighted heavily.\n- Some legacy nodes lack titles. Cheap to fix opportunistically.\n- Asset nodes referencing `idb:` or `blob:` refs are browser-local by design; the benchmark\n  counts them separately rather than as broken.\n\n## How to move the score\n\nFix dangling references first (property 3 failures are real bugs), then backfill titles and\nmarkdown headings. New features should keep 2 and 3 at 100 by construction: ids on creation,\nfiles written before references to them.\n",
+      "markdownId": "cosmo-note-dev-benchmark-doc",
+      "markdownUpdatedAt": "2026-07-30T11:18:37.586Z"
+    },
+    {
+      "id": "dev-perf-analysis",
+      "x": 605.8810922348215,
+      "y": 304.102123816837,
+      "width": 419.9999999999998,
+      "height": 483.4703892394981,
+      "type": "markdown",
+      "title": "Performance analysis and action plan",
+      "file": "/.agents/whiteboard/performance_analysis_2026-07-30.md",
+      "href": "/.agents/whiteboard/performance_analysis_2026-07-30.md",
+      "_rawMarkdown": "# Performance analysis: where the remaining milliseconds live\n\nWritten 2026-07-30 against measured state, not guesses. Baseline from this week's profiling:\nsteady wheel zoom at 145 nodes runs 60 FPS (avg frame 16.77 ms, p95 16.8 ms), pointer-move\ndispatch costs 2.1 microseconds per event since the interaction relay landed (was 71.2), and the\nzoom re-raster stalls are gone with the gesture-scoped `will-change`. The dev overlay (FPS, worst\nframe, spike counter) is the standing instrument.\n\n## Where delay still lives, largest first\n\n1. **Embeds dominate load and memory.** Every YouTube, Wikipedia, or app iframe boots at page\n   load, on screen or not. That is network, CPU, and memory spent before first interaction, and\n   it was the source of the \"long frames\" that looked like zoom jank in profiling. The board\n   itself is fast; the guests are heavy.\n2. **Whole-board serialization on every dirty mark.** `serializeState` walks all nodes and\n   stringifies the full canvas on a 400 ms debounce while editing. At 145 nodes it is a few\n   milliseconds per tick on the main thread; it grows linearly with board size.\n3. **Synchronous full mount.** All nodes build DOM at load, visible or not. Time-to-interactive\n   scales with board size rather than viewport content.\n4. **Selection queries.** `querySelectorAll(\".bd-item.selected\")` runs in keydown and overlay\n   paths. Cheap at 145 nodes, O(board) forever.\n5. **One 8.5k-line script.** The runtime parses in one gulp on every board page. Fine on desktop,\n   measurable on weak phones. Not worth touching until a bundler exists for other reasons\n   (extraction plan trigger 4).\n6. **Tracker full re-render.** The kanban rebuilds its innerHTML per change. At current card\n   counts this is invisible; it is the first thing to revisit if the board grows tenfold.\n\n## Action plan, in order\n\n1. **Lazy embeds** (biggest win, UX and memory): iframes activate on viewport proximity via\n   IntersectionObserver, showing the existing preview card until then; offscreen embeds unload\n   after long invisibility. Also fixes \"board with many videos eats a laptop\".\n2. **Selection as state**: keep a `Set` of selected ids alongside the CSS class, kill the\n   O(board) queries in hot paths.\n3. **Incremental saves**: dirty-node tracking, serialize only changed nodes into the state\n   snapshot. Shares design with operation-level writes from\n   [`realtime_collaboration_note.md`](./realtime_collaboration_note.md), so one design serves\n   both performance and sync.\n4. **Staged mount**: render viewport-intersecting nodes first, the rest in idle callbacks.\n5. **A perf budget in CI**: a stage-gate style storm asserting p95 frame time and worst frame on\n   the test board, so regressions surface as red tests instead of user reports.\n\nItems 1 and 2 are afternoon-sized. 3 and 4 are real projects; do them when a board slow enough\nto prove them exists. 5 lands with the next test pass.\n",
+      "markdownId": "cosmo-note-dev-perf-analysis",
+      "markdownUpdatedAt": "2026-07-30T11:26:21.906Z"
+    },
+    {
+      "id": "dev-realtime-note",
+      "x": 117.8190629994288,
+      "y": 980.9450735945381,
+      "width": 420,
+      "height": 480,
+      "type": "markdown",
+      "title": "Realtime collaboration feasibility",
+      "file": "/.agents/whiteboard/realtime_collaboration_note.md",
+      "href": "/.agents/whiteboard/realtime_collaboration_note.md",
+      "_rawMarkdown": "# Realtime collaboration: feasibility against the current architecture\n\nWritten 2026-07-30 for the \"Realtime collaboration across boards, markdown, and structured data,\nif the architecture supports it cleanly\" card. Assessment, not a commitment.\n\n## The honest verdict\n\nThe architecture does not support it cleanly today. The blocker is not networking, it is the\nwrite model: every save is a whole-state overwrite. `POST /api/save-board` writes the full\ncanvas, `todo.md` updates rewrite the whole file, and two writers doing read-modify-write on the\nsame file lose whichever landed first. This session already produced a live example: user and\nagent priorities crossing on the tracker within seconds of each other.\n\n## What exists that helps\n\n- The `todo-update` endpoint pattern: line-addressed writes with an `expect` guard that refuses a\n  write when the target drifted. This is an operation-level write with optimistic concurrency, in\n  miniature, already proven on the tracker.\n- The tracker's poll-and-render loop with focus-safe re-render: a working \"see someone else's\n  change within seconds\" surface, no sockets needed.\n- File-first state with stable identity: `canvasId`, `markdownId`, node ids. Operations can\n  address entities without inventing an identity layer.\n\n## The staged path, cheapest first\n\n1. **Operation-level canvas writes.** Generalize the todo-update pattern to the board: node-level\n   ops (add, move, resize, edit, delete) with a base-version guard, applied server-side to the\n   canvas file. Kills last-write-wins clobbers even for a single user with two tabs, which is a\n   standing bug class today. Valuable standalone; prerequisite for everything below.\n2. **Presence and refresh.** A heartbeat file per board (who, when, viewport) plus the tracker's\n   poll pattern on the canvas: other sessions' changes appear within seconds, other people appear\n   as cursors or name chips. No CRDT, no sockets; the preview server serializes writes naturally\n   because it is one process.\n3. **Live co-editing.** Only after 1 and 2 prove out. Two credible designs: (a) server-serialized\n   ops fanned out over SSE/WebSocket, files stay canonical, offline means read-only; or (b) CRDT\n   (Yjs or similar) with the `.canvas` as snapshot, buying offline merge at the cost of a second\n   source of truth and a deep runtime dependency. Recommendation when the time comes: (a) first;\n   it fits the file-first model and the ladder in `agents.md`, where live co-editing is the last\n   rung, after seeing, running, and editing on the site.\n\n## What not to do\n\nDo not bolt a sync library onto the current whole-state save; every concurrent edit becomes a\ncoin flip. Do not start with markdown co-editing; per-line ops inside contenteditable are the\nhardest variant of the problem, and the board ops in stage 1 deliver most of the value.\n",
+      "markdownId": "cosmo-note-dev-realtime-note",
+      "markdownUpdatedAt": "2026-07-30T11:18:37.588Z"
+    },
+    {
+      "id": "dev-vnc-iframe",
+      "x": 596.3808330776526,
+      "y": 983.135335151832,
+      "width": 420,
+      "height": 480,
+      "type": "markdown",
+      "title": "VNC sessions and iframe-refusing sites",
+      "file": "/.agents/research/vnc_and_iframe_embedding_2026-07-30.md",
+      "href": "/.agents/research/vnc_and_iframe_embedding_2026-07-30.md",
+      "_rawMarkdown": "# VNC sessions and iframe-refusing sites: what it takes\n\nWritten 2026-07-30 for the two research cards. Both questions are really one question: how much\nof the outside world can live inside a board page, and where the browser's walls actually are.\n\n## VNC in a board\n\nBrowsers cannot open raw TCP, and classic VNC (RFB) is raw TCP. Every browser VNC story is\ntherefore RFB-over-WebSocket, and the only question is who does the translation:\n\n- **websockify / a bridge process**: what stock noVNC setups use. Works, but it is exactly the\n  extra desktop-side server you said you do not want.\n- **VNC servers that speak WebSockets natively** (no bridge): x11vnc, libvncserver-based servers,\n  TigerVNC built with websocket support, and above all **KasmVNC**, which is web-native end to\n  end and serves its own client. With one of these, the desktop side is just the VNC server\n  itself; nothing else to install.\n\n**Minimum path that works today, zero runtime changes:** run KasmVNC (or x11vnc with its web\nclient) on the machine you want to reach, and put its URL in a live-embed link node. The session\nrenders inside the board like any embed.\n\n**The proper v2:** vendor noVNC's JS client (like fflate is vendored) and add a `vnc` node type\nwhose config is a `wss://host:port` target, connecting in-board without the server's own web\npage. Worth doing when a real VNC workflow exists; it is a bounded, dependency-light addition.\n\n## Sites that refuse iframes\n\n`X-Frame-Options` / CSP `frame-ancestors` are enforced by the visitor's browser, and the site,\nnot us, chooses them. The options, honestly weighed:\n\n- **Fallback cards (do now):** detect the refused embed and render the existing bookmark-preview\n  card (title, image, link-out) instead of a grey box. No policy problems, works on the static\n  site, and most \"I just want to see it on the board\" cases are served by a preview plus a click.\n- **Header-stripping proxy (do not build):** works only through our server, breaks logins because\n  the proxy owns the cookies, is against many sites' terms, and becomes a maintenance tarpit.\n  Wrong foundation for a local-first tool.\n- **A browser extension (optional dev tool):** a small extension can relax frame headers for your\n  own browser only. Reasonable opt-in power-user add-on; never a requirement.\n- **A desktop shell (the real answer, later):** Electron/Tauri webviews are not subject to\n  X-Frame-Options, so a Cosmoboard desktop app embeds anything, plus real terminals and file\n  access. This is exactly Stage 3 (application and session hosting) of\n  `COSMOBOARD_MIGRATION.md`, and the honest moment to \"jump ship\" from browser-only. A full\n  Gecko browser or OS remains Stage 5; nothing today needs it.\n\n**Recommendation:** ship fallback cards now; treat VNC via KasmVNC-in-an-embed as available\ntoday; put the desktop shell question where it already lives, the migration plan's Stage 3, and\ndecide it as a direction call rather than a workaround.\n",
+      "markdownId": "cosmo-note-dev-vnc-iframe",
+      "markdownUpdatedAt": "2026-07-30T11:26:17.593Z"
+    },
+    {
+      "id": "dev-migration",
+      "x": 1073.4915545265746,
+      "y": 291.4474766083805,
+      "width": 612.697126537925,
+      "height": 408.9475443360571,
+      "type": "markdown",
+      "title": "Staged trajectory (COSMOBOARD_MIGRATION.md)",
+      "file": "/COSMOBOARD_MIGRATION.md",
+      "href": "/COSMOBOARD_MIGRATION.md",
+      "_rawMarkdown": "# Cosmoboard direction handoff\n\nUse this file to continue the product-direction and architecture discussion in the correct Cosmoboard repository.\n\n## Why this handoff exists\n\nThe discussion began inside the Punchlist repository by mistake. Punchlist should remain its own focused personal task-planning app. Cosmoboard is a separate product direction and should be designed, tracked, and implemented in its own repository.\n\nNo Cosmoboard implementation or repository split was started here.\n\n## Product vision\n\nCosmoboard should become a project-centered productivity environment that combines:\n\n- A spatial canvas for understanding projects and relationships.\n- Markdown for durable, portable information.\n- A CLI for fast control, scripting, and agent access.\n- Human and AI-agent collaboration in the same project workspace.\n- Project-based information storage and retrieval.\n- Hosted applications and persistent application state inside projects.\n- Higher performance on large and long-running workspaces.\n- Terminal sessions and remote graphical sessions such as VNC.\n- Collaboration between multiple people and agents.\n\nPossible later forms include a dedicated Gecko-based browser or a complete Linux distribution. Those are long-term directions, not first-version requirements.\n\nThe unifying idea is one interface where project knowledge, tasks, conversations, tools, running applications, and computational sessions stay connected rather than living in separate products.\n\n## Existing starting point\n\nThere is already a separate sibling checkout named `aide-board`. It is currently clean and contains:\n\n- A project board.\n- An agent graph.\n- Human-agent chat.\n- Agent presence and phase-by-phase progress.\n- Interactive review and question pages.\n- Local HTML reports.\n- A small Node server and file-based project state.\n\nIt currently acts as Punchlist's development interface, but it is already physically separated from the Punchlist repository. It may be the natural seed for Cosmoboard, subject to design review.\n\nThe current `aide-board` architecture is deliberately small:\n\n- Static HTML pages.\n- Small zero-dependency Node scripts.\n- State stored in the consuming project's `status/` directory.\n- Punchlist embedded as the board pane.\n- No general application-hosting, terminal, VNC, or collaborative storage layer yet.\n\n## Important product boundary\n\nPunchlist and Cosmoboard should not collapse into one product.\n\n- Punchlist remains the focused, local-first personal planner distributed as one HTML file.\n- Cosmoboard becomes the broader project workspace and agent-operating environment.\n- Cosmoboard may host or integrate Punchlist as one interface, but Punchlist should remain independently usable and releasable.\n\nThis separation also resolves a prior Punchlist product constraint: collaboration, terminals, hosted apps, and operating-system ambitions do not belong in its minimal single-file scope.\n\n## Scope decomposition\n\nThe vision contains several independent systems. Design them as stages rather than one specification.\n\n### Stage 0: Product boundary and repository decision\n\nDecide whether Cosmoboard:\n\n1. Evolves directly from `aide-board`.\n2. Starts as a new repository that imports selected `aide-board` concepts.\n3. Uses `aide-board` as a temporary prototype while a new core is designed.\n\nNo option has been approved yet.\n\n### Stage 1: Human-and-agent project workspace\n\nGeneralize today's board, chat, graph, progress, reports, and reviews into a standalone project workspace.\n\nThe first version should prove that a human and one or more agents can:\n\n- See the same project state.\n- Store durable project information.\n- Plan and track work.\n- Ask and answer structured questions.\n- Attach visual references and per-item feedback.\n- Understand who is acting and what phase work is in.\n\n### Stage 2: Unified canvas, Markdown, and CLI\n\nGive the same project entities multiple coordinated interfaces:\n\n- Canvas for spatial relationships.\n- Markdown for direct editing and portability.\n- CLI for automation and agent control.\n\nThese should be views over shared project data, not three independent stores.\n\n### Stage 3: Application and session hosting\n\nAdd explicit project resources for:\n\n- Terminal sessions.\n- Long-running processes.\n- Web applications.\n- Persisted application state.\n- Remote graphical sessions such as VNC.\n\nThis stage requires a trusted local or remote runtime. It should not be simulated inside the initial static interface.\n\n### Stage 4: Collaboration\n\nAdd multi-user ownership, permissions, presence, history, conflict handling, and shared project state. Design this after the single-user and multi-agent data model is stable.\n\n### Stage 5: Dedicated browser or operating environment\n\nEvaluate a Gecko-based browser shell or Linux distribution only after the workspace and runtime layers prove valuable. The earlier stages should expose clean interfaces so either form can host them later.\n\n## Design principles\n\n- Start from the smallest useful standalone Cosmoboard.\n- Keep the data model independent of any single UI.\n- Treat canvas, Markdown, and CLI as peer interfaces over shared entities.\n- Make agent actions explicit, inspectable, reversible, and permissioned.\n- Separate durable project knowledge from ephemeral process and UI state.\n- Preserve portability. Projects should have a clear exportable representation.\n- Do not scaffold browser-engine, VNC, container, or operating-system layers before their stage begins.\n- Prefer process boundaries and small protocols over shared internal code between Punchlist and Cosmoboard.\n\n## Requested planning workflow\n\nEvren wants the design process presented at a live local URL.\n\nThe planning interface should:\n\n- Use an interactive HTML page.\n- Present one decision at a time.\n- Include diagrams, mockups, or other visual references where useful.\n- Provide a feedback field for every item.\n- Allow screenshots or pasted visual references.\n- Show a final summary before submission.\n- Send the structured answers back to the working agent/model.\n\nThe existing `aide-board` review harness already provides much of this interaction pattern and should be evaluated for reuse in the correct repository.\n\n## First unresolved question\n\nWhat should Cosmoboard's first independently useful version prove?\n\n- A human-and-agent project workspace based on today's board, chat, graph, progress, and review tools.\n- A unified canvas, Markdown, and CLI workspace.\n- A remote-computing workspace centered on terminals and VNC.\n\nThe preliminary recommendation is the first option. It has real working material in `aide-board`, establishes the shared project model needed by later stages, and avoids committing early to a browser engine or operating system.\n\n## Required next steps in the correct repository\n\n1. Read this handoff and inspect the correct repository.\n2. Check whether it already contains Cosmoboard code, plans, or naming decisions.\n3. Reconcile those findings with the `aide-board` starting point.\n4. Continue the brainstorming process one scope question at a time.\n5. Build the requested interactive local planning page with visual references.\n6. Compare two or three repository/separation approaches.\n7. Present the staged architecture for approval.\n8. Only after approval, write a committed design specification and implementation plan.\n\nDo not implement or move code before the design is approved.\n\n## Changes made in the wrong Punchlist repository\n\nNo Punchlist app source, generated app output, tests, workflows, or website files were edited.\n\nChanges made by the agent during orientation and planning:\n\n- Created `docs/codebase-orientation-2026-07-29.md`.\n- Created `status/codebase-orientation.html`.\n- Updated `status/status-board.json` with:\n  - A completed codebase-orientation task.\n  - A paused Cosmoboard direction task with design-process children.\n  - Corresponding history entries and the Codex agent-device name.\n- `status/archive.json` may have been created or updated by the sanctioned board-writing helper while it pruned old completed board items.\n- Cleared the stale `claude` heartbeat after Evren explicitly approved it.\n- Created this migration file.\n\nThe working tree already contained other unrelated modified and untracked status/review files. They were not edited or removed.\n\n",
+      "markdownId": "cosmo-note-dev-migration",
+      "markdownUpdatedAt": "2026-07-31T00:51:09.626Z"
+    },
+    {
+      "id": "demo-heading",
+      "x": 120,
+      "y": 900,
+      "width": 980,
+      "height": 70,
+      "type": "text",
+      "text": "Showcase: one of every node type. Break these freely; the docs above are the real ones."
+    },
+    {
+      "id": "demo-text",
+      "x": 120,
+      "y": 1000,
+      "width": 280,
+      "height": 140,
+      "type": "text",
+      "text": "A text node. Double click to edit, one click enters markdown notes."
+    },
+    {
+      "id": "demo-link-preview",
+      "x": 430,
+      "y": 1000,
+      "width": 300,
+      "height": 140,
+      "type": "link",
+      "url": "https://jsoncanvas.org",
+      "title": "Link node, preview mode",
+      "embedMode": "preview"
+    },
+    {
+      "id": "demo-youtube",
+      "x": 665.5036100925321,
+      "y": 1585.2679632978643,
+      "width": 791.2246973486072,
+      "height": 518.0952768384069,
+      "type": "link",
+      "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+      "embedMode": "preview",
+      "description": "Video recommendation",
+      "image": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "demo-image",
+      "x": 156.57924770611658,
+      "y": 1670.7715733903988,
+      "width": 400,
+      "height": 399.0772779700115,
+      "type": "file",
+      "file": "/content/boards/cosmoboard/screenshot-4.png",
+      "title": "Image node",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "demo-drawing",
+      "x": 500,
+      "y": 1350,
+      "width": 240,
+      "height": 160,
+      "type": "text",
+      "text": "<svg viewBox=\"0 0 200 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 96 C 40 20, 80 20, 100 60 S 160 110, 188 30\" fill=\"none\" stroke=\"#3fdaca\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>"
+    },
+    {
+      "id": "demo-vnc",
+      "x": 676.3587981660035,
+      "y": 2176.0813440297984,
+      "width": 560,
+      "height": 420,
+      "type": "vnc",
+      "title": "VNC session",
+      "url": "",
+      "autoConnect": true,
+      "scaleViewport": true,
+      "viewOnly": false
+    },
+    {
+      "id": "demo-board-preview",
+      "x": 147.4344357795874,
+      "y": 2124.5229999944504,
+      "width": 340,
+      "height": 272,
+      "type": "board-preview",
+      "boardSlug": "test-board",
+      "boardSource": "/content/boards/test-board/current.canvas",
+      "boardHref": "/content/boards/test-board.html",
+      "title": "Board preview: the test board",
+      "description": ""
+    },
+    {
+      "id": "demo-base",
+      "x": 1290,
+      "y": 1000,
+      "width": 700,
+      "height": 380,
+      "type": "base",
+      "source": "/content/base-data/items.json",
+      "collection": "",
+      "filter": "section=projects",
+      "columns": [
+        "title",
+        "publishingStatus",
+        "year",
+        "effort"
+      ],
+      "title": "Projects"
+    },
+    {
+      "id": "demo-app",
+      "x": 1290,
+      "y": 1420,
+      "width": 380,
+      "height": 220,
+      "type": "app",
+      "source": "/content/apps/excalidraw-proto.json",
+      "embedMode": "preview",
+      "appConfig": {
+        "slug": "excalidraw-proto",
+        "appName": "Excalidraw",
+        "description": "A quick scratchpad session for wireframes.",
+        "url": "https://excalidraw.com/#room=aa8b4c2b9213123b320d,4RkR000000000000000000",
+        "icon": "✏️",
+        "tags": [
+          "sketch",
+          "ui"
+        ]
+      }
+    },
+    {
+      "id": "demo-entity",
+      "x": 2049.0652899300744,
+      "y": 1002.7652545372275,
+      "width": 380,
+      "height": 300,
+      "type": "entity",
+      "entityRef": "eurocrate-storage-system",
+      "source": "/content/entities/index.json",
+      "title": "Eurocrate storage system"
+    },
+    {
+      "id": "dbuq9gp2wct",
+      "x": 2247.485867519492,
+      "y": 1854.9558755831001,
+      "width": 771.9390672590157,
+      "height": 428.7140449354001,
+      "url": "https://www.youtube.com/watch?v=VQy50fuxI34",
+      "type": "link",
+      "embedMode": "live",
+      "title": "FORGET Loop Engineering. Agentic Engineering is about THIS",
+      "description": "Video recommendation",
+      "image": "https://i.ytimg.com/vi/VQy50fuxI34/hqdefault.jpg",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "0c3fapl123fw",
+      "x": 1593.502878329526,
+      "y": 1848.6675776101197,
+      "width": 600,
+      "height": 400,
+      "url": "https://www.youtube.com/watch?v=VQy50fuxI34",
+      "type": "link",
+      "embedMode": "live",
+      "title": "FORGET Loop Engineering. Agentic Engineering is about THIS",
+      "description": "Video recommendation",
+      "image": "https://i.ytimg.com/vi/VQy50fuxI34/hqdefault.jpg",
+      "hasAdjustedRatio": true
+    },
+    {
+      "id": "njho9vpszj",
+      "x": 484.2364747932986,
+      "y": -58.45481654369033,
+      "width": 340,
+      "height": 150,
+      "type": "link",
+      "url": "/content/boards/test-board.html",
+      "title": "Test board (sandbox, break freely)",
+      "embedMode": "preview"
+    },
+    {
+      "id": "ozb4w50vho",
+      "x": -1125.9840362101877,
+      "y": 1632.1685412055738,
+      "width": 1111.153648023245,
+      "height": 391.82639338185777,
+      "url": "/content/boards/dev/bayblend-fr3010-pc-abs.pdf",
+      "title": "Bayblend-FR3010 - (PC+ABS)",
+      "embedMode": "live",
+      "originalFilename": "Bayblend-FR3010 - (PC+ABS).pdf",
+      "type": "link"
+    }
+  ],
+  "edges": [],
+  "viewport": {
+    "x": 486.2747951057256,
+    "y": 168.65366986076788,
+    "z": 0.1
+  },
+  "defaultViewport": {
+    "x": 40,
+    "y": 100,
+    "z": 0.9
+  }
+}

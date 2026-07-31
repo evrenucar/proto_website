@@ -1,0 +1,43 @@
+name: Board tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: board-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  board-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Stage gate (board basics)
+        run: node tests/board/test-board-basics.test.mjs
+
+      - name: Perf budget
+        run: node tests/board/perf-budget.test.mjs
+        env:
+          # CI runners raster in software on slower CPUs than the dev
+          # machine, so the frame budgets are looser here. They still catch
+          # the catastrophic classes; the dispatch budget is the tight one.
+          PERF_IDLE_P95_MS: "35"
+          PERF_ZOOM_P95_MS: "400"
+          PERF_DRAG_P95_MS: "250"
+          PERF_PAN_P95_MS: "250"
+          PERF_DISPATCH_US: "60"

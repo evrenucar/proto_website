@@ -1487,6 +1487,41 @@ function renderBoardPage(currentFile, board, introPanel = null) {
                 <span>seconds</span>
               </div>
             </label>
+            <label class="braindump-settings-toggle" for="braindump-setting-dev-mode">
+              <span class="braindump-settings-label-wrap">
+                <span class="braindump-settings-label">Developer mode</span>
+                <span class="braindump-settings-copy">Shows a live overlay with FPS, camera position and zoom, pointer coordinates, node counts, and the selected node.</span>
+              </span>
+              <input type="checkbox" id="braindump-setting-dev-mode">
+            </label>
+          </section>
+          <section class="braindump-settings-section" aria-labelledby="braindump-ghsync-title">
+            <h3 id="braindump-ghsync-title" class="braindump-help-title">GitHub sync</h3>
+            <p class="braindump-help-copy">Mirrors this board's canvas to a repository you control on every save. The token stays in this browser and is sent only to api.github.com. Use a fine-grained token with contents read and write on that one repository.</p>
+            <label class="braindump-settings-toggle" for="braindump-setting-ghsync-enabled">
+              <span class="braindump-settings-label-wrap">
+                <span class="braindump-settings-label">Enabled</span>
+              </span>
+              <input type="checkbox" id="braindump-setting-ghsync-enabled">
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-ghsync-repo">
+              <span class="braindump-settings-label">Repository</span>
+              <div class="braindump-settings-input-row">
+                <input type="text" id="braindump-setting-ghsync-repo" placeholder="owner/repo" spellcheck="false" autocomplete="off">
+              </div>
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-ghsync-branch">
+              <span class="braindump-settings-label">Branch</span>
+              <div class="braindump-settings-input-row">
+                <input type="text" id="braindump-setting-ghsync-branch" placeholder="main" spellcheck="false" autocomplete="off">
+              </div>
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-ghsync-token">
+              <span class="braindump-settings-label">Token</span>
+              <div class="braindump-settings-input-row">
+                <input type="password" id="braindump-setting-ghsync-token" placeholder="github_pat_..." spellcheck="false" autocomplete="off">
+              </div>
+            </label>
           </section>
           <section class="braindump-settings-section" aria-labelledby="braindump-help-title">
             <h3 id="braindump-help-title" class="braindump-help-title">Help</h3>
@@ -1642,6 +1677,7 @@ function createBoardPageDefinition(page) {
     description: page.description,
     ogImage: seo.defaultImage,
     bodyClass: `page-${page.board.slug} page-board`,
+    robots: page.robots,
     structuredData: [websiteSchema],
     content: renderBoardPage(page.file, page.board, page.introPanel || null)
   };
@@ -2156,9 +2192,16 @@ const collectionSchema = {
     "A selection of project summaries by Evren Ucar across product concepts, workshop tools, and mobility ideas."
 };
 
+// Hand-maintained public pages that the generator does not write but the
+// sitemap should still advertise.
+const EXTRA_SITEMAP_FILES = ["cosmoboard-landing.html"];
+
 function renderSitemap(pageList) {
-  const urls = pageList
+  const urls = [...pageList, ...EXTRA_SITEMAP_FILES.map((file) => ({ file }))]
     .filter((page) => !["coming_soon.html", "404.html"].includes(page.file))
+    // noindex pages stay out of the sitemap: a page told to hide from search
+    // engines should not be advertised to them either.
+    .filter((page) => !String(page.robots || "").includes("noindex"))
     .map(
       (page) => `  <url>
     <loc>${pagePathToUrl(page.file)}</loc>
@@ -2435,7 +2478,24 @@ export async function build() {
   });
   await writeFile(path.join(baseDataDir, "items.json"), JSON.stringify(baseItems, null, 0), "utf8");
 
+  // The landing page keeps its own hand-crafted design, but the design lives
+  // in a template now: the build injects the two runtime asset hashes and the
+  // onboarding canvas version, which used to be re-copied by hand after every
+  // rebuild and drifted whenever the copy was forgotten.
+  const landingTemplate = await readFile(
+    path.join(rootDir, "src", "templates", "cosmoboard-landing.template.html"),
+    "utf8"
+  );
+  const landingHtml = landingTemplate
+    .replaceAll("{{BRAINDUMP_CSS_VERSION}}", boardAssetVersions.css)
+    .replaceAll("{{BRAINDUMP_JS_VERSION}}", boardAssetVersions.js)
+    .replaceAll(
+      "{{ONBOARDING_SOURCE_VERSION}}",
+      getBoardSourceVersion("content/boards/onboarding/current.canvas")
+    );
+
   await Promise.all([
+    writeFile(path.join(rootDir, "cosmoboard-landing.html"), landingHtml, "utf8"),
     writeFile(
       path.join(rootDir, "robots.txt"),
       `User-agent: *\nAllow: /\nSitemap: ${site.url}/sitemap.xml\n`,

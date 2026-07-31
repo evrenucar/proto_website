@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cosmoboard — a local-first thinking tool</title>
     <meta name="description" content="Cosmoboard is a local-first spatial workspace where canvases, markdown, files, and embeds can live together. A slowly growing prototype by Evren Ucar.">
-    <meta name="robots" content="noindex,nofollow">
+    <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#222222">
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg" />
-    <!-- This page is hand-maintained. The generated pages version these two assets
-         by content hash, so re-copy both ?v= values from the generated
-         onboarding.html after changing braindump.js or braindump.css. Leaving them
-         stale serves returning visitors a cached runtime. -->
-    <link rel="stylesheet" href="CSS/braindump.css?v=0df001bbb596">
-    <script src="JavaScript/braindump.js?v=ecdb858f9d7c" defer></script>
+    <!-- Generated from src/templates/cosmoboard-landing.template.html by npm run build.
+         Edit the template, not the output; asset hashes and the board source
+         version are injected at build time. -->
+    <link rel="stylesheet" href="CSS/braindump.css?v=42eda0dd75c2">
+    <script src="JavaScript/braindump.js?v=ed4c5f1c4704" defer></script>
     <style>
       :root {
         --bg: #222222;
@@ -362,10 +361,36 @@
       @media (prefers-reduced-motion: reduce) {
         .page-bottom-ticker-track { animation-duration: 45s; }
       }
+
+      .site-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 28px;
+        font-size: 14px;
+      }
+
+      .site-links a {
+        color: var(--text-dim);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        padding-bottom: 1px;
+      }
+
+      .site-links a:hover {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
     </style>
   </head>
   <body>
     <main class="page">
+      <nav class="site-links" aria-label="Site">
+        <a href="index.html">evrenucar.com</a>
+        <a href="projects.html">Projects</a>
+        <a href="onboarding.html">Onboarding tour</a>
+        <a href="cosmoboard.html">Working board</a>
+      </nav>
       <div class="eyebrow">Cosmoboard</div>
       <h1>A local-first place for canvases, notes, and files to live together.</h1>
       <p class="lede">
@@ -568,10 +593,8 @@
         This is the actual Cosmoboard, sitting right inside this page in read-only mode. Pan with the hand tool, zoom with the wheel, have a look around. To actually edit anything, open it in its own page.
       </p>
       <div class="embed-frame">
-        <!-- This page is hand-maintained, not generated. data-board-source-version
-             must match the value in the generated onboarding.html (sha1 of
-             content/boards/onboarding/current.canvas); re-copy it after the
-             canvas changes, otherwise this preview silently ignores saved state. -->
+        <!-- data-board-source-version is injected at build time from the sha1 of
+             content/boards/onboarding/current.canvas. -->
         <div
           class="braindump-viewport"
           data-board-app="true"
@@ -579,7 +602,7 @@
           data-board-slug="onboarding"
           data-board-title="Onboarding"
           data-board-source="content/boards/onboarding/current.canvas"
-          data-board-source-version="0f3a9bbd08bd"
+          data-board-source-version="03788d85b5aa"
           data-board-legacy-source=""
           data-board-repo-path="content/boards/onboarding/current.canvas"
           data-board-index="[]"
