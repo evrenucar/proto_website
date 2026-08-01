@@ -44,12 +44,12 @@ Jot anything here mid-session. Anything that outlives the session moves to
 - The tracker board is checked for new user updates every work cycle, and updated every cycle.
 - Sandbox for stage checks: `/content/boards/test-board.html`, noindex, out of the sitemap,
   saves confined to `content/boards/test-board/`.
-- Preview server: `npm run preview` on port 4174, running. 4173 belongs to `aide-board`.
+- Preview server: `http://127.0.0.1:4174` (`npm run preview`), and 4174 is the documented port
+  everywhere now. 4173 belongs to `aide-board`.
 - The user works the tracker live while agents run. Expect concurrent writes to
   `.agents/todo.md` and treat mid-session file changes as normal, not corruption.
 - Previous session's full map:
   [`.agents/handoffs/handoff_2026-07-30_cosmoboard_sprint.md`](./.agents/handoffs/handoff_2026-07-30_cosmoboard_sprint.md).
-  Everything from it is uncommitted in the working tree on `fix-markdown-sidecar-405-error`.
 
 ### Start Of Session
 
@@ -62,8 +62,44 @@ Jot anything here mid-session. Anything that outlives the session moves to
 - Known constraints: preview server was down on arrival, restarted on 4174. The cosmoboard
   canvas holds ~292 lines of uncommitted user work, so every browser probe ran with autosave
   off and `/api/save-board` blocked.
+- **A second session ran on `main` in parallel with this branch** and is merged in here. It
+  fixed the recommendation panel overflowing the viewport near 1024px, made 4174 the documented
+  port across `README.md`, `scripts/README.md`, `scripts/AGENTS.md` and the whiteboard skill's
+  desktop doc, and confirmed the orphan markdown node was already gone. Its test,
+  `tests/features/toolbar-panel-viewport-fit-e2e.test.mjs`, is now part of this tree.
 
 ### End Of Session
+
+- Date: 2026-07-31 (the session that ran on `main`, merged into this branch)
+- Preview server: `http://127.0.0.1:4174`, running.
+- What changed:
+  - Fixed the panel overflow. It was worse than filed: the shell is centred, so an open panel wider
+    than the window hangs off *both* edges, not just the right. `CSS/braindump.css` now clamps the
+    shell to the window and wraps the panel onto its own row above the toolbar. `width: max-content`
+    and a 560px cap on the panel are both load-bearing — without them the panel wraps at every width
+    or balloons to 730px. Wide widths measure identical to before.
+  - New test `tests/features/toolbar-panel-viewport-fit-e2e.test.mjs`: 30 panel measurements across
+    ten widths, 1440 down to 390, on all three issue panels. Failed at 1061px and 1024px before the
+    fix, green after.
+  - The orphan node card was already done by commit `cf4cb58`. Verified rather than assumed: 23
+    nodes, no `hgr0v5cjqam`, every referenced sidecar present, and no stray `note-*.md` appeared
+    despite a dozen board loads.
+  - 4174 is now the documented port in `README.md`, `scripts/README.md`, `scripts/AGENTS.md`, the
+    whiteboard skill's `desktop-testing.md`, and this repo's Chrome cache note. Nothing was needed in
+    `package.json` or root `AGENTS.md`.
+  - `npm run build`, since the CSS is cache-busted by content hash and the fix would not otherwise
+    reach any page. Churn is all date stamps and hashes; several project pages were still on a
+    hand-edited `site.js?v=5`.
+  - Re-synced `cosmoboard-landing.html`, which was two hashes stale and would have shipped without
+    the fix.
+- What still needs work:
+  - Two questions are on the board: whether the landing page should be the indexed front door, and
+    what happens to the public PDFs. Both are yours, neither blocks anything. The PDF one is
+    carried into `todo.md` as an open `!p1` card so the merge cannot bury it.
+  - `tests/export/export-bundling-e2e.test.mjs` was failing on a 30s `waitForFunction` there. It
+    passes on this branch, so the merge resolves it.
+
+### End Of Session, this branch
 
 - Date: 2026-07-31
 - What changed:

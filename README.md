@@ -153,7 +153,7 @@ Detailed agent docs:
 | Run one test file | `node --test tests/<subdir>/<file>.test.mjs` |
 | Check markdown links | `node scripts/check-md-links.mjs` |
 
-Preview runs at `http://127.0.0.1:4173`.
+Preview runs at `http://127.0.0.1:4174`.
 
 ---
 
@@ -164,7 +164,7 @@ There is a separate, plain landing page for the Cosmoboard idea on its own, in c
 - Live: [evrenucar.com/cosmoboard-landing.html](https://evrenucar.com/cosmoboard-landing.html)
 - File: [`cosmoboard-landing.html`](cosmoboard-landing.html)
 - Not linked from the site navigation on purpose
-- Open it directly, or visit `http://127.0.0.1:4173/cosmoboard-landing.html` while running `npm run preview`
+- Open it directly, or visit `http://127.0.0.1:4174/cosmoboard-landing.html` while running `npm run preview`
 
 ---
 

@@ -16,7 +16,7 @@ What each script does, how to invoke it, and which `npm run` alias maps to which
 - `build-site.mjs` — reads `src/site-data.mjs` + `content/` and emits the static site
 - `dev-server.mjs` — lightweight dev server (port 3000) with board-save write API
 - `extract-assets.mjs` — extracts base64 images embedded in `.canvas` files to the filesystem
-- `preview-server.mjs` — production-like server for the built output (port 4173 by default)
+- `preview-server.mjs` — production-like server for the built output (port 4174 by default)
 - `sync-notion.mjs` — fetches Notion pages and writes `src/notion-items.json`
 
 ## Conventions

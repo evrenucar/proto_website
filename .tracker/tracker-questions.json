@@ -1,10 +1,10 @@
 {
-  "updated": "2026-07-29",
-  "branch": "fix-markdown-sidecar-405-error",
+  "updated": "2026-07-31",
+  "branch": "main",
   "suites": [
     { "name": "build", "pass": 4, "total": 4 },
     { "name": "preview", "pass": 4, "total": 4 },
-    { "name": "features", "pass": 3, "total": 3 },
+    { "name": "features", "pass": 4, "total": 4 },
     { "name": "board", "pass": 33, "total": 33 },
     { "name": "export", "pass": 2, "total": 3 }
   ],
@@ -14,7 +14,30 @@
     { "q": "Orphan node", "a": "Delete it from the cosmoboard canvas" },
     { "q": "Preview port", "a": "Move to 4174 permanently, update the docs" }
   ],
-  "questions": [],
+  "questions": [
+    {
+      "id": 5,
+      "label": "Landing page",
+      "title": "Should cosmoboard-landing.html be the page strangers are pointed at?",
+      "why": "It is the clearest explanation of Cosmoboard on the site, and objective criterion 3 is about a stranger understanding what this is. But it is noindex,nofollow, absent from the sitemap, and has no site nav, while onboarding.html gets the nav entry and the indexing. It is also hand-maintained, so it silently drifts: today it was still serving an old braindump.css hash and would have missed the panel fix entirely. This is a positioning call, not a technical one, so I have not touched any of it.",
+      "options": [
+        { "key": "A", "title": "Promote the landing page", "note": "Index it, add it to the sitemap, give it the nav entry, and point the nav there instead of onboarding.html.", "answer": "Promote cosmoboard-landing.html: index it, list it, give it the nav" },
+        { "key": "B", "title": "Keep onboarding as the front door", "note": "Landing stays an unlisted deep link you share by hand. No change.", "answer": "Leave onboarding.html as the front door, landing stays unlisted" },
+        { "key": "C", "title": "Both, landing first", "note": "Index both, but the nav and the sitemap lead with the landing page.", "answer": "Index both pages, lead with cosmoboard-landing.html" }
+      ]
+    },
+    {
+      "id": 6,
+      "label": "Public PDFs",
+      "title": "Four PDFs are served publicly from the boards. Which stay?",
+      "why": "Two identical copies of the Maker Faire exhibitor list under content/boards/braindump/ (229 KB each, naming 119 people with zone and set-up assignments), plus two more on the cosmoboard board that were not on the earlier card: participant-information.pdf (118 KB, a different document, not a copy) and funda-hoca-sunum-26-4-28.pdf (8.7 MB). Cosmoboard is the board a stranger is most likely to open. I have not opened, moved, or deleted any of them — third-party material and your files are your call.",
+      "options": [
+        { "key": "A", "title": "Take all four down", "note": "Remove them from the boards and the repo, and adjust any node that points at one.", "answer": "Remove all four PDFs from the public boards and the repo" },
+        { "key": "B", "title": "Only the exhibitor list", "note": "The 119-name list is the privacy problem. The cosmoboard two stay.", "answer": "Remove the Maker Faire exhibitor list copies only" },
+        { "key": "C", "title": "I will check them myself", "note": "Leave everything in place until you have looked at what each one contains.", "answer": "Leave the PDFs alone for now, you will review them" }
+      ]
+    }
+  ],
   "archivedQuestions": [
     {
       "id": 1,

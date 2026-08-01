@@ -1,5 +1,20 @@
 [
   {
+    "at": "2026-07-31T11:20:00Z",
+    "agent": "proto-website-claude",
+    "text": "Three cards to Review. Panel overflow fixed and pinned by a new test that measures 30 panel positions across ten widths. The orphan node turned out to be gone already, removed by cf4cb58. 4174 is documented everywhere it should be."
+  },
+  {
+    "at": "2026-07-31T10:40:00Z",
+    "agent": "proto-website-claude",
+    "text": "Worth a look: cosmoboard-landing.html was still serving an old braindump.css hash, so the page you would send someone was missing the fix until I re-synced it. Third time this chore has come up."
+  },
+  {
+    "at": "2026-07-31T09:00:00Z",
+    "agent": "proto-website-claude",
+    "text": "Starting on three cards: the recommendation panel escaping the viewport near 1024px, plus the two you already answered on the board — delete the orphan node, make 4174 the documented port."
+  },
+  {
     "at": "2026-07-30T17:55:00Z",
     "agent": "claude",
     "text": "VNC is built and demonstrated, so the three cards I claimed are all in Review. noVNC 1.7.0 vendored, a real vnc node type, client loaded on first connect so boards without one pay nothing. Target in the canvas, password in this browser only, and a node with both comes back by itself on reload with no typing. Proven against a 200-line RFB 3.8 server I wrote for the test: wrong password refused, right one connects, and the pixel drawn on the canvas is the pixel the server sent. It caught a real trap on the way: normalizeAssetUrl was turning ws://127.0.0.1:6080 into a bare slash. I see your three new bug cards, picking them up now. One finding for you in Bugs: cosmoboard-initial-layout is red because a live session saved a panned-away camera into the cosmoboard canvas, not because of any code. I left the file alone since it holds your uncommitted work."
@@ -10,14 +25,29 @@
     "text": "Two of the three To do cards are in Review. YouTube: the timeline is clickable now (the shield hands the pointer to the player on the first click and takes it back when the cursor returns to the canvas), and arrow keys seek from the real playhead (the API handshake was fired once before the player was ready, so it was dropped and every seek started from zero). Measured a scrub from 5.4s to 153.2s on a click 60 percent along the bar. Firefox Alt: a bare Alt is claimed in both directions, so the menu bar stays shut, with AltGr, Alt+letter and text fields deliberately left alone. Two new suites, plus stage gate, esc-deselect, wheel routing and the old YouTube embed suite all green. On to VNC."
   },
   {
+    "at": "2026-07-30T15:55:00Z",
+    "agent": "claude",
+    "text": "Alt-drag copy upgraded to your spec: Alt engages or disengages the copy at any moment of the drag, the stay-behind keeps the selected outline, the moving item glows teal at 20 percent, and release finalizes selection cleanly. Verified through every phase in a browser; suites green; sandbox restored."
+  },
+  {
     "at": "2026-07-30T15:40:00Z",
     "agent": "claude",
     "text": "New goal from you: clear the To do column and test each one properly. Claimed all three: VNC support demonstrated on the test board with credentials that survive a reload, YouTube timeline scrubbing and arrow-key seeking, and the Firefox Alt menu bar. Diagnosis on the YouTube one already: the wheel shield sits over the whole player permanently and turns every left click into play/pause, so the controls never even appear, which is why the timeline is unclickable. Starting with the two small ones."
   },
   {
+    "at": "2026-07-30T15:30:00Z",
+    "agent": "claude",
+    "text": "The worst standing bug is dead: stale tabs can no longer silently overwrite newer board state. Saves carry the loaded baseline, the server refuses older ones, the tab says reload and keeps your work locally. Tested at the endpoint and in the suites. Backlog op-writes card annotated: it now buys merging, not safety, since safety is in."
+  },
+  {
     "at": "2026-07-30T15:05:00Z",
     "agent": "claude",
     "text": "Fallback cards shipped: a live embed of a site that refuses iframes (github, google, notion, or anything the new /api/frame-check header probe catches) now shows a card naming the site with an open-in-new-tab hint, instead of the grey error box. Verified in a browser on github (known list), MDN (header probe) and example.com (stays live). Server on 4174 restarted with the endpoint; stage gate, YouTube and routes suites green. That is all three Backlog pulls done and in Review: perf budget test, benchmark backfill, fallback cards."
+  },
+  {
+    "at": "2026-07-30T15:00:00Z",
+    "agent": "claude",
+    "text": "Board clear again: zero To do, zero In progress. Final four built and verified: markdown downloads bundle their images as a zip with rewritten refs, Alt-drag copies (clone stays, drag moves), spawn placement probes for free space, and the dev board is linked from the tracker footer with an eleven-node showcase including the VNC slot and a drawing. Backlog holds the tagged roadmap. Handoff file is current; safe to /clear."
   },
   {
     "at": "2026-07-30T14:40:00Z",
@@ -30,29 +60,14 @@
     "text": "Perf budget test is in Review, and it caught something on arrival: the sandbox had drifted (stray nodes, a dead image ref, the markdown node renamed), which had the stage gate silently red. Both tests now seed canonical sandbox state before running, so play on the test board can never break the gates again; your sandbox is reset to canonical. The budget test measures idle, zoom, drag, pan frame times plus pointer dispatch cost, and runs in CI on every PR via the new board-tests workflow. Next: benchmark backfill to 100 percent."
   },
   {
-    "at": "2026-07-30T14:17:30Z",
-    "agent": "claude",
-    "text": "New session from the handoff. Board is clear of open work, so pulling the next ranked items out of Backlog per the performance plan: the perf budget test first (the plan says it lands with the next test pass), then the benchmark backfill to 100 percent, then fallback preview cards for iframe-refusing sites. Incremental saves and staged mount stay parked until a board slow enough to prove them exists, as the plan specifies."
-  },
-  {
-    "at": "2026-07-30T15:55:00Z",
-    "agent": "claude",
-    "text": "Alt-drag copy upgraded to your spec: Alt engages or disengages the copy at any moment of the drag, the stay-behind keeps the selected outline, the moving item glows teal at 20 percent, and release finalizes selection cleanly. Verified through every phase in a browser; suites green; sandbox restored."
-  },
-  {
-    "at": "2026-07-30T15:30:00Z",
-    "agent": "claude",
-    "text": "The worst standing bug is dead: stale tabs can no longer silently overwrite newer board state. Saves carry the loaded baseline, the server refuses older ones, the tab says reload and keeps your work locally. Tested at the endpoint and in the suites. Backlog op-writes card annotated: it now buys merging, not safety, since safety is in."
-  },
-  {
-    "at": "2026-07-30T15:00:00Z",
-    "agent": "claude",
-    "text": "Board clear again: zero To do, zero In progress. Final four built and verified: markdown downloads bundle their images as a zip with rewritten refs, Alt-drag copies (clone stays, drag moves), spawn placement probes for free space, and the dev board is linked from the tracker footer with an eleven-node showcase including the VNC slot and a drawing. Backlog holds the tagged roadmap. Handoff file is current; safe to /clear."
-  },
-  {
     "at": "2026-07-30T14:20:00Z",
     "agent": "claude",
     "text": "Embed overflow is fixed and in Review. Handoff written to .agents/handoffs/handoff_2026-07-30_cosmoboard_sprint.md: full session map, the four remaining To dos in pickup order, and every gotcha. Safe to /clear; the next session starts from the handoff and the board."
+  },
+  {
+    "at": "2026-07-30T14:17:30Z",
+    "agent": "claude",
+    "text": "New session from the handoff. Board is clear of open work, so pulling the next ranked items out of Backlog per the performance plan: the perf budget test first (the plan says it lands with the next test pass), then the benchmark backfill to 100 percent, then fallback preview cards for iframe-refusing sites. Incremental saves and staged mount stay parked until a board slow enough to prove them exists, as the plan specifies."
   },
   {
     "at": "2026-07-30T14:00:00Z",

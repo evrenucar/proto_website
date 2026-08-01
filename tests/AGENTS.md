@@ -25,7 +25,7 @@ Node built-in test suite (`node:test`) covering build correctness, preview-serve
 | `preview/` | Preview server endpoints + smoke (4 files) | `process.cwd()`-relative |
 | `export/` | Export bundling pipeline (3 files) | `export-bundling-runtime` uses `path.resolve(__dirname, "..", "..")`; others are cwd-relative |
 | `build/` | `build-site.mjs` / `extract-assets.mjs` correctness (3 files) | `path.resolve(__dirname, "..", "..")` for `rootDir`; `../../scripts/...` for imports |
-| `features/` | Cross-cutting feature E2Es: shared entities, markdown authoring, recommendation, YouTube (5 files) | `shared-entity-*` use `path.resolve(__dirname, "..", "..")` and `../../scripts/...` |
+| `features/` | Cross-cutting feature E2Es: shared entities, markdown authoring, recommendation, toolbar panel fit, YouTube (6 files) | `shared-entity-*` use `path.resolve(__dirname, "..", "..")` and `../../scripts/...` |
 
 Diagnostic helpers (`_diag-*`, `screenshot-markdown-indent.mjs`, legacy `A_test_description.md`) live under `.archive/diag/` after Stage 3.
 
