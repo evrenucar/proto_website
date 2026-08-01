@@ -177,8 +177,17 @@ Whole suite green: board, build, features, export, preview. Performance holds af
 idle 16.8ms p95, drag 83.4, pan 99.9, zoom 166.6 against a 220 budget, pointer dispatch 4.85us
 against 25us, so the pin hook and the shift-drag recompute cost nothing measurable. Site rebuilt.
 
-Full map of this session, including the gotchas worth not relearning:
-[`.agents/handoffs/handoff_2026-07-31_todo_lane_cleared.md`](./.agents/handoffs/handoff_2026-07-31_todo_lane_cleared.md).
+**Next agent: start with
+[`.agents/handoffs/handoff_2026-08-01_continue_here.md`](./.agents/handoffs/handoff_2026-08-01_continue_here.md).**
+It says what to pick up and in what order, the traps that cost real time, and the decisions already
+taken so they are not re-litigated. The sprint's own map, if you want the detail behind it, is
+[`handoff_2026-07-31_todo_lane_cleared.md`](./.agents/handoffs/handoff_2026-07-31_todo_lane_cleared.md).
+
+Since that map was written: `origin/main` was merged in (the toolbar panel viewport fix), and two
+board questions were answered and built. The landing page now leads the sitemap with both pages
+indexed, and all four public PDFs are down, boards and repo. The user also added four new cards
+mid-session, and two of them are feedback on work that just shipped. They are the first thing to
+pick up.
 
 ### Start Of Previous Session
 
