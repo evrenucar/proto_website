@@ -81,6 +81,17 @@ Two tools made it work, both in `.tmp/scratch/opus5-0/`:
   file that looks fine. Use `[System.IO.File]::WriteAllText` with `UTF8Encoding($false)`.
 - **`gh workflow run` needs the workflow on the DEFAULT branch.** `board-tests.yml` only exists on
   this branch, so dispatch 404s and pushing alone runs no CI. See the open card.
+- **The "never write to `content/`" rule was given to the patch agents and not to the reviewers.**
+  A wave-4 reviewer probing a patched runtime created an empty orphan sidecar,
+  `content/boards/cosmoboard/canvas-2026-08-01_22-52-13.canvas`, on the real cosmoboard. It was
+  caught in the commit listing and deleted. If you write reviewer prompts, give them the same
+  autosave-off and `/api/save-board`-blocked rules as the agents they review, because a reviewer
+  that reproduces a bug is driving the same runtime.
+- **Suites hardcode ports, and the ones I handed to agents collided with them.**
+  `board-shift-snap-stroke-e2e` uses 4201 and `board-shift-snap-no-history-spam` uses 4202, which
+  were wave 4's first two agent ports. Both suites failed with "preview server exited early" until
+  the leftover agent servers were killed. Check a port is not already claimed by a test file before
+  assigning it.
 
 ## The lesson, sharpened
 
