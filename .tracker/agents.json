@@ -1,12 +1,12 @@
 {
   "comment": "Declared identity for every agent working this board. The tracker reads this for card border colours, the who-strip, and the feed. An agent not listed here still works: the tracker falls back to a hashed colour from its name. The id is what goes in todo.md as @id.",
-  "updated": "2026-07-31",
+  "updated": "2026-08-01",
   "agents": [
     {
       "id": "opus5-0",
       "n": 0,
       "model": "opus 5",
-      "goal": "orchestrator, sole writer of braindump.js",
+      "goal": "orchestrator, merged main, committed",
       "color": "#e0b054"
     },
     {

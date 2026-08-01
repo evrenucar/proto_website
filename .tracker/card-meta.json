@@ -343,5 +343,25 @@
     "createdAt": null,
     "updatedAt": "2026-07-31T19:17:01.007Z",
     "updatedBy": "you"
+  },
+  "In the task management tracker board when I click items move": {
+    "createdAt": "2026-08-01T04:04:15.854Z",
+    "updatedAt": "2026-08-01T04:04:15.854Z",
+    "updatedBy": "you"
+  },
+  "Done is a separate full-width bar below the four working col": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T04:04:24.995Z",
+    "updatedBy": "you"
+  },
+  "Embeds no longer eat the board's navigation, and it was neve": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T04:04:34.692Z",
+    "updatedBy": "you"
+  },
+  "Tracker: agents are declared, not guessed.": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T04:04:51.786Z",
+    "updatedBy": "you"
   }
 }

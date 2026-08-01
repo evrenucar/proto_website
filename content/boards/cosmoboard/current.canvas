@@ -1,7 +1,7 @@
 {
   "canvasId": "bfca6ad2-3592-424a-a463-533da7c29720",
   "createdAt": "2026-04-28T15:42:09.615Z",
-  "updatedAt": "2026-07-31T18:37:33.602Z",
+  "updatedAt": "2026-08-01T04:05:08.007Z",
   "nodes": [
     {
       "id": "cosmo-title",
@@ -233,28 +233,6 @@
       "_rawMarkdown": "# Cosmoboard direction\n\nThe Cosmoboard system takes the Braindump whiteboard engine and generalizes it into a reusable runtime where any page can host a board.\n\n## Core principles\n\n- **File-first** — every board is a `.canvas` JSON file on disk\n- **Local-first** — changes save to localStorage before attempting a server sync\n- **Spatial by nature** — content lives on a 2D canvas, not in a document stream\n\n## Node types\n\n| Type | Purpose |\n|------|---------|\n| `text` | Free-form note or label |\n| `link` | Bookmark with live preview |\n| `image` / `file` | Embedded asset |\n| `board-preview` | Minimap reference to another board |\n| `markdown` | Rendered `.md` file inline on the canvas |\n\n## Status\n\nThe engine is generalized. Multiple boards can mount on the same page via `mountCosmoboard(hostElement)`. Preview mode embeds boards read-only inside project detail pages.\n\nNext steps: markdown-to-canvas sync, filesystem content registry, base/database layer.\n",
       "markdownId": "cosmo-note-2w1038jprlt",
       "markdownUpdatedAt": "2026-07-31T01:56:25.375Z"
-    },
-    {
-      "id": "nfw8czu22uq",
-      "x": -1166.4925732826543,
-      "y": 1974.459135161894,
-      "width": 780.5871776961721,
-      "height": 947.2123234865269,
-      "url": "/content/boards/cosmoboard/participant-information.pdf",
-      "title": "Participant information",
-      "embedMode": "live",
-      "type": "link"
-    },
-    {
-      "id": "fjam96so57",
-      "x": -2358.8862063865477,
-      "y": 1968.4233203548733,
-      "width": 1176.0516462723128,
-      "height": 767.7844817063831,
-      "url": "/content/boards/cosmoboard/funda-hoca-sunum-26-4-28.pdf",
-      "title": "Funda Hoca Sunum 26_4_28",
-      "embedMode": "live",
-      "type": "link"
     },
     {
       "id": "0t81eff6u5n",
@@ -555,7 +533,7 @@
       "description": "Video recommendation",
       "image": "https://i.ytimg.com/vi/IgMg1XYAcAQ/hqdefault.jpg",
       "hasAdjustedRatio": true,
-      "youtubeResumeSeconds": 214
+      "youtubeResumeSeconds": 0
     },
     {
       "id": "u7wnxqdda7a",
@@ -570,8 +548,8 @@
   ],
   "edges": [],
   "viewport": {
-    "x": 84.59974079738151,
-    "y": -280.0368761563212,
+    "x": 207.26642780910026,
+    "y": -515.4035753750712,
     "z": 0.3485688216653457
   }
 }

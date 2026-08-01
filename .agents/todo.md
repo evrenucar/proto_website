@@ -62,9 +62,11 @@ card there within seconds.
 
 ## Now
 
+- [ ] In the task management tracker board when I click items move things drag items the scroll position of items disappear and it becomes hard to find them fix this. Also maybe best to add ID numbers to thm that are visible and easy to manage.top left # ()
+
 - [ ] Lets have a option to embed the images and other assets that are small enough into markdow via embedding them in BASE 64. Maybe for now can ask after you click the download icon. ANd also would be nice to have a setting for it in settings. Currently the default behavior should be asking the user. In settings alternatives can be: base64 embded markdown, download makrdown with content as zip, download markdown with assests without assets. Also when embedding base-64 it would be ideal if in markdown its formatted as a reference: Where the image is: ![Growth Chart][chart-1] (at the bototm of the file: [chart-1]: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAA.
 
-- [A] Tracker: agents are declared, not guessed. !p2
+- [x] Tracker: agents are declared, not guessed. !p2
   [`.tracker/agents.json`](../.tracker/agents.json) holds one entry per agent: id, number, the
   model behind it, the goal it is on, and a colour. The board reads it, so the strip says
   "opus 5 · 2, alt-drag copy undo, working" instead of a bare "claude", the card border and the
@@ -511,6 +513,22 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** any page's nav, Cosmoboard, lands on the landing page; its top row links back
   out; `sitemap.xml` lists it; `robots` meta reads index,follow.
 
+- [A] Landing page positioning settled: index both, lead with the landing page. You answered !p2
+  C on 2026-08-01. Most of it was already true on this branch and the question was written
+  against the older state on `main`: both `cosmoboard-landing.html` and `onboarding.html` are
+  `index,follow`, both are in the sitemap, and the nav's **Cosmoboard** entry already opens the
+  landing page. So "index both" needed nothing.
+  What "lead with" needed was the sitemap, and one detail is worth knowing: **a sitemap has no
+  inherent order**, so putting a URL first is presentation only. `<priority>` is the part a
+  crawler actually reads. The landing page is now first in the file *and* carries
+  `<priority>1.0</priority>`; every other page is left without a priority, which means the 0.5
+  default. That declares one page above the rest rather than ranking the whole site, which would
+  say nothing.
+  Onboarding keeps its indexing and its place, and stays the first link the landing page offers,
+  so the tour is still one click from the explanation.
+  **How to check:** `head -12 sitemap.xml` shows `cosmoboard-landing.html` first with priority
+  1.0. Both pages still read `index,follow`.
+
 - [x] `onboarding.html` is live at `evrenucar.com/onboarding.html`, having 404'd since it was
   written. The nav's **Cosmoboard** entry opens it, and **Braindump** is unlisted: it stays built
   and reachable at its URL, but a first-time visitor no longer lands in the scratch pad.
@@ -535,7 +553,30 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** `git ls-files .playwright-mcp` returns nothing; `.gitignore` covers the
   directory; the staged deletions are part of this working tree.
 
-- [ ] **Two more PDFs are public on the cosmoboard, and only you can decide about them.** !p1
+- [A] **All four public PDFs are down, boards and repo.** You answered A on 2026-08-01. !p1
+  The two Maker Faire exhibitor lists under `content/boards/braindump/` were already gone. The
+  two on the cosmoboard are now too: `participant-information.pdf` (116 KB) and
+  `funda-hoca-sunum-26-4-28.pdf` (8.3 MB). Both files are deleted and both nodes are off the
+  canvas (`nfw8czu22uq` and `fjam96so57`); no edge referenced either, 54 nodes down to 52. The
+  canvas `updatedAt` is bumped, so a board tab left open from before this is refused by the
+  stale-tab guard instead of putting them back. Nothing under `content/` or in any built page
+  refers to them any more, and the site is rebuilt.
+  **One dependency had to be adjusted, and it is an improvement.** `scripts/performance-audit.mjs`
+  used the participant PDF as its upload fixture, and a build test asserted that filename. The
+  audit never needed that document, only a PDF big enough for the upload path to be worth
+  measuring, so it generates one now at the same size (~118 KB, valid PDF 1.4, verified). The
+  audit no longer depends on board content that can be edited or deleted underneath it, which is
+  what made this break in the first place.
+  **What this does not do:** the files remain in git history. Scrubbing history is a separate,
+  destructive decision and is yours to make. Until then anyone with the repo can recover them,
+  though nothing on the live site links to them.
+  Left in place deliberately: `content/boards/dev/bayblend-fr3010-pc-abs.pdf`, a manufacturer
+  materials datasheet on the noindex dev board. It was not one of the four and holds no personal
+  data, but say the word and it goes too.
+  **How to check:** `find content -name "*.pdf"` returns only the datasheet. Reload
+  `/cosmoboard.html`; the two PDF nodes are gone.
+
+- [x] Two more PDFs were public on the cosmoboard. Superseded by the card above, answered A. !p1
   Raised on `main` while this branch was being worked, and still open after the merge, so it is
   carried over verbatim rather than lost. The Maker Faire exhibitor lists were deleted, but these
   are different documents, not copies: `content/boards/cosmoboard/participant-information.pdf`
@@ -1006,7 +1047,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   **How to check:** open any PDF or embedded site, press the fullscreen arrows on the right of
   its header. Escape comes back. A PDF should return on the same page you left it on.
 
-- [A] Embeds no longer eat the board's navigation, and it was never only PDFs. !p1
+- [x] Embeds no longer eat the board's navigation, and it was never only PDFs. !p1
   Your report: cursor lands on a PDF and zoom and middle-drag pan stop working, because the
   embed scrolls instead. The fix already existed and was wired to exactly one thing. A
   transparent shield over YouTube kept wheel and pan working over a video and handed the
@@ -1142,7 +1183,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   **How to check:** claim any card with an @name; it jumps above unclaimed cards in its column.
   Original note: the ones claude is working on actively should be brought to the top
 
-- [A] Done is a separate full-width bar below the four working columns now, collapsed to its
+- [x] Done is a separate full-width bar below the four working columns now, collapsed to its
   header by default, exactly as you suggested; the live columns take all the horizontal space.
   Verified in a browser: four wide columns, Done spanning beneath.
   **How to check:** reload the tracker; Done sits under the board as a bar, show/hide toggles it.

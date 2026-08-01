@@ -2196,16 +2196,29 @@ const collectionSchema = {
 // sitemap should still advertise.
 const EXTRA_SITEMAP_FILES = ["cosmoboard-landing.html"];
 
+// The page a stranger should be pointed at first. Decided 2026-08-01: index the
+// landing page and the onboarding board both, and lead with the landing page,
+// because it is the clearest written explanation of what Cosmoboard is and
+// objective criterion 3 is about a stranger understanding that.
+//
+// A sitemap has no inherent order, so listing it first is presentation only;
+// <priority> is the part a crawler actually reads. Everything else is left
+// without a priority, which means the 0.5 default, so this one page is the only
+// thing declared above the rest rather than a ranking of the whole site.
+const SITEMAP_LEAD_FILE = "cosmoboard-landing.html";
+
 function renderSitemap(pageList) {
   const urls = [...pageList, ...EXTRA_SITEMAP_FILES.map((file) => ({ file }))]
     .filter((page) => !["coming_soon.html", "404.html"].includes(page.file))
     // noindex pages stay out of the sitemap: a page told to hide from search
     // engines should not be advertised to them either.
     .filter((page) => !String(page.robots || "").includes("noindex"))
+    .sort((a, b) =>
+      (b.file === SITEMAP_LEAD_FILE ? 1 : 0) - (a.file === SITEMAP_LEAD_FILE ? 1 : 0))
     .map(
       (page) => `  <url>
     <loc>${pagePathToUrl(page.file)}</loc>
-    <lastmod>${buildDate}</lastmod>
+    <lastmod>${buildDate}</lastmod>${page.file === SITEMAP_LEAD_FILE ? "\n    <priority>1.0</priority>" : ""}
   </url>`
     )
     .join("\n");
