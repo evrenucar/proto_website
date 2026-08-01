@@ -93,6 +93,6 @@ user's verdict on work you handed back, written straight from the board, newest 
 - Always start a local server before reporting progress on site work.
 - Share the active local preview address at session start and end.
 - Use `npm run preview` (port 4174, `scripts/preview-server.mjs`). **Not 4173:** the `aide-board`
-  project owns that port on this machine. It owns the write APIs: `/api/save-board`, `/api/save-markdown`, `/api/save-asset`, `/api/list-markdown`, `/api/get-video-meta`.
+  project owns that port on this machine, and 4174 is the permanent answer as of 2026-07-31. It owns the write APIs: `/api/save-board`, `/api/save-markdown`, `/api/save-asset`, `/api/list-markdown`, `/api/get-video-meta`.
 - `scripts/dev-server.mjs` (port 3000) is a legacy mini-server that only handles `/api/save-board`. Treat it as deprecated. Do not use it for board sessions, markdown, or drag-drop uploads. Anything that drops a PDF, image, or `.md` against it returns 404.
 - If an API route returns 404 in the browser but the route exists in `scripts/preview-server.mjs` on disk, the running Node process is stale. Stop it (Ctrl+C) and run `npm run preview` again. Pulling commits does not reload an already-running server.

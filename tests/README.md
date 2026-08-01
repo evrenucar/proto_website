@@ -26,9 +26,9 @@ Test suite for `proto_website`, using Node's built-in `node:test` runner. No tes
 | `tests/preview/` | Preview server endpoints + smoke test | 4 |
 | `tests/export/` | Export bundling pipeline | 3 |
 | `tests/build/` | `scripts/build-site.mjs` / `scripts/extract-assets.mjs` correctness | 3 |
-| `tests/features/` | Cross-cutting feature E2Es: shared entities, markdown authoring, recommendation flow, YouTube embed | 5 |
+| `tests/features/` | Cross-cutting feature E2Es: shared entities, markdown authoring, recommendation flow, toolbar panel fit, YouTube embed | 6 |
 
-24 tests total. Diagnostic helpers (`_diag-*`, `screenshot-markdown-indent.mjs`) and the legacy `A_test_description.md` were archived to `.archive/diag/` in the same change.
+29 `*.test.mjs` files today, plus the two parked `shared-entity-*.pending.mjs`. Diagnostic helpers (`_diag-*`, `screenshot-markdown-indent.mjs`) and the legacy `A_test_description.md` were archived to `.archive/diag/` in the same change.
 
 ---
 
@@ -49,6 +49,7 @@ These tests spawn their own server process via `node:child_process` — no manua
 - `tests/features/shared-entity-runtime-e2e.test.mjs`
 - `tests/features/markdown-authoring-e2e.test.mjs`
 - `tests/features/recommendation-flow-e2e.test.mjs`
+- `tests/features/toolbar-panel-viewport-fit-e2e.test.mjs`
 - `tests/features/youtube-live-embed.test.mjs`
 
 Playwright tests in this group import from `playwright` (a dev dependency). If Chromium is not installed, run `npx playwright install chromium` once.

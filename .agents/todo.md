@@ -94,6 +94,16 @@ card there within seconds.
   should jump to Done with a green badge. Drag a card between two columns and confirm it stays there
   after the next poll. Then check `.agents/todo.md` matches what the board shows.
 
+- [A] `cosmoboard-landing.html` re-synced, which the CSS fix forced and which was overdue anyway.
+  The page is hand-maintained but carries generated values, so it drifts silently. It was serving
+  `braindump.css?v=0df001bbb596` while every built page had moved on, meaning the best page to send
+  someone would not have picked up the panel fix at all. Its `data-board-source-version` was also
+  stale, `0f3a9bbd08bd` against the generated `b0b6af1061a5`, left behind by commit `ac8e69e` when
+  the onboarding canvas last changed. Both updated by hand; nothing else in the file was touched,
+  since `data-board-index="[]"` and the absent recommendation attributes are deliberate for a
+  preview-mode embed. This is the third time this chore has come up. Generating the page would end
+  it.
+
 ### Decided 2026-07-29, not yet built
 
 Answered on the board. Held until the direction review says they are worth doing.
@@ -105,11 +115,19 @@ Answered on the board. Held until the direction review says they are worth doing
 - [ ] Add the `entity` node to `content/boards/cosmoboard/current.canvas`, then rename
   `tests/features/shared-entity-build.pending.mjs` and `shared-entity-runtime-e2e.pending.mjs` back
   to `*.test.mjs`. This is the last thing keeping any test parked.
-- [ ] Delete orphan markdown node `hgr0v5cjqam` from `content/boards/cosmoboard/current.canvas`.
-  Its `_rawMarkdown` is empty and the file it points at was deleted on purpose, so nothing is lost.
-- [ ] Move the preview server to port 4174 permanently and update every doc that says 4173:
-  `AGENTS.md`, `.agents/agents.md`, `tests/README.md`, and the `preview` script in `package.json`.
-  `aide-board/serve.mjs` owns 4173.
+- [A] Orphan markdown node `hgr0v5cjqam` is already gone from `content/boards/cosmoboard/current.canvas`.
+  Commit `cf4cb58` ("Take third-party event material and an orphan node off the boards") removed it
+  during the pre-merge audit; the card was never closed. Checked on 2026-07-31: the canvas holds 23
+  nodes, none with that id, no edge references it, and every remaining markdown and file node points
+  at a file that exists. Several browser sessions loaded the board during this session and `git
+  status` stayed free of stray `note-*.md`, which is the symptom that would have returned.
+- [A] The preview server is on 4174 permanently and the live docs say so. `aide-board/serve.mjs`
+  owns 4173. Three of the four files named here needed nothing: `scripts/preview-server.mjs` already
+  defaults to 4174, so `package.json` needs no port at all; `tests/README.md` and root `AGENTS.md`
+  never mentioned 4173. The stale ones were `README.md`, `scripts/README.md`, `scripts/AGENTS.md`,
+  the Chrome cache note further down this file, and the whiteboard skill's `desktop-testing.md`.
+  Left alone on purpose: archives, handoffs, previous test logs, the security audit, and board
+  content that records a 4173 URL as history rather than instruction.
 
 ### Objective status, checked live 2026-07-29
 
@@ -155,6 +173,13 @@ Merged to `main` and live. First deploy since 2026-06-22.
 - [ ] The Maker Faire exhibitor PDF is still public under `content/boards/braindump/`, in two
   copies. It was removed from the onboarding board but that is not where it originated. It names
   119 people with their zone and set-up assignments. Decide whether it should be there at all.
+  **Found 2026-07-31, a third file worth the same look:** `content/boards/cosmoboard/participant-information.pdf`
+  is a different document, not a copy — 118 KB against the maker list's 229 KB, different hash. It
+  is on the cosmoboard board, which is the board a stranger is most likely to open, and it is served
+  publicly. I did not open it or move it. Alongside it sits the 8.7 MB
+  `funda-hoca-sunum-26-4-28.pdf`. Both are yours to decide on; I am only reporting that they are
+  public. (The two `ERR_ABORTED` console lines for these files on `/cosmoboard.html` are unrelated:
+  headless Chromium has no PDF viewer, and both files are present on disk.)
 - [ ] `.playwright-mcp/` is 31 tracked test-dump files served publicly. Pre-existing, and
   `.gitignore` does not cover it.
 
@@ -172,11 +197,25 @@ Merged to `main` and live. First deploy since 2026-06-22.
   user on 2026-07-29, no longer an issue. Measured across phone, tablet and desktop widths first:
   at every touch width the panels go to a single 312px column and nothing escapes, so the reported
   symptom did not reproduce. One unrelated thing did show up and is filed separately below.
-- [ ] The recommendation panel escapes the viewport at desktop widths near 1024px. Found while
-  measuring the overflow report above, and it is a different bug: at 1024px with a mouse the panel
-  is 558px wide in row layout and its right edge sits 18.7px past the viewport. The mobile column
-  layout only kicks in below 1000px, or at 1200px with a coarse pointer, so a 1000-1200px mouse
-  window falls between the two. Low priority, nobody has hit it.
+- [A] The recommendation panel no longer escapes the viewport at desktop widths near 1024px. It
+  overflowed **both** edges, not just the right: the toolbar shell is centred with `left: 50%` plus
+  `translateX(-50%)`, so once toolbar + open panel came to 1061px it hung 18.7px off each side at
+  1024px. The mobile column layout only starts below 1000px, or at 1200px with a coarse pointer, so
+  every mouse width from 1000px to ~1061px fell between the two rules.
+  The shell now clamps to the window and wraps the panel onto its own row above the toolbar, the
+  same shape the mobile layout already used. Two details were load-bearing:
+  - `width: max-content` on the shell. `left: 50%` leaves only half the window as available space,
+    so a wrapping shell shrinks to that and wraps at *every* width, including 1440px.
+  - `max-width: min(100%, 560px)` on the panel. Under `max-content` the recommend panel's checkbox
+    label stopped wrapping and the panel grew to 730px, which moved the wrap threshold to 1257px.
+  Proof: `tests/features/toolbar-panel-viewport-fit-e2e.test.mjs`, 30 panel measurements across ten
+  widths from 1440 down to 390, asserting an 8px gutter on all four edges, a usable panel width, and
+  no horizontal document scroll. It failed at 1061px and 1024px before the fix. Wide widths are
+  measurably unchanged: the panel sits at 692..1252 of 1440 before and after.
+  **How to check:** open `/onboarding.html`, size the window to about 1024px wide with a mouse, and
+  press the recommend button in the toolbar. The panel should sit centred above the toolbar with
+  nothing cut off at either edge. Then widen to 1440px: it should go back to sitting beside the
+  toolbar exactly as it does today.
 - [ ] `_underscore_` does not render as emphasis. `renderMarkdownLineToHtml` has rules for
   `**bold**`, `*em*`, `` `code` `` and links, but none for underscores, so `_word_` shows its
   underscores verbatim. Found while fixing the caret mapping, which had assumed the opposite. The
@@ -298,7 +337,7 @@ Not bugs, just things that bite if you forget them.
   generator computes as a content hash. Re-copy it from the generated `onboarding.html` whenever the
   onboarding canvas changes. Generating this page too would remove the chore.
 - Chrome can hold stale local board state or a cached runtime. If Cosmoboard looks broken only in
-  Chrome, clear site data for `127.0.0.1:4173` or hard reload.
+  Chrome, clear site data for `127.0.0.1:4174` or hard reload.
 - Do not remove legacy field tolerance for `markdown.source` and `board-preview.file` yet. Imported
   bundles and old localStorage states still contain them.
 

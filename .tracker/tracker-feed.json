@@ -1,5 +1,20 @@
 [
   {
+    "at": "2026-07-31T11:20:00Z",
+    "agent": "proto-website-claude",
+    "text": "Three cards to Review. Panel overflow fixed and pinned by a new test that measures 30 panel positions across ten widths. The orphan node turned out to be gone already, removed by cf4cb58. 4174 is documented everywhere it should be."
+  },
+  {
+    "at": "2026-07-31T10:40:00Z",
+    "agent": "proto-website-claude",
+    "text": "Worth a look: cosmoboard-landing.html was still serving an old braindump.css hash, so the page you would send someone was missing the fix until I re-synced it. Third time this chore has come up."
+  },
+  {
+    "at": "2026-07-31T09:00:00Z",
+    "agent": "proto-website-claude",
+    "text": "Starting on three cards: the recommendation panel escaping the viewport near 1024px, plus the two you already answered on the board — delete the orphan node, make 4174 the documented port."
+  },
+  {
     "at": "2026-07-29T14:05:00Z",
     "agent": "claude",
     "text": "Shipped. 31 commits merged to main, first deploy since 22 June. onboarding.html is live and the nav points at it. Runtime went from v=58 to current."

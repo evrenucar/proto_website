@@ -40,22 +40,56 @@ was dropped.
 
 ## Current Scope
 
-- Continuing from `.agents/handoffs/handoff_2026-07-29_review_and_tracker.md`, pick-up point 2:
-  verify the caret offset mapping for markdown lines with inline formatting.
-- Preview server: `http://127.0.0.1:4174` (`PORT=4174 node scripts/preview-server.mjs`). **Not the
-  usual 4173:** `aide-board/serve.mjs` from the user's other project is holding that port. Question 4
-  on the board asks which one should own it.
+- Preview server: `http://127.0.0.1:4174` (`npm run preview`). Question 4 is answered: 4174 is the
+  port now, and the docs are being updated to match.
 
 ### Start Of Session
 
-- Date: 2026-07-29
-- Working on: caret offset mapping, the one item the handoff listed as landed but never verified.
-- Why now: it was the top unblocked card. Pick-up point 1 is still waiting on the two board
-  questions, which are unanswered.
-- Known constraints: the helpers live inside the `mountCosmoboard` closure, so they cannot be
-  imported. Verification has to go through the real editor in a browser.
+- Date: 2026-07-31
+- Working on, in order:
+  1. The recommendation panel escaping the viewport at desktop widths near 1024px. Top open bug and
+     it sits on the objective's criterion 4, the route a stranger uses to send a suggestion.
+  2. Delete orphan markdown node `hgr0v5cjqam` from the cosmoboard canvas. Answered A on the board.
+  3. Make 4174 the documented preview port everywhere. Answered A on the board.
+- Why now: 1 is the highest open card that is neither frozen nor waiting on a decision. 2 and 3 are
+  already decided by the user and are one-liners, so they clear with it.
+- Known constraints: underscore emphasis and the shared-entity node are frozen in `agents.md`, so
+  the other two answered questions stay parked regardless of having answers.
 
 ### End Of Session
+
+- Date: 2026-07-31
+- Preview server: `http://127.0.0.1:4174`, running.
+- What changed:
+  - Fixed the panel overflow. It was worse than filed: the shell is centred, so an open panel wider
+    than the window hangs off *both* edges, not just the right. `CSS/braindump.css` now clamps the
+    shell to the window and wraps the panel onto its own row above the toolbar. `width: max-content`
+    and a 560px cap on the panel are both load-bearing — without them the panel wraps at every width
+    or balloons to 730px. Wide widths measure identical to before.
+  - New test `tests/features/toolbar-panel-viewport-fit-e2e.test.mjs`: 30 panel measurements across
+    ten widths, 1440 down to 390, on all three issue panels. Failed at 1061px and 1024px before the
+    fix, green after.
+  - The orphan node card was already done by commit `cf4cb58`. Verified rather than assumed: 23
+    nodes, no `hgr0v5cjqam`, every referenced sidecar present, and no stray `note-*.md` appeared
+    despite a dozen board loads.
+  - 4174 is now the documented port in `README.md`, `scripts/README.md`, `scripts/AGENTS.md`, the
+    whiteboard skill's `desktop-testing.md`, and this repo's Chrome cache note. Nothing was needed in
+    `package.json` or root `AGENTS.md`.
+  - `npm run build`, since the CSS is cache-busted by content hash and the fix would not otherwise
+    reach any page. Churn is all date stamps and hashes; several project pages were still on a
+    hand-edited `site.js?v=5`.
+  - Re-synced `cosmoboard-landing.html`, which was two hashes stale and would have shipped without
+    the fix.
+- What still needs work:
+  - Two questions are on the board: whether the landing page should be the indexed front door, and
+    what happens to the four public PDFs. Both are yours, neither blocks anything.
+  - `tests/export/export-bundling-e2e.test.mjs` still fails on its 30s `waitForFunction`. Untouched
+    and unrelated; not re-run this session.
+  - Nothing is committed. The whole session sits in the working tree.
+- Next step:
+  - Answer the two board questions, or point me at the next card.
+
+### End Of Session (previous, 2026-07-29)
 
 - Date: 2026-07-29
 - What changed:

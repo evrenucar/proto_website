@@ -1076,6 +1076,17 @@ html:has(body.page-board) {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
+  justify-content: center;
+  /* The shell is centred, so anything wider than the window hangs off both edges at once. An open
+     issue panel does exactly that between 1000px and ~1061px with a mouse, where the mobile column
+     layout has not started yet. Clamp to the window and let the panel wrap onto its own row above
+     the toolbar instead of pushing the whole shell out.
+     `width: max-content` is load-bearing: `left: 50%` leaves only half the window as available
+     space, so a wrapping shell would shrink to that and wrap at every width. Percentage max-width
+     resolves against the viewport regardless, since the shell is fixed. */
+  flex-wrap: wrap-reverse;
+  width: max-content;
+  max-width: calc(100% - 24px);
   gap: 12px;
   z-index: 10;
 }
@@ -1349,7 +1360,9 @@ html:has(body.page-board) {
   box-shadow: 0 12px 30px rgba(0,0,0,0.45);
   padding: 10px 12px;
   min-width: 0;
-  max-width: 100%;
+  /* Cap the intrinsic width, or the recommend panel's checkbox label refuses to wrap once the
+     shell is sized by `max-content` and the panel grows to ~730px. */
+  max-width: min(100%, 560px);
 }
 
 .braindump-issue-panel[hidden] {
