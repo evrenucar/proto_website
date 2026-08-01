@@ -2793,9 +2793,96 @@ html:has(body.page-board) {
   max-width: 230px;
 }
 
+/* The drawing tuning harness. The overlay is pointer-transparent so it can
+   never swallow a stroke; this block is the one part meant to be touched. */
+.bd-dev-tuning {
+  pointer-events: auto;
+  min-width: 246px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2d2c2c;
+}
+
+.bd-dev-stroke b { color: var(--bd-accent, #3fdaca); }
+
+.bd-dev-slider {
+  display: grid;
+  grid-template-columns: 62px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.bd-dev-slider > span {
+  color: #707070;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+
+.bd-dev-slider > b {
+  color: var(--bd-ink, #fafafa);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-size: 10px;
+}
+
+.bd-dev-slider input[type="range"] {
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--bd-accent, #3fdaca);
+  cursor: ew-resize;
+}
+
+.bd-dev-check input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  justify-self: start;
+  accent-color: var(--bd-accent, #3fdaca);
+  cursor: pointer;
+}
+
+.bd-dev-tuning-reset {
+  margin-top: 8px;
+  padding: 3px 9px;
+  border: 1px solid #2d2c2c;
+  border-radius: 5px;
+  background: transparent;
+  color: #9b9b9b;
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.bd-dev-tuning-reset:hover {
+  color: var(--bd-ink, #fafafa);
+  border-color: #4a4a4a;
+}
+
 .bd-dev-overlay b.is-good { color: #5cc47f; }
 .bd-dev-overlay b.is-ok { color: #e0b054; }
 .bd-dev-overlay b.is-bad { color: #e0655f; }
+
+/* The site's sidenav is position:fixed at z-index 50 over the left 232px of
+   the board viewport, and the dev overlay sits at left:14px underneath it. That
+   never mattered while the overlay was a pointer-transparent readout. It matters
+   the moment it carries sliders: measured on both board shells, elementFromPoint
+   at the centre of a slider returned aside.sidenav, so every drag would have hit
+   the nav. Clearing the nav is what .board-page-panel already does. */
+@media screen and (min-width: 1201px) {
+  .bd-dev-overlay {
+    left: calc(var(--desktop-nav-width, 232px) + 14px);
+  }
+
+  html.nav-desktop-collapsed .bd-dev-overlay,
+  body.nav-desktop-collapsed .bd-dev-overlay {
+    left: 14px;
+  }
+}
 
 @media (max-width: 768px) {
   .bd-dev-overlay {

@@ -75,6 +75,24 @@ const probeCanvas = {
       markdownId: "cosmo-arrow-pan-probe",
       markdownUpdatedAt: "2026-08-01T00:00:00.000Z",
     },
+    // A PLAIN node, and it is the load-bearing one for the selection gate.
+    // The two probes above both make the keydown handler return before it ever
+    // reaches the pan branch: the YouTube node is claimed by the seek handler,
+    // and a note being typed into is caught by the text-field bail-out at the
+    // top. So a suite that only used those two would assert the gate while
+    // never executing it, which is exactly what happened: deleting the gate
+    // outright left this suite green while a selected node no longer stopped
+    // the pan. A text node is selected by a single click without entering edit
+    // mode, so phase 2b below reaches the gate for real.
+    {
+      id: "plain-pan-probe",
+      type: "text",
+      x: 320,
+      y: 430,
+      width: 260,
+      height: 120,
+      text: "plain node for the selection gate",
+    },
   ],
   edges: [],
 };
@@ -205,6 +223,41 @@ try {
     `ArrowRight inside the note should move the caret forward, was ${editingState.caretOffset} now ${caretAfter}`);
 
   await deselectAll();
+
+  // =============================================================== phase 2b
+  // The card's headline condition, executed for real: "When nothing is
+  // selected the arrow keys should serve to browser around the board". With a
+  // PLAIN node selected the arrows must not pan.
+  //
+  // Phases 1 and 2 cannot prove this. Both return earlier in the keydown
+  // handler than the pan branch, so with the gate deleted the suite still went
+  // green while the camera moved 798px with a node selected. This phase uses a
+  // text node, which a single click selects without entering edit mode, so the
+  // handler actually reaches the gate.
+  const plainBox = await page.locator("#plain-pan-probe").boundingBox();
+  assert.ok(plainBox, "expected the plain text probe to be visible");
+  await page.mouse.click(plainBox.x + plainBox.width / 2, plainBox.y + plainBox.height / 2);
+  await page.waitForTimeout(150);
+  assert.equal(await selectedCount(), 1, "2b: clicking the plain node must select exactly it");
+  assert.equal(
+    await page.evaluate(() => !!document.activeElement?.closest?.(".bd-item") && document.activeElement.isContentEditable),
+    false,
+    "2b: a single click must select the text node without entering edit mode, or this phase tests the wrong branch"
+  );
+
+  const beforePlain = await camera();
+  await page.keyboard.down("ArrowRight");
+  await page.waitForTimeout(700);
+  await page.keyboard.up("ArrowRight");
+  await page.waitForTimeout(80);
+  const afterPlain = await camera();
+  assert.equal(
+    afterPlain.x, beforePlain.x,
+    `2b: the camera must not move while a plain node is selected, moved ${(afterPlain.x - beforePlain.x).toFixed(1)}px`
+  );
+  assert.equal(afterPlain.y, beforePlain.y, "2b: nor vertically");
+
+  await deselectAll();
   assert.equal(await selectedCount(), 0, "fixture should end with nothing selected before the pan phase");
 
   // ================================================================ phase 3
@@ -249,8 +302,26 @@ try {
     `speed late in a hold (${midHoldSpeed.toFixed(3)} px/ms) should clearly exceed the opening speed ` +
     `(${earlySpeed.toFixed(3)} px/ms): the longer the hold, the faster it should go`);
 
-  // --- speed cap: two equal-length windows well past the ramp should cover
-  // near-identical ground, not keep growing without bound. ---
+  // --- speed cap, asserted against the documented ceiling in absolute terms ---
+  // This used to compare two adjacent 400ms windows and require a ratio under
+  // 1.5. That cannot see an absent cap: unbounded linear acceleration across
+  // two windows only 400ms apart is a ratio of about 1.31, so deleting the cap
+  // entirely left this green while the board ran away at 7613 px/s. Measured,
+  // not theorised.
+  //
+  // ARROW_PAN_MAX_SPEED is 2200 px/s = 2.2 px/ms. The 1.25 allowance covers
+  // sampling error at window edges, not a second cap: an uncapped ramp is past
+  // 3.8 px/ms by the end of this hold and past 7 px/ms shortly after, so the
+  // margin is nowhere near wide enough to hide a missing cap.
+  const CAP_PX_PER_MS = 2.2;
+  const fastestWindow = Math.max(...speeds.map((s) => s.pxPerMs));
+  assert.ok(
+    fastestWindow <= CAP_PX_PER_MS * 1.25,
+    `speed must never exceed the ${CAP_PX_PER_MS} px/ms cap, fastest window measured ${fastestWindow.toFixed(3)} px/ms ` +
+    `across ${speeds.length} windows. A value far above this means the cap is gone, not that the ramp is steep.`
+  );
+
+  // And it must genuinely plateau rather than merely stay under the ceiling.
   const plateau = lateSpeeds.slice(-2);
   const plateauRatio = Math.max(plateau[0], plateau[1]) / Math.max(Math.min(plateau[0], plateau[1]), 0.001);
   assert.ok(plateauRatio < 1.5,

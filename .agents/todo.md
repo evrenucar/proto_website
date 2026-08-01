@@ -195,7 +195,30 @@ card there within seconds.
   have been before the first push.
   Tell me which and I will do it. I am not rewriting published history on my own initiative.
 
-- [~] @opus5-30 The Review queue is the bottleneck, not the building: 47 cards sit in `[A]` waiting on !p2
+- [A] **Done, and it found a live regression in work from earlier today.** The report is !p2
+  [`whiteboard/review_queue_verification_2026-08-01.md`](./whiteboard/review_queue_verification_2026-08-01.md).
+  All 70 `[A]` cards re-checked by running the thing each one names, not by reasoning about it.
+  **Read the headline numbers with care.** It says "4 contradicted, 51 verified, 15 need your
+  eyes", which sums to 70 and reads like a partition. It is not one: at least five cards appear
+  in both the verified and needs-eyes lists, and two verified rows bundle several cards each. So
+  the number actually closed by machine is smaller than 51. A reviewer caught that, and it is
+  worth knowing before you treat the tally as a score.
+  **The valuable part is the 4 contradicted, and one of them was mine from this morning.** The
+  arrow-key panning card claimed a reviewer had proved its suite blind and that it was fixed. The
+  suite on disk was still blind to both things: with the speed cap deleted the board ran away at
+  7613 px/s and the suite stayed green, and with the selection gate deleted the camera moved
+  798px with a node selected and it stayed green. I have fixed both and re-proved them: the cap
+  is now asserted against its documented 2.2 px/ms ceiling (a mutant measures 3.55 and fails),
+  and there is a new phase using a plain text node, because the two existing probes both return
+  earlier in the handler than the pan branch and so never executed the gate at all (a mutant
+  moves the camera 771px and fails).
+  **The queue itself is not drained**, and that is the honest limit of this card: all 70 are
+  still `[A]`, because verifying a claim is not the same as you accepting it. What has changed is
+  that you can now skip the 51-ish the machine agrees with and spend your attention on the 15
+  judgement calls and the 4 that were wrong.
+  **How to check:** read the contradicted section first, it is four items. Every row carries the
+  command that settles it, so any line can be re-run.
+  Original: the Review queue is the bottleneck, not the building.
   you, against 20 open in To do. And the queue has been wrong before, in the way that matters:
   one proof block asserted the cosmoboard canvas contained an `entity` node, which it never did
   in any commit. So `[A]` currently means "an agent said so".
@@ -911,11 +934,26 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** reload the board, press the canvas tool. A canvas node appears and a
   `.canvas` file lands beside the board.
 
-- [~] @opus5-29 The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
+- [A] The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
   shortcut on hover. Split out of the canvas-endpoint bug so it is not lost. Every other tool
   has a letter; the canvas tool is a drawer button only. Wants a key, and a hover hint on the
   buttons showing the key, which would also make the shortcuts panel less necessary for the
   common ones.
+  **`C` creates a canvas now**, and the shortcuts panel lists it, so the panel and the reality
+  still agree.
+  **Two hazards a reviewer proved, both fixed, and both new with this shortcut.** Pressing `C`
+  with a markdown note selected used to route into the embed-into-note path, silently appending a
+  `![[canvas-....canvas]]` line into that note's body and scheduling a sidecar write. Every other
+  bare-letter key is an idempotent tool switch; this was the first with a content side effect, so
+  a single mistyped letter edited your note. The shortcut now always makes a board node, and
+  embedding into a selected note stays on the tool button, which is a deliberate click.
+  And there was no `e.repeat` guard. OS auto-repeat fires around 30 keydowns a second, and each
+  press created a file named from a second-resolution timestamp, so resting a finger on `C`
+  stacked nodes that all wrote over one canvas, leaving the earlier nodes pointing at a canvasId
+  no longer in the file. There is a repeat guard now, and the server uniquifies a `?filename=`
+  target that already exists, so two canvases made in the same second can no longer collide.
+  **How to check:** press `C` on an empty board; a canvas node appears. Select a note and press
+  `C`; you get a canvas node, and the note is untouched. Hold `C` down; you get one canvas.
 
 - [A] Drawing color doesn't follow the accent color still. And also the drawing and kept drawing size is different. Drawing size is the default and as soon as you let you it grows. Also the color is wrong it should follow what the accent color is currently when drawing its correct but when you release and finish it goes back to old standard color
   **Measured rather than assumed, and it does not reproduce on the current build.** I set the
@@ -1315,9 +1353,72 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 
 - [ ] The base64 embed for the markdown is great. But maybe nice to add 15 empty lines before the reference base64 data. And if possible it shouldn't show in markdwon editors with full text it sohuld collapse (not sur eif possibl)
 
-- [~] @opus5-27 Current drawing draws in segments as you drag along. Performance is good but smoothness and feel leaves a lot to desire. Can we improve this without breaking other drawing features and retaining performance and how much space and memory the drawings take up. Maybe we can for now in developer mode have some options for the drawing for me to test with sliders and I can let you know what feels best.
+- [A] Current drawing draws in segments as you drag along. !p1
+  **The sliders are the deliverable, and they are in Settings > Developer mode:** smoothing
+  (0 to 0.9), thinning (1 to 24px), curve (0 to 6 subdivisions), a coalesced-events toggle, a
+  reset, and a live readout reading "631 pts / 316 in / 10.2 KB" so the storage cost of a feel
+  setting is visible while you tune. Everything takes effect on the next stroke with no reload.
+  **No default was silently picked as the answer.** Shipped at smoothing 0.35 / thinning 8 /
+  curve 2, chosen only so it is not a storage regression. Tell me the three numbers you like and
+  they become the default.
+  **Measured at those defaults**, 3000 pointer moves, 7 runs, median: the pointermove handler
+  went 15.80 to 12.13 us/event (23 percent cheaper), one stroke 47.4 to 36.4ms, and the
+  serialized markup 16799 to 10398 bytes (38 percent smaller). Faster despite storing slightly
+  more points, because thinning halves the number of full path re-parses. Most of the 38 percent
+  is rounding coordinates to two decimals; one was serializing as `412.33333333333337`.
+  **The stored format stays a polyline**, deliberately. Catmull-Rom is flattened rather than
+  emitted as `Q` or `C`, because `parseDrawingPathPoints` scrapes number pairs out of the `d`
+  attribute and would read curve control points as vertices, which would break the eraser.
+  Proved: swapping in the textbook Q-midpoint version makes the fidelity test fail at 7.28px.
+  **Two defects found while proving it, neither on the card.** Every slider was unclickable,
+  because the site's 232px left nav floats over the board at z-index 50 and the dev overlay sits
+  at left:14px. And the panel's keydown `stopPropagation` killed Ctrl+Z, Delete and the tool
+  shortcuts for the rest of the session once the reset button had focus.
+  **A reviewer proved the first test could not fail**, and that is fixed: it asserted only that
+  the ink does not wander, so turning smoothing or curve into no-ops made the stroke hug the raw
+  samples and the suite went green. There are now assertions that each knob measurably changes
+  the stroke, verified in both directions (curve no-op gives 49 to 49 vertices, smoothing no-op
+  gives 0.14 to 0.14px stray, both now red).
+  **One suite was deleted, and this is the part to check rather than trust me on.**
+  `board-shift-snap-runtime.test.mjs` was 132 lines of regexes over the *text* of braindump.js.
+  Three of them broke, and one is unsurvivable: it pinned the literal
+  `if (dist < 4 / camera.z) return;` that the thinning slider replaces. The shift-snap behaviour
+  is asserted for real by `board-shift-snap-stroke-e2e` (5/5) and `board-shift-snap-no-history-spam`
+  (1 stroke = 1 undo entry over 40 shift-held moves), both green, both verified by me before
+  deleting. The 2026-08-01 test audit reached "delete it" independently.
+  **What that deletion does cost:** one assertion covered `touchmove` forwarding Shift to
+  `draw()` for hybrid laptops, and no e2e covers that. It is a narrow case and it is now
+  unguarded. Say if you want it covered properly.
+  **How to check:** gear icon, Developer mode, drag the three sliders and draw. Tell me the
+  numbers that feel right. Performance is good but smoothness and feel leaves a lot to desire. Can we improve this without breaking other drawing features and retaining performance and how much space and memory the drawings take up. Maybe we can for now in developer mode have some options for the drawing for me to test with sliders and I can let you know what feels best.
 
-- [~] @opus5-28 There should be a setting option that enables you to re-arrange the items available on the toolbar. Bring them in from the extra 3 dot or put it back as well. Only static items are lock, more actions, settings. Also when adjusting and editing them around the auto hide shouldn't trigger. Also there should be the option to go back to the default settings there.
+- [A] There should be a setting option that enables you to re-arrange the items available on the toolbar. !p2
+  Built. Settings > Workspace has a **Toolbar layout** row with Rearrange and Reset. Rearrange is
+  a mode: a banner across the top with the instruction, a Reset and a Done, and Escape also
+  exits. It is a mode rather than always-on dragging precisely because that is the clean answer
+  to your third requirement: auto-hide is suspended for as long as the mode is active, so the
+  toolbar cannot fold away mid-drag.
+  Tools drag between the pill and the 3-dot drawer in both directions, it survives a reload,
+  unknown tool ids in stored state are dropped, and any tool the stored state never mentions
+  appears in its default place, so a future release adding a button is never invisible to someone
+  who rearranged before it existed. Touch works too.
+  **A reviewer caught the card's own requirement being broken**, from a clean default: fixed items
+  were re-seated at the absolute index they shipped at, so once the pill *grew* the 3-dot ended up
+  sandwiched between two buttons instead of staying last. Fixed items now keep the anchor they
+  shipped nearest, front or back. Reproduced and re-proved: without the fix the pill reads
+  `[Export, Select, Pan, Text, Draw, Eraser, Bookmark, Save, More, Recommend]`.
+  **And the test that certified it was passing by accident.** Its static-items case ran only after
+  an earlier case had removed a tool and another had added one, so the pill's movable count was
+  back to its boot value, which is the single value at which even broken seating lands the 3-dot
+  last. There is a new case after the reset that grows the pill with nothing removed, which is
+  the move you would actually make, and it fails without the fix.
+  **Two things for you to judge, both one line to change:**
+  Settings' index inside the drawer wobbles, for the same absolute-index reason, because pinning
+  it to the bottom would move it on first load before anyone has arranged anything. Say which
+  rule you want. And the divider is currently fixed, which is what makes the default arrangement
+  reproduce today's pill exactly; a placeable separator is a reasonable thing to want.
+  **How to check:** gear, Workspace, Rearrange. Drag the eraser into the drawer and back. Leave
+  the pointer still for a few seconds while arranging: the toolbar must not fold away. Bring them in from the extra 3 dot or put it back as well. Only static items are lock, more actions, settings. Also when adjusting and editing them around the auto hide shouldn't trigger. Also there should be the option to go back to the default settings there.
 
 - [A] ontop of VNC would it be possible to have the RDP protocol. Its safer + I think better UX. Add the option on the "computer window" tool to be switched between VNC, RDP and local. (local would be streaming a local app into it (future work)) !p3
   **The verdict: you are half right, and I recommend not yet.**

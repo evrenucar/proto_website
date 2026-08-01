@@ -437,6 +437,10 @@ let lastViewportTouchTime = 0;
 let toolbarLockButton = null;
 let toolbarRevealButton = null;
 let toolbarAutoHideTimer = null;
+// Declared up here with the rest of the toolbar's state, not next to the
+// arrangement code 5,000 lines down, because scheduleToolbarCollapse reads it
+// and that function is defined first.
+let toolbarArrangeActive = false;
 let localStateSaveTimeout = null;
 let autosaveIntervalId = null;
 let autosaveRepositorySupported = true;
@@ -480,14 +484,57 @@ const DEFAULT_BOARD_THEME = Object.freeze({
 const MARKDOWN_DOWNLOAD_MODES = Object.freeze(["ask", "base64", "zip", "plain"]);
 const DEFAULT_MARKDOWN_DOWNLOAD_MODE = "ask";
 
+// How the pen turns pointer samples into a stroke. Four knobs, all live in
+// Settings > Developer mode so a feel question can be answered by feel rather
+// than argued about:
+//
+//   smoothing  0-0.9. Exponential filter on the incoming sample. Kills tremor,
+//              adds a little lag, costs nothing in stored points.
+//   thinning   1-24 screen px between accepted samples. The only knob that
+//              changes stored size on its own.
+//   curve      0-6 Catmull-Rom subdivisions per span. 0 is the raw polyline
+//              this board drew before. Multiplies stored points by its value.
+//   coalesced  replay PointerEvent.getCoalescedEvents(). Free fidelity: the
+//              thinning gate still decides how many samples survive.
+//
+// The shipped default is deliberately not a storage regression: thinning moved
+// from 4px to 8px and curve to 2, which lands the same number of stored points
+// as the old 4px polyline while the ink is an interpolating curve instead of a
+// chord chain.
+const DEFAULT_DRAW_TUNING = Object.freeze({
+  smoothing: 0.35,
+  thinning: 8,
+  curve: 2,
+  coalesced: true
+});
+
+function normalizeDrawTuning(raw) {
+  const clamp = (value, min, max, fallback) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  };
+  return {
+    smoothing: Math.round(clamp(raw?.smoothing, 0, 0.9, DEFAULT_DRAW_TUNING.smoothing) * 100) / 100,
+    thinning: Math.round(clamp(raw?.thinning, 1, 24, DEFAULT_DRAW_TUNING.thinning)),
+    curve: Math.round(clamp(raw?.curve, 0, 6, DEFAULT_DRAW_TUNING.curve)),
+    coalesced: raw?.coalesced !== false
+  };
+}
+
 const DEFAULT_BOARD_SETTINGS = Object.freeze({
   autosaveEnabled: true,
   autosaveSeconds: DEFAULT_AUTOSAVE_SECONDS,
   devMode: false,
+  drawTuning: DEFAULT_DRAW_TUNING,
   // Both default off, so a board nobody has touched behaves exactly as it
   // did before either feature existed.
   toolbarAutoHide: false,
   locked: false,
+  // null, not the default order by value: the default is read out of the DOM,
+  // so a board that has never been rearranged carries nothing about arrangement
+  // and a future build that adds a button is free to place it.
+  toolbarArrangement: null,
   theme: DEFAULT_BOARD_THEME,
   githubSync: Object.freeze({ enabled: false, repo: "", branch: "main", token: "" }),
   markdownDownloadMode: DEFAULT_MARKDOWN_DOWNLOAD_MODE
@@ -624,8 +671,16 @@ function loadBoardSettings() {
       autosaveEnabled: parsed?.autosaveEnabled !== false,
       autosaveSeconds: clampAutosaveSeconds(parsed?.autosaveSeconds),
       devMode: parsed?.devMode === true,
+      drawTuning: normalizeDrawTuning(parsed?.drawTuning),
       toolbarAutoHide: parsed?.toolbarAutoHide === true,
       locked: parsed?.locked === true,
+      // Shape-checked, not trusted: normalizeToolbarArrangement drops unknown
+      // ids and refills missing ones. Anything that is not an object is simply
+      // no arrangement.
+      toolbarArrangement:
+        parsed?.toolbarArrangement && typeof parsed.toolbarArrangement === "object"
+          ? parsed.toolbarArrangement
+          : null,
       theme: normalizeBoardTheme(parsed?.theme),
       githubSync: normalizeGithubSync(parsed?.githubSync),
       markdownDownloadMode: normalizeMarkdownDownloadMode(parsed?.markdownDownloadMode)
@@ -1175,6 +1230,10 @@ function syncSettingsPanelFromState() {
   if (settingsGhSyncTokenInput) settingsGhSyncTokenInput.value = ghSync.token || "";
   // Last, so every lazily built section already exists to be regrouped.
   ensureSettingsPanelStructure();
+  // After the regrouping, deliberately: this row is inserted next to the
+  // auto-hide toggle, and that toggle has just been moved into the "Workspace"
+  // group. Building it first would strand it behind under "Saving".
+  ensureToolbarArrangeSettingsUi();
 }
 
 function applyBoardSettings(options = {}) {
@@ -1182,11 +1241,17 @@ function applyBoardSettings(options = {}) {
   boardSettings.autosaveEnabled = boardSettings.autosaveEnabled !== false;
   boardSettings.autosaveSeconds = clampAutosaveSeconds(boardSettings.autosaveSeconds);
   boardSettings.devMode = boardSettings.devMode === true;
+  boardSettings.drawTuning = normalizeDrawTuning(boardSettings.drawTuning);
   boardSettings.toolbarAutoHide = boardSettings.toolbarAutoHide === true;
   boardSettings.locked = boardSettings.locked === true;
   boardSettings.theme = normalizeBoardTheme(boardSettings.theme);
   boardSettings.githubSync = normalizeGithubSync(boardSettings.githubSync);
   boardSettings.markdownDownloadMode = normalizeMarkdownDownloadMode(boardSettings.markdownDownloadMode);
+  // Before the persist below rather than after it, so the stored key never
+  // keeps an id the runtime has already dropped. Also renders the toolbar, so
+  // the Reset button in the settings header restores the shipped order for
+  // free, the same way it restores every other setting.
+  applyToolbarArrangement();
   boardConfig.autosaveSeconds = boardSettings.autosaveSeconds;
   if (persist) {
     persistBoardSettings();
@@ -1205,6 +1270,10 @@ function applyBoardSettings(options = {}) {
 
 function setToolbarActionsOpen(isOpen) {
   if (!toolbarActions || !toolbarMoreButton) return;
+  // The drawer is one of the two drop targets while the toolbar is being
+  // arranged, so a stray closeFloatingPanels() from somewhere else must not
+  // shut it out from under a drag in progress.
+  if (toolbarArrangeActive && !isOpen) return;
 
   toolbarActions.classList.toggle("is-open", isOpen);
   toolbarMoreButton.setAttribute("aria-expanded", String(isOpen));
@@ -3900,7 +3969,96 @@ function buildDevOverlay() {
     '<div class="bd-dev-row"><span>tool</span><b data-dev="tool">-</b></div>',
     '<div class="bd-dev-row bd-dev-sel"><span>selected</span><b data-dev="selected">none</b></div>'
   ].join("");
+  el.appendChild(buildDevTuningPanel());
   return el;
+}
+
+// ---- drawing tuning harness (Settings > Developer mode) ----
+// The sliders sit in the overlay rather than in the settings panel on purpose:
+// tuning a pen is draw, tweak, draw again, and the settings panel covers the
+// canvas you are drawing on. Every change takes effect on the next sample, with
+// no reload, because draw() reads getDrawTuning() per point.
+//
+// The stroke row is the whole reason this is a harness and not three sliders:
+// it prints what the last stroke actually cost, so "smoother" can be weighed
+// against "bigger" instead of guessed at.
+const DEV_TUNING_CONTROLS = [
+  { key: "smoothing", label: "smoothing", min: 0, max: 0.9, step: 0.05, format: (v) => Number(v).toFixed(2) },
+  { key: "thinning", label: "thinning", min: 1, max: 24, step: 1, format: (v) => `${v}px` },
+  { key: "curve", label: "curve", min: 0, max: 6, step: 1, format: (v) => (v > 0 ? `x${v}` : "off") }
+];
+
+function handleDevTuningInput(event) {
+  const input = event.target?.closest?.("[data-draw-tune]");
+  if (!input) return;
+  const key = input.dataset.drawTune;
+  const value = input.type === "checkbox" ? input.checked : Number(input.value);
+  boardSettings.drawTuning = normalizeDrawTuning({ ...getDrawTuning(), [key]: value });
+  persistBoardSettings();
+  syncDevTuningPanel();
+}
+
+function buildDevTuningPanel() {
+  const wrap = document.createElement("div");
+  wrap.className = "bd-dev-tuning";
+  wrap.innerHTML = [
+    '<div class="bd-dev-row bd-dev-stroke"><span>stroke</span><b data-dev="stroke">-</b></div>',
+    ...DEV_TUNING_CONTROLS.map(
+      (control) =>
+        `<label class="bd-dev-slider"><span>${control.label}</span>` +
+        `<input type="range" data-draw-tune="${control.key}" min="${control.min}" max="${control.max}" step="${control.step}">` +
+        `<b data-tune-out="${control.key}">-</b></label>`
+    ),
+    '<label class="bd-dev-slider bd-dev-check"><span>coalesced</span><input type="checkbox" data-draw-tune="coalesced"><b data-tune-out="coalesced">-</b></label>',
+    '<button type="button" class="bd-dev-tuning-reset" data-draw-tune-reset>reset drawing</button>'
+  ].join("");
+
+  // The overlay is pointer-transparent so it can never swallow a stroke. This
+  // block has to take the drag, so every POINTER gesture stops here: a
+  // slider drag must not also lay down ink or pan the board behind it.
+  //
+  // keydown is deliberately NOT in this list. Every board shortcut handler
+  // already returns early when the event target is an INPUT, so arrowing a
+  // focused slider cannot pan; swallowing keydown as well would only break the
+  // shortcuts that should still work, since focus stays in this panel after a
+  // slider is touched. It cost one green run to learn: Ctrl+A stopped
+  // selecting the moment the reset button had focus.
+  for (const type of ["pointerdown", "mousedown", "touchstart", "click", "dblclick", "wheel"]) {
+    wrap.addEventListener(type, (event) => event.stopPropagation());
+  }
+  wrap.addEventListener("input", handleDevTuningInput);
+  wrap.querySelector("[data-draw-tune-reset]")?.addEventListener("click", () => {
+    boardSettings.drawTuning = normalizeDrawTuning(null);
+    persistBoardSettings();
+    syncDevTuningPanel();
+  });
+  return wrap;
+}
+
+function syncDevTuningPanel() {
+  if (!devOverlayEl) return;
+  const tuning = getDrawTuning();
+  for (const control of DEV_TUNING_CONTROLS) {
+    const input = devOverlayEl.querySelector(`[data-draw-tune="${control.key}"]`);
+    if (input) input.value = String(tuning[control.key]);
+    const readout = devOverlayEl.querySelector(`[data-tune-out="${control.key}"]`);
+    if (readout) readout.textContent = control.format(tuning[control.key]);
+  }
+  const box = devOverlayEl.querySelector('[data-draw-tune="coalesced"]');
+  if (box) box.checked = tuning.coalesced === true;
+  const boxReadout = devOverlayEl.querySelector('[data-tune-out="coalesced"]');
+  if (boxReadout) boxReadout.textContent = tuning.coalesced ? "on" : "off";
+}
+
+function paintStrokeStats() {
+  const target = devOverlayEl?.querySelector('[data-dev="stroke"]');
+  if (!target) return;
+  if (!lastStrokeStats) {
+    target.textContent = "-";
+    return;
+  }
+  const { points, samples, bytes } = lastStrokeStats;
+  target.textContent = `${points} pts · ${samples} in · ${(bytes / 1024).toFixed(1)} KB`;
 }
 
 function paintDevOverlay(now) {
@@ -3993,6 +4151,8 @@ function syncDevOverlay() {
     devOverlayEl = null;
     devPointerClient = null;
   }
+  syncDevTuningPanel();
+  paintStrokeStats();
 }
 
 // Generate zoom-scaled pen cursor. The ring is the real brush, at the real
@@ -4497,7 +4657,20 @@ window.addEventListener("pointermove", (e) => {
     camera.y = e.clientY - startPan.y;
     updateTransform();
   } else if (isDrawing) {
-    draw(e.clientX, e.clientY, e.shiftKey);
+    // One pointermove on a 120Hz+ digitiser carries several real samples, and
+    // taking only the last is what makes a fast drag land as one long chord:
+    // the ink cuts the corner the hand went round. Replaying the batch costs no
+    // stored points, because the thinning gate still decides what survives.
+    // Shift-snap is excluded: it only ever wants the live cursor.
+    const coalesced =
+      getDrawTuning().coalesced && !e.shiftKey && typeof e.getCoalescedEvents === "function"
+        ? e.getCoalescedEvents()
+        : null;
+    if (coalesced && coalesced.length > 1) {
+      for (const sample of coalesced) draw(sample.clientX, sample.clientY, false);
+    } else {
+      draw(e.clientX, e.clientY, e.shiftKey);
+    }
   } else if (eraseState) {
     eraseTo(e.clientX, e.clientY);
   } else if (dragRect.active) {
@@ -5147,6 +5320,21 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     openMarkdownPanel(screenToCanvas(lastMousePos.x, lastMousePos.y));
   }
+  if (e.key === "c" || e.key === "C") {
+    e.preventDefault();
+    // e.repeat: OS key auto-repeat fires around 30 keydowns a second, and this
+    // creates a FILE per press whose name is a second-resolution timestamp, so
+    // resting a finger on C stacked nodes that all wrote over one canvas. Every
+    // other bare-letter binding is an idempotent tool switch, so none of them
+    // needed this; the first one with a side effect does.
+    if (e.repeat) return;
+    // allowNoteEmbed: false, because a stray letter must never edit a note.
+    // With a markdown note selected this used to append a `![[...]]` line into
+    // its body and schedule a sidecar write, so one mistyped key silently
+    // mutated content. Embedding into a note stays available from the tool
+    // button, which is a deliberate click rather than a typo.
+    void createNewCanvasNode(screenToCanvas(lastMousePos.x, lastMousePos.y), { allowNoteEmbed: false });
+  }
   if (e.code === "Space") {
     e.preventDefault();
     if (activeTool !== "pan") {
@@ -5323,6 +5511,11 @@ function setToolbarCollapsed(collapsed) {
 function scheduleToolbarCollapse() {
   if (toolbarAutoHideTimer) window.clearTimeout(toolbarAutoHideTimer);
   if (!boardSettings.toolbarAutoHide) return;
+  // "Also when adjusting and editing them around the auto hide shouldn't
+  // trigger." Arranging is a mode, so this needs no heuristic: while it is on,
+  // the collapse timer is never armed at all. setToolbarArrangeActive(false)
+  // calls this again on the way out, which is what restarts it.
+  if (toolbarArrangeActive) return;
   toolbarAutoHideTimer = window.setTimeout(() => {
     // Never collapse out from under an open panel or a focused control —
     // :focus-within covers a keyboard user tabbing through settings the same
@@ -5428,8 +5621,8 @@ function buildCanvasToolbarButton() {
   button.type = "button";
   button.className = "braindump-toolbar-action";
   button.dataset.tool = "new-canvas";
-  button.setAttribute("aria-label", "New canvas");
-  button.title = "New canvas";
+  button.setAttribute("aria-label", "New canvas (C)");
+  button.title = "New canvas (C)";
   button.innerHTML = `
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><rect x="6.5" y="6.5" width="6" height="5" rx="1"></rect><rect x="14" y="12" width="4.5" height="5.5" rx="1"></rect><line x1="12.5" y1="10" x2="15" y2="12"></line></svg>
     <span class="braindump-toolbar-action-label">Canvas</span>
@@ -5459,6 +5652,514 @@ function buildCanvasToolbarButton() {
 }
 
 buildCanvasToolbarButton();
+
+// ── Toolbar arrangement ──────────────────────────────────────────────────────
+// The card, verbatim: "There should be a setting option that enables you to
+// re-arrange the items available on the toolbar. Bring them in from the extra 3
+// dot or put it back as well. Only static items are lock, more actions,
+// settings. Also when adjusting and editing them around the auto hide shouldn't
+// trigger. Also there should be the option to go back to the default settings
+// there."
+//
+// A mode you enter from settings, not always-on drag. The card's own wording
+// ("a setting option that enables you to re-arrange") is only the first reason.
+// The second is that these buttons are the board's primary controls: if they
+// were draggable at all times, every slightly-slow press on the pen would be a
+// two-pixel drag that silently reordered the pill, and the pen would not get
+// selected. The mode is also the honest answer to the auto-hide requirement —
+// while it is on, the collapse timer is simply not allowed to fire, instead of
+// guessing from pointer movement whether an arrangement is in progress.
+//
+// Built in JS like the eraser, the canvas button and the auto-hide toggle
+// before it: the toolbar markup is copy-pasted into every generated board page
+// under content/boards, so one insertion here reaches all of them with no
+// build step.
+//
+// Everything is driven by Pointer Events, so a finger and a mouse take exactly
+// the same path. touch-action: none on the arrangeable items (see
+// ensureToolbarArrangeStyles) is what stops a drag from scrolling the page
+// instead of moving a button.
+const TOOLBAR_ARRANGE_FIXED_TOOLS = Object.freeze(["more", "settings"]);
+
+// { pill: [entry], more: [entry] }, entry = { id, el, fixed, defaultIndex }.
+// Read once out of the DOM as shipped, so "default" is whatever the page
+// template plus the injected buttons actually produce, rather than a second
+// hand-written list here that could drift from it.
+let toolbarArrangeRegistry = null;
+let toolbarArrangeBar = null;
+let toolbarArrangeSettingsRow = null;
+let toolbarArrangeDrag = null;
+
+function toolbarArrangeIdFor(el) {
+  if (el.classList?.contains("braindump-toolbar-divider")) return "divider";
+  const tool = el.dataset?.tool;
+  // Save and Recommend ship twice — once in the pill for a fine pointer, once
+  // in the drawer for a coarse one, with CSS hiding whichever does not apply.
+  // They are two different buttons and get two different ids, so moving one
+  // never silently moves the other.
+  if (tool) {
+    return el.classList?.contains("braindump-toolbar-action-mobile-only") ? `${tool}-compact` : tool;
+  }
+  // Open Canvas and Import are <label>s around a hidden file input, with no
+  // data-tool of their own. Their input's id is already stable and unique.
+  const fileInput = el.querySelector?.('input[type="file"]');
+  if (fileInput?.id) return fileInput.id.replace(/^braindump-/, "");
+  return "";
+}
+
+function buildToolbarArrangeRegistry() {
+  if (toolbarArrangeRegistry) return toolbarArrangeRegistry;
+  if (isPreviewMode || !toolbar || !toolbarActions) return null;
+  const read = (root) => {
+    const entries = [];
+    for (const el of Array.from(root.children)) {
+      // The drawer itself lives inside the pill; it is a container, not an item.
+      if (el === toolbarActions) continue;
+      const id = toolbarArrangeIdFor(el);
+      if (!id) continue;
+      el.dataset.arrangeId = id;
+      const fixed = TOOLBAR_ARRANGE_FIXED_TOOLS.includes(el.dataset.tool || "") || id === "divider";
+      if (fixed) el.dataset.arrangeFixed = "true";
+      entries.push({ id, el, fixed, defaultIndex: entries.length });
+    }
+    // Distance from the END as well as from the start. A fixed item that ships
+    // last must STAY last however many items arrive beside it, and an absolute
+    // index cannot express that: the 3-dot shipped at index 8 of 9, so once one
+    // more button was dragged into the pill it sat at 8 of 10 with a button to
+    // its right, which is exactly what "static" is supposed to prevent.
+    for (const entry of entries) entry.defaultFromEnd = entries.length - 1 - entry.defaultIndex;
+    return entries;
+  };
+  toolbarArrangeRegistry = { pill: read(toolbar), more: read(toolbarActions) };
+  return toolbarArrangeRegistry;
+}
+
+function normalizeToolbarArrangement(raw) {
+  const registry = buildToolbarArrangeRegistry();
+  if (!registry) return null;
+
+  const movable = new Map();
+  for (const key of ["pill", "more"]) {
+    for (const entry of registry[key]) {
+      if (!entry.fixed) movable.set(entry.id, entry);
+    }
+  }
+
+  const out = { pill: [], more: [] };
+  const placed = new Set();
+  for (const key of ["pill", "more"]) {
+    if (!Array.isArray(raw?.[key])) continue;
+    for (const value of raw[key]) {
+      const id = String(value);
+      // An id the runtime no longer has — a tool that was removed, a key
+      // written by an older or newer build, a hand edit — is dropped on its
+      // own. Losing one entry must never cost the whole arrangement.
+      if (!movable.has(id) || placed.has(id)) continue;
+      out[key].push(id);
+      placed.add(id);
+    }
+  }
+  // The other half of the same promise: anything the stored state never
+  // mentions goes back to its default container at its default index. A
+  // release that adds a button is therefore never invisible to someone who
+  // rearranged their toolbar before that button existed.
+  for (const key of ["pill", "more"]) {
+    for (const entry of registry[key]) {
+      if (entry.fixed || placed.has(entry.id)) continue;
+      out[key].splice(Math.min(entry.defaultIndex, out[key].length), 0, entry.id);
+      placed.add(entry.id);
+    }
+  }
+  return out;
+}
+
+// The pill and the drawer are two different shapes: in the pill an item is a
+// 44px icon, in the drawer it is a full-width row with the icon and a word. A
+// tool dragged into the drawer therefore has to be given the drawer's clothes,
+// or it sits there as a bare square with nothing to read.
+//
+// Nothing is taken off again on the way back out, because nothing needs to be:
+// .braindump-toolbar-action-label is display:none outside the drawer, and
+// .braindump-toolbar-action has no rule of its own outside it either. One
+// direction of work instead of two, and no state to get out of step.
+function ensureToolbarArrangeDrawerRow(el) {
+  if (el.dataset.arrangeId === "divider") return;
+  el.classList.add("braindump-toolbar-action");
+  if (el.querySelector(".braindump-toolbar-action-label")) return;
+  const label = document.createElement("span");
+  label.className = "braindump-toolbar-action-label";
+  // "Add Bookmark (L)" reads as "Add Bookmark": the shortcut hint belongs in
+  // the tooltip, which still carries it, not in a row label.
+  label.textContent = String(el.getAttribute("aria-label") || el.title || "")
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .trim();
+  el.appendChild(label);
+}
+
+function applyToolbarArrangement() {
+  const registry = buildToolbarArrangeRegistry();
+  if (!registry) return;
+
+  const arrangement = normalizeToolbarArrangement(boardSettings.toolbarArrangement);
+  boardSettings.toolbarArrangement = arrangement;
+
+  const byId = new Map();
+  for (const key of ["pill", "more"]) {
+    for (const entry of registry[key]) byId.set(entry.id, entry);
+  }
+
+  for (const key of ["pill", "more"]) {
+    const root = key === "pill" ? toolbar : toolbarActions;
+    const order = arrangement[key].map((id) => byId.get(id)?.el).filter(Boolean);
+    // Fixed items are never in the arrangement arrays at all: they are re-seated
+    // at the index they ship at, clamped to whatever is actually present. That
+    // is what "static" means here — no stored state, not even one written by
+    // hand into localStorage, can move the 3-dot or Settings. The lock is not in
+    // either container to begin with; it lives in the dock beside the pill and
+    // so has nothing to grab.
+    // Each fixed item keeps the anchor it shipped nearest: one near the front
+    // holds its index from the front, one near the back holds its distance from
+    // the back. Front-anchored go in first, in shipping order, so their indices
+    // mean what they say; then back-anchored, furthest-from-the-end first, for
+    // the same reason from the other side.
+    const fixedEntries = registry[key].filter((entry) => entry.fixed);
+    const frontAnchored = fixedEntries
+      .filter((entry) => entry.defaultIndex <= entry.defaultFromEnd)
+      .sort((a, b) => a.defaultIndex - b.defaultIndex);
+    const backAnchored = fixedEntries
+      .filter((entry) => entry.defaultIndex > entry.defaultFromEnd)
+      .sort((a, b) => b.defaultFromEnd - a.defaultFromEnd);
+    for (const entry of frontAnchored) {
+      order.splice(Math.min(entry.defaultIndex, order.length), 0, entry.el);
+    }
+    for (const entry of backAnchored) {
+      order.splice(Math.max(order.length - entry.defaultFromEnd, 0), 0, entry.el);
+    }
+    // appendChild on an element already in the tree moves it, so this walk
+    // rewrites the row into exactly `order` without removing anything first.
+    for (const el of order) root.appendChild(el);
+    if (key === "more") for (const el of order) ensureToolbarArrangeDrawerRow(el);
+  }
+  // The drawer stays the pill's last child: it is absolutely positioned, so it
+  // paints the same wherever it sits, but leaving a popover sandwiched between
+  // two buttons makes the flex row's own order stop reading like the toolbar.
+  toolbar.appendChild(toolbarActions);
+}
+
+function ensureToolbarArrangeStyles() {
+  if (document.getElementById("bd-toolbar-arrange-styles")) return;
+  // Injected rather than added to CSS/braindump.css, so this whole feature is
+  // one file's worth of change, and so every rule is scoped under .is-arranging
+  // and cannot touch the pill's normal layout — the collapsed toolbar's width
+  // is load-bearing for the reveal tab's centring and for the panel-fit suite.
+  const style = document.createElement("style");
+  style.id = "bd-toolbar-arrange-styles";
+  style.textContent = `
+.braindump-toolbar-shell.is-arranging [data-arrange-id] {
+  cursor: grab;
+  touch-action: none;
+}
+.braindump-toolbar-shell.is-arranging [data-arrange-id]:not([data-arrange-fixed]) {
+  outline: 1px dashed rgba(var(--bd-accent-rgb, 63, 218, 202), 0.6);
+  outline-offset: -3px;
+}
+.braindump-toolbar-shell.is-arranging [data-arrange-fixed] {
+  cursor: default;
+  opacity: 0.45;
+}
+.braindump-toolbar-shell.is-arranging .bd-arrange-dragging {
+  cursor: grabbing;
+  opacity: 0.5;
+}
+.braindump-toolbar-arrange-bar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  border: 1px solid #2d2c2c;
+  border-radius: 12px;
+  background: rgba(26, 25, 25, 0.98);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  color: #d7d7d7;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.braindump-toolbar-arrange-bar.is-open {
+  display: flex;
+}
+.braindump-toolbar-arrange-bar button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  background: #1c1c1c;
+  color: #d7d7d7;
+  font: inherit;
+  cursor: pointer;
+}
+.braindump-toolbar-arrange-bar button:hover {
+  color: var(--bd-ink, #fafafa);
+  border-color: var(--bd-accent, #3fdaca);
+}
+`;
+  document.head.appendChild(style);
+}
+
+function ensureToolbarArrangeBar() {
+  if (toolbarArrangeBar) return toolbarArrangeBar;
+  if (!viewport || !buildToolbarArrangeRegistry()) return null;
+  ensureToolbarArrangeStyles();
+
+  toolbarArrangeBar = document.createElement("div");
+  toolbarArrangeBar.className = "braindump-toolbar-arrange-bar";
+  toolbarArrangeBar.setAttribute("data-board-ui", "toolbar-arrange-bar");
+  toolbarArrangeBar.setAttribute("role", "toolbar");
+  toolbarArrangeBar.setAttribute("aria-label", "Toolbar arrangement");
+  toolbarArrangeBar.innerHTML = `
+    <span>Drag a tool along the bar, or into and out of the &#8943; drawer. Lock, &#8943; and Settings stay put.</span>
+    <button type="button" data-board-ui="toolbar-arrange-reset">Reset to default</button>
+    <button type="button" data-board-ui="toolbar-arrange-done">Done</button>
+  `;
+  // On the viewport, not in the toolbar shell. The shell carries
+  // translateX(-50%), so a fixed child of it resolves against the shell instead
+  // of the window (the trap the reveal tab's comment in braindump.css records),
+  // and an absolute child of the shell would land on top of the actions drawer,
+  // which is open for the whole of this mode.
+  viewport.appendChild(toolbarArrangeBar);
+
+  toolbarArrangeBar
+    .querySelector('[data-board-ui="toolbar-arrange-reset"]')
+    ?.addEventListener("click", resetToolbarArrangement);
+  toolbarArrangeBar
+    .querySelector('[data-board-ui="toolbar-arrange-done"]')
+    ?.addEventListener("click", () => setToolbarArrangeActive(false));
+  return toolbarArrangeBar;
+}
+
+// Requirement 4. Clearing the key rather than writing the default order back in
+// by value: normalizeToolbarArrangement(null) already reconstructs the shipped
+// order from the DOM, so a reset board carries nothing at all to say about
+// arrangement, which is the same stronger guarantee resetBoardThemeToDefault
+// makes for the theme.
+function resetToolbarArrangement() {
+  boardSettings.toolbarArrangement = null;
+  applyToolbarArrangement();
+  persistBoardSettings();
+  showToolbarToast("Toolbar layout reset to default.", "info");
+}
+
+function setToolbarArrangeActive(active) {
+  if (!buildToolbarArrangeRegistry()) return;
+  toolbarArrangeActive = active === true;
+  ensureToolbarArrangeBar();
+  toolbarShell?.classList.toggle("is-arranging", toolbarArrangeActive);
+  toolbarArrangeBar?.classList.toggle("is-open", toolbarArrangeActive);
+
+  if (toolbarArrangeActive) {
+    // Requirement 3, structurally rather than heuristically: reveal now, and
+    // scheduleToolbarCollapse refuses to arm the timer at all while the mode is
+    // on. The drawer is held open the whole time, because moving an item "in
+    // from the extra 3 dot or put it back as well" needs both ends visible.
+    revealToolbar();
+    setSettingsPanelOpen(false);
+    setToolbarActionsOpen(true);
+  } else {
+    endToolbarArrangeDrag();
+    setToolbarActionsOpen(false);
+    persistBoardSettings();
+    scheduleToolbarCollapse();
+  }
+}
+
+function toolbarArrangeContainerKeyAt(x, y, draggedEl) {
+  // elementsFromPoint, not elementFromPoint: the item being dragged sits under
+  // the pointer and would otherwise answer for its old container every time,
+  // making a drag into the drawer impossible. Skipping it in the stack is
+  // cheaper than toggling pointer-events on it mid-drag.
+  const stack = typeof document.elementsFromPoint === "function" ? document.elementsFromPoint(x, y) : [];
+  for (const el of stack) {
+    if (draggedEl?.contains(el)) continue;
+    if (el === toolbarActions || toolbarActions.contains(el)) return "more";
+    if (el === toolbar || toolbar.contains(el)) return "pill";
+  }
+  return null;
+}
+
+function toolbarArrangeIndexAt(containerKey, x, y, draggedEl) {
+  const root = containerKey === "pill" ? toolbar : toolbarActions;
+  // The pill is a row and the drawer is a column, so the axis that decides
+  // "before or after" is not the same one in both.
+  const vertical = containerKey === "more";
+  const pos = vertical ? y : x;
+  let index = 0;
+  for (const el of Array.from(root.children)) {
+    if (el === draggedEl || !el.dataset.arrangeId || el.dataset.arrangeFixed) continue;
+    const rect = el.getBoundingClientRect();
+    // The Save/Recommend twin for the other pointer type has no box at this
+    // width, so it has no midpoint to compare against either.
+    if (!rect.width && !rect.height) continue;
+    const mid = vertical ? rect.top + rect.height / 2 : rect.left + rect.width / 2;
+    if (pos > mid) index += 1;
+  }
+  return index;
+}
+
+function moveToolbarArrangeItem(id, containerKey, index) {
+  const arrangement = boardSettings.toolbarArrangement || normalizeToolbarArrangement(null);
+  if (!arrangement) return;
+  for (const key of ["pill", "more"]) {
+    const at = arrangement[key].indexOf(id);
+    if (at >= 0) arrangement[key].splice(at, 1);
+  }
+  const list = arrangement[containerKey];
+  list.splice(Math.max(0, Math.min(index, list.length)), 0, id);
+  boardSettings.toolbarArrangement = arrangement;
+  applyToolbarArrangement();
+}
+
+function endToolbarArrangeDrag() {
+  if (!toolbarArrangeDrag) return;
+  const { el } = toolbarArrangeDrag;
+  toolbarArrangeDrag = null;
+  el.classList.remove("bd-arrange-dragging");
+  window.removeEventListener("pointermove", onToolbarArrangePointerMove);
+  window.removeEventListener("pointerup", onToolbarArrangePointerUp);
+  // Persisted on every drop, not only on Done, so a reload halfway through an
+  // arrangement keeps what has already been moved.
+  persistBoardSettings();
+}
+
+function onToolbarArrangePointerMove(event) {
+  if (!toolbarArrangeDrag) return;
+  const { el, id } = toolbarArrangeDrag;
+  const containerKey = toolbarArrangeContainerKeyAt(event.clientX, event.clientY, el);
+  // Outside both containers: hold the last position rather than snapping the
+  // item somewhere arbitrary, so overshooting the drawer does not lose it.
+  if (!containerKey) return;
+  const index = toolbarArrangeIndexAt(containerKey, event.clientX, event.clientY, el);
+  const list = boardSettings.toolbarArrangement?.[containerKey] || [];
+  // A drag spends most of its pixels inside the slot it is already in, and each
+  // of those would otherwise re-append every button in the toolbar.
+  if (toolbarArrangeDrag.containerKey === containerKey && list.indexOf(id) === index) return;
+  toolbarArrangeDrag.containerKey = containerKey;
+  moveToolbarArrangeItem(id, containerKey, index);
+}
+
+function onToolbarArrangePointerUp() {
+  endToolbarArrangeDrag();
+}
+
+function onToolbarArrangePointerDown(event) {
+  if (!toolbarArrangeActive) return;
+  // Every control in the shell stops doing its day job for the duration of the
+  // mode: pressing the pen must not select the pen, and pressing Import must
+  // not open a file picker. Capture phase, because the buttons carry their own
+  // listeners and bubble phase would be too late to stop them.
+  event.preventDefault();
+  event.stopPropagation();
+
+  const el = event.target?.closest?.("[data-arrange-id]");
+  // Requirement 2. The 3-dot and Settings are in the containers and refuse the
+  // grab right here; the lock lives outside both and carries no arrange id at
+  // all, so it never gets this far.
+  if (!el || el.dataset.arrangeFixed === "true") return;
+
+  toolbarArrangeDrag = { el, id: el.dataset.arrangeId, containerKey: null };
+  el.classList.add("bd-arrange-dragging");
+  // Deliberately no setPointerCapture, and deliberately no pointercancel
+  // listener. A live-reordering drag moves the dragged element with
+  // appendChild, which detaches and reattaches it — and a captured element
+  // leaving the document is exactly the condition the Pointer Events spec says
+  // must fire pointercancel. Listening on window instead means the stream keeps
+  // arriving whether or not the implicit touch capture survived a reparent, and
+  // the drag ends on the pointerup that a finger or a mouse always produces.
+  window.addEventListener("pointermove", onToolbarArrangePointerMove, { passive: false });
+  window.addEventListener("pointerup", onToolbarArrangePointerUp);
+}
+
+function ensureToolbarArrangeSettingsUi() {
+  if (toolbarArrangeSettingsRow) return toolbarArrangeSettingsRow;
+  if (!settingsPanel || !buildToolbarArrangeRegistry()) return null;
+
+  const row = document.createElement("div");
+  row.className = "braindump-settings-toggle";
+  row.setAttribute("data-board-ui", "toolbar-arrange-settings");
+  row.innerHTML = `
+    <span class="braindump-settings-label-wrap">
+      <span class="braindump-settings-label">Toolbar layout</span>
+      <span class="braindump-settings-copy">Rearrange the tools and move them between the toolbar and the &#8943; drawer. Lock, &#8943; and Settings stay where they are.</span>
+    </span>
+  `;
+  const openButton = document.createElement("button");
+  openButton.type = "button";
+  openButton.className = "braindump-settings-reset-btn";
+  openButton.setAttribute("data-board-ui", "toolbar-arrange");
+  openButton.textContent = "Rearrange";
+  openButton.addEventListener("click", () => setToolbarArrangeActive(true));
+  row.appendChild(openButton);
+
+  const resetButton = document.createElement("button");
+  resetButton.type = "button";
+  resetButton.className = "braindump-settings-reset-btn";
+  resetButton.setAttribute("data-board-ui", "toolbar-arrange-reset-setting");
+  resetButton.textContent = "Reset";
+  resetButton.addEventListener("click", resetToolbarArrangement);
+  row.appendChild(resetButton);
+
+  // Next to the auto-hide toggle it belongs with, and called after
+  // ensureSettingsPanelStructure has already lifted that toggle into the
+  // "Workspace" group, so this row lands in the group with it rather than
+  // stranded under "Saving".
+  const autoHideRow = settingsToolbarAutoHideInput?.closest(".braindump-settings-toggle");
+  if (autoHideRow) autoHideRow.insertAdjacentElement("afterend", row);
+  else settingsPanel.querySelector(".braindump-settings-section")?.appendChild(row);
+
+  toolbarArrangeSettingsRow = row;
+  return row;
+}
+
+if (toolbarShell && !isPreviewMode) {
+  // The lock is unmovable by construction: it lives in the dock beside the
+  // pill, not in either container, so it has no arrange id and can never be
+  // picked up. The flag is only so it dims with the other two fixed controls
+  // and says so, instead of looking draggable and then silently doing nothing.
+  toolbarLockButton?.setAttribute("data-arrange-fixed", "true");
+  toolbarShell.addEventListener("pointerdown", onToolbarArrangePointerDown, true);
+  // The tool buttons carry their own click and touchstart listeners, so
+  // swallowing at the shell in the capture phase is the only place that stops
+  // them firing. touchstart is stopped but NOT default-prevented: touch-action:
+  // none already suppresses the scroll, and cancelling touchstart is what puts
+  // the pointer stream at risk on the very devices this has to work on.
+  const swallowWhileArranging = (event) => {
+    if (!toolbarArrangeActive) return;
+    event.stopPropagation();
+    if (event.cancelable && event.type === "click") event.preventDefault();
+  };
+  toolbarShell.addEventListener("click", swallowWhileArranging, true);
+  toolbarShell.addEventListener("touchstart", swallowWhileArranging, { capture: true, passive: true });
+  // Escape leaves the mode, the same key that closes every other board panel.
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key !== "Escape" || !toolbarArrangeActive) return;
+      event.stopPropagation();
+      setToolbarArrangeActive(false);
+    },
+    true
+  );
+  // Render the stored arrangement now rather than waiting for the
+  // applyBoardSettings call at the end of this file, so the toolbar is never
+  // painted once in default order and then rearranged in front of the user.
+  applyToolbarArrangement();
+}
 
 if (isPreviewMode && boardConfig.fullBoardHref) {
   const cornerLink = document.createElement("a");
@@ -6411,6 +7112,102 @@ function endBrushSizeLongPress() {
 // Drawing logic
 let lastDrawPoint = { x: 0, y: 0 };
 
+// ---- how a stroke is built ----
+// A stroke is stored as a polyline and has to stay one. parseDrawingPathPoints
+// scrapes number PAIRS out of the `d` attribute, so the first Q or C anyone
+// emits turns control points into vertices and the eraser starts cutting where
+// the ink is not. Everything here therefore changes WHICH points enter the
+// polyline and never the polyline itself.
+//
+// Catmull-Rom is the curve because it interpolates: the flattened output still
+// contains every accepted sample, so the stored path passes through the points
+// the hand actually made and the eraser cuts on the visible ink.
+//
+// Coordinates are rounded to two decimals on the way in. A raw screenToCanvas
+// point serializes as 412.33333333333337 — eighteen characters of sub-micron
+// precision on a board measured in pixels. Two decimals is six characters and
+// is not visible at any zoom this board allows.
+const STROKE_COORD_PRECISION = 100;
+let strokeSamples = [];
+let strokeSpanCursor = 0;
+let strokeSmoothed = null;
+let strokeSampleTotal = 0;
+let lastStrokeStats = null;
+
+function getDrawTuning() {
+  return boardSettings?.drawTuning || DEFAULT_DRAW_TUNING;
+}
+
+function roundStrokePoint(point) {
+  return {
+    x: Math.round(point.x * STROKE_COORD_PRECISION) / STROKE_COORD_PRECISION,
+    y: Math.round(point.y * STROKE_COORD_PRECISION) / STROKE_COORD_PRECISION
+  };
+}
+
+function resetStrokeAccumulator(seed) {
+  const start = seed ? { x: seed.x, y: seed.y } : null;
+  strokeSamples = start ? [start] : [];
+  strokeSpanCursor = 0;
+  strokeSmoothed = start;
+}
+
+function appendStrokeVertex(point) {
+  const p = roundStrokePoint(point);
+  if (p.x < minX) minX = p.x;
+  if (p.x > maxX) maxX = p.x;
+  if (p.y < minY) minY = p.y;
+  if (p.y > maxY) maxY = p.y;
+  currentPathData += ` L ${p.x} ${p.y}`;
+}
+
+function catmullRomPoint(p0, p1, p2, p3, t) {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return {
+    x: 0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+    y: 0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+  };
+}
+
+// A span needs the sample after it to be curved, so with curve on, emission
+// runs one sample behind the pointer and `final` lands the debt. With curve
+// off the limit is the same either way, which is exactly the old behaviour:
+// one appended vertex per accepted sample, no lag.
+function emitStrokeSpans(final) {
+  const curve = getDrawTuning().curve;
+  const limit = final || curve <= 0 ? strokeSamples.length - 1 : strokeSamples.length - 2;
+  while (strokeSpanCursor < limit) {
+    const i = strokeSpanCursor;
+    const p1 = strokeSamples[i];
+    const p2 = strokeSamples[i + 1];
+    if (curve > 0) {
+      const p0 = strokeSamples[i - 1] || p1;
+      const p3 = strokeSamples[i + 2] || p2;
+      for (let step = 1; step <= curve; step++) {
+        appendStrokeVertex(catmullRomPoint(p0, p1, p2, p3, step / curve));
+      }
+    } else {
+      appendStrokeVertex(p2);
+    }
+    strokeSpanCursor++;
+  }
+}
+
+// Catmull-Rom at t=1 is the sample itself, so after a flush the last vertex in
+// the path IS lastDrawPoint. Shift-snap depends on that: it anchors the
+// straight line on lastDrawPoint, and if the path had not caught up the line
+// would start a few pixels off the end of the ink.
+function flushStrokeTail() {
+  emitStrokeSpans(true);
+  if (currentPath) currentPath.setAttribute("d", currentPathData);
+}
+
+function recordStrokeStats(points, samples, bytes) {
+  lastStrokeStats = { points, samples, bytes };
+  paintStrokeStats();
+}
+
 // Shift-snap state for straight-line drawing.
 // Active only while a stroke is in progress, the draw tool is selected, and Shift is held.
 let preservedPathData = "";
@@ -6451,6 +7248,9 @@ function snapStraightLine(start, cursor) {
 function bakeShiftSegment() {
   if (lineEndPoint) {
     lastDrawPoint = { x: lineEndPoint.x, y: lineEndPoint.y };
+    // Freehand resumes from the end of the line, not from the samples that ran
+    // up to it, or the curve would bend back into the segment it just baked.
+    resetStrokeAccumulator(lastDrawPoint);
   }
   preservedPathData = "";
   lineStartPoint = null;
@@ -6473,8 +7273,10 @@ function getPenStrokeColor() {
 function startDrawing(x, y) {
   if (isPreviewMode) return;
   isDrawing = true;
-  let pos = screenToCanvas(x, y);
+  let pos = roundStrokePoint(screenToCanvas(x, y));
   lastDrawPoint = pos;
+  resetStrokeAccumulator(pos);
+  strokeSampleTotal = 0;
   preservedPathData = "";
   lineStartPoint = null;
   lineEndPoint = null;
@@ -6501,6 +7303,9 @@ function draw(x, y, shiftKey = false) {
   // path below must stay untouched so non-Shift drawing performance is unchanged.
   if (shiftKey && activeTool === "draw") {
     if (!wasShiftHeld) {
+      // Land the points the curve still owes before the line takes over, so the
+      // straight segment starts exactly where the ink already ends.
+      flushStrokeTail();
       preservedPathData = currentPathData;
       lineStartPoint = { x: lastDrawPoint.x, y: lastDrawPoint.y };
       wasShiftHeld = true;
@@ -6520,23 +7325,42 @@ function draw(x, y, shiftKey = false) {
     bakeShiftSegment();
   }
 
-  // Throttle points to reduce DOM repaints and lag
-  let dist = Math.hypot(pos.x - lastDrawPoint.x, pos.y - lastDrawPoint.y);
-  if (dist < 4 / camera.z) return;
-  lastDrawPoint = pos;
+  const tuning = getDrawTuning();
 
-  minX = Math.min(minX, pos.x); maxX = Math.max(maxX, pos.x);
-  minY = Math.min(minY, pos.y); maxY = Math.max(maxY, pos.y);
-  currentPathData += ` L ${pos.x} ${pos.y}`;
+  // Exponential filter on the incoming sample. This is the knob that takes the
+  // tremor out; it costs lag, and it costs nothing in stored points.
+  if (tuning.smoothing > 0 && strokeSmoothed) {
+    strokeSmoothed = {
+      x: strokeSmoothed.x + (pos.x - strokeSmoothed.x) * (1 - tuning.smoothing),
+      y: strokeSmoothed.y + (pos.y - strokeSmoothed.y) * (1 - tuning.smoothing)
+    };
+    pos = strokeSmoothed;
+  } else {
+    strokeSmoothed = { x: pos.x, y: pos.y };
+  }
+
+  // Thinning gate, in screen pixels at any zoom. The only knob that changes how
+  // many points a stroke stores on its own.
+  const dist = Math.hypot(pos.x - lastDrawPoint.x, pos.y - lastDrawPoint.y);
+  if (dist < tuning.thinning / camera.z) return;
+
+  pos = roundStrokePoint(pos);
+  lastDrawPoint = pos;
+  strokeSamples.push(pos);
+  strokeSampleTotal++;
+  emitStrokeSpans(false);
   currentPath.setAttribute("d", currentPathData);
 }
 
 function stopDrawing() {
   if (!isDrawing) return;
   isDrawing = false;
+  flushStrokeTail();
   bakeShiftSegment();
   if (currentPath) {
-    const spec = buildDrawingSpec(parseDrawingPathPoints(currentPathData), getPenStrokeColor(), getBrushSize("draw"));
+    const points = parseDrawingPathPoints(currentPathData);
+    const spec = buildDrawingSpec(points, getPenStrokeColor(), getBrushSize("draw"));
+    recordStrokeStats(points.length, strokeSampleTotal, spec ? spec.markup.length : 0);
     if (spec) {
       createNode("text", spec.x, spec.y, {
         width: spec.width,
@@ -6639,17 +7463,27 @@ function buildDrawingSpec(points, stroke, strokeWidth) {
   const w = Math.max(right - left, 10);
   const h = Math.max(bottom - top, 10);
   const pad = drawingBoxPadding(strokeWidth);
-  const viewBox = `${left - pad} ${top - pad} ${w + pad * 2} ${h + pad * 2}`;
+  // Two decimals, everywhere a number is stored. `left - pad` on a stroke that
+  // starts at 124.74 serializes as 119.74000000000001: eighteen characters of
+  // float noise on a board measured in pixels. The eraser's rebuilt endpoints
+  // land on the disc boundary and are worse. Rounding is deterministic, so an
+  // erase and its undo still serialize byte-identically.
+  const round2 = (value) => Math.round(value * 100) / 100;
+  const boxX = round2(left - pad);
+  const boxY = round2(top - pad);
+  const boxW = round2(w + pad * 2);
+  const boxH = round2(h + pad * 2);
+  const viewBox = `${boxX} ${boxY} ${boxW} ${boxH}`;
   const head = `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;">`;
   const body = points.length < 2
-    ? `<circle cx="${left}" cy="${top}" r="${Math.max(strokeWidth / 2, 1)}" fill="${stroke}"></circle>`
-    : `<path d="${points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ")}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`;
+    ? `<circle cx="${round2(left)}" cy="${round2(top)}" r="${Math.max(strokeWidth / 2, 1)}" fill="${stroke}"></circle>`
+    : `<path d="${points.map((p, i) => `${i === 0 ? "M" : "L"} ${round2(p.x)} ${round2(p.y)}`).join(" ")}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`;
   return {
     markup: `${head}${body}</svg>`,
-    x: left - pad,
-    y: top - pad,
-    width: w + pad * 2,
-    height: h + pad * 2
+    x: boxX,
+    y: boxY,
+    width: boxW,
+    height: boxH
   };
 }
 
@@ -10157,9 +10991,13 @@ function openCanvasFullscreen(nodeObj) {
   host.focus({ preventScroll: true });
 }
 
-async function createNewCanvasNode(spawnAt = null) {
+async function createNewCanvasNode(spawnAt = null, options = {}) {
   if (isPreviewMode) return null;
   if (isBoardLocked()) return null;
+  // Embedding into a selected note is a deliberate act, so it belongs to a
+  // deliberate gesture. The keyboard shortcut passes allowNoteEmbed: false, see
+  // the `c` binding.
+  const allowNoteEmbed = options.allowNoteEmbed !== false;
 
   const title = defaultCanvasTimestampName();
   const filename = sanitizeCanvasFilename(`${title}.canvas`);
@@ -10181,7 +11019,7 @@ async function createNewCanvasNode(spawnAt = null) {
     return null;
   }
 
-  if (insertCanvasEmbedIntoSelectedNote(result.url)) {
+  if (allowNoteEmbed && insertCanvasEmbedIntoSelectedNote(result.url)) {
     showToolbarToast(`Embedded ${filename} in the selected note.`, "success");
     return null;
   }
@@ -12429,6 +13267,7 @@ const SHORTCUT_GROUPS = [
       [["T"], "Text note"],
       [["L"], "Link"],
       [["X"], "New markdown note where the pointer is"],
+      [["C"], "New canvas node where the pointer is"],
       [["Space"], "Hold to pan, release to go back to the tool you had"],
     ],
   },

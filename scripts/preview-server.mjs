@@ -54,7 +54,19 @@ function resolveCanvasSidecarTarget(boardTarget, pathValue, filenameValue) {
       .replace(/^\/+/, "");
     if (normalized) filePath = path.normalize(path.join(rootDir, normalized));
   } else if (filenameValue) {
-    filePath = path.normalize(path.join(boardDir, sanitizeCanvasFilename(filenameValue)));
+    // ?filename= means "make me a new one", so it must never land on a file that
+    // already exists. The client names these from a second-resolution timestamp,
+    // so two canvases created in the same second collided and the second silently
+    // overwrote the first, leaving the first node pointing at a canvasId that was
+    // no longer in the file. ?path= above is the opposite case, addressing a
+    // sidecar that already exists, and must not be uniquified.
+    const safeName = sanitizeCanvasFilename(filenameValue);
+    const base = safeName.replace(/\.canvas$/i, "");
+    let candidate = path.normalize(path.join(boardDir, safeName));
+    for (let n = 2; existsSync(candidate) && n < 1000; n++) {
+      candidate = path.normalize(path.join(boardDir, `${base}-${n}.canvas`));
+    }
+    filePath = candidate;
   }
 
   if (!filePath) return null;
