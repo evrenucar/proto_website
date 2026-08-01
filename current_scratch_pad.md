@@ -53,6 +53,61 @@ Jot anything here mid-session. Anything that outlives the session moves to
 
 ### Start Of Session
 
+- Date: 2026-08-01
+- Working on: clearing the whole open board, fanned out across agents. The user's instruction is
+  to execute all To do and Backlog items, carefully reviewed and folded into the code.
+- Wave 1, seven agents, all claimed on the board: pin drag by edges and corners (`opus5-9`),
+  toolbar folding with the lock at bottom centre plus the markdown gradient (`opus5-10`), eraser
+  and pen revamp (`opus5-11`), base64 markdown assets (`opus5-12`), canvas tool and safe rename
+  (`opus5-13`), tracker scroll and card ids (`opus5-14`), recreatable perf benchmark (`opus5-15`).
+- Shape: nobody writes `JavaScript/braindump.js` or `CSS/braindump.css`. Agents prove their fix in
+  a running page and hand back anchor-based hunks; `opus5-0` is the single writer and applies them.
+  Own port each (4181 to 4187), own test file each, no builds while others work. Every patch goes
+  through an adversarial reviewer that re-verifies each anchor occurs exactly once before apply.
+- Known constraints: the user edits `todo.md` live, so re-read before every edit and never rewrite
+  the whole file. The preview server on 4174 went down once already this session and was restarted
+  detached. Three new cards filed as critical: nothing is pushed, the PDFs are still in git
+  history, and the 47-card Review queue is now the bottleneck.
+- Not started, deliberately: the mobile fast-zoom crash (blocked on the user's phone by their own
+  decision), `defaultViewport` (decided: leave alone), and the frozen roadmap phases 3, 4, 6, 7
+  and 8 plus the desktop shell, which are multi-week programmes the objective freeze covers and
+  which need an explicit unfreeze rather than an agent starting them quietly.
+
+### End Of Session, 2026-08-01
+
+- **17 cards built across three waves, 26 agents, whole suite green: 64 of 64.** Site rebuilt,
+  landing page in sync. Nothing committed, nothing pushed.
+- Waves 1 and 3 landed about 2,400 lines into `JavaScript/braindump.js` through 84 + 44 anchored
+  hunks. `braindump.js` and `braindump.css` were never edited by an agent: they hand back hunks
+  and `opus5-0` applies them. That discipline held across 26 concurrent agents with nothing lost.
+- **The applier had a real bug and a reviewer found it by running it.** It wrote each file as
+  that file's hunks resolved, so a patch spanning the client and the server could write a patched
+  client and then throw on the server. It is all-or-nothing across files now, verified by making
+  a patch fail deliberately and confirming nothing was written.
+- **Eleven reviewer-proven defects were fixed before or just after apply.** The ones worth
+  remembering are the ones a green suite could not see: an arrow-pan suite that passed with the
+  speed cap deleted and again with the "nothing selected" gate deleted; a toolbar suite asserting
+  a centring that CSS guarantees while the real affordance sat 303px off; a download suite that
+  proved the button on the card but never the same button in the fullscreen viewer, which was the
+  one path that was broken.
+- **Two findings became `!p1` cards rather than fixes, because they are the user's call.**
+  Ctrl+S does not save the board (it opens a Save-As dialog or downloads a file) and both suites
+  guarding that are structurally incapable of failing. And `scripts/preview-server.mjs` binds
+  beyond loopback and checks no `Origin`, so any site in an open tab can post to its write APIs.
+  That second one is also what stopped the terminal node being built, since a WebSocket upgrade
+  is not covered by CORS.
+- **A research note corrected one of our own.** Tauri and Electron webviews both enforce
+  X-Frame-Options, contrary to `vnc_and_iframe_embedding_2026-07-30.md`. Electron can strip
+  headers and keep embeds as real iframes that pan and zoom with the canvas; Tauri cannot. That
+  flips the shell recommendation to Electron and wants an explicit decision before anyone
+  scaffolds one.
+- Still open and unchanged: nothing is pushed (six commits, CI has never run on this branch), the
+  four PDFs remain recoverable from `origin/main` history, and the Review queue is now 67 cards.
+- Next: the Review queue is the bottleneck. The mechanical re-verification pass proposed on its
+  card is the highest-value next move.
+
+### Start Of Session
+
 - Date: 2026-07-31
 - Working on: the two `!p1` cards from Features and ideas, both PDF and both the same area:
   the fullscreen button, and embeds swallowing wheel-zoom and middle-drag pan.

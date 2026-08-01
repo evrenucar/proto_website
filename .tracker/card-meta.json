@@ -321,17 +321,17 @@
   },
   "I don't like how the pinning just snaps to my face currently": {
     "createdAt": "2026-07-31T18:17:12.875Z",
-    "updatedAt": "2026-07-31T18:17:12.875Z",
+    "updatedAt": "2026-08-01T05:26:18.263Z",
     "updatedBy": "you"
   },
   "When nothing is selected the arrow keys should serve to brow": {
     "createdAt": "2026-07-31T18:38:03.434Z",
-    "updatedAt": "2026-07-31T18:38:03.434Z",
+    "updatedAt": "2026-08-01T05:26:20.597Z",
     "updatedBy": "you"
   },
   "Lets have a option to embed the images and other assets that": {
     "createdAt": "2026-07-31T18:43:54.025Z",
-    "updatedAt": "2026-07-31T18:43:54.025Z",
+    "updatedAt": "2026-08-01T11:26:14.939Z",
     "updatedBy": "you"
   },
   "[runtime] Alt-drag copy, now a live modifier per your refine": {
@@ -346,7 +346,7 @@
   },
   "In the task management tracker board when I click items move": {
     "createdAt": "2026-08-01T04:04:15.854Z",
-    "updatedAt": "2026-08-01T04:04:15.854Z",
+    "updatedAt": "2026-08-01T05:25:08.005Z",
     "updatedBy": "you"
   },
   "Done is a separate full-width bar below the four working col": {
@@ -362,6 +362,171 @@
   "Tracker: agents are declared, not guessed.": {
     "createdAt": null,
     "updatedAt": "2026-08-01T04:04:51.786Z",
+    "updatedBy": "you"
+  },
+  "[sync] Stale-tab clobber guard shipped, the interim fix for ": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T04:24:16.901Z",
+    "updatedBy": "you"
+  },
+  "The auto hide is cool and all but it should hide together wi": {
+    "createdAt": "2026-08-01T04:51:24.770Z",
+    "updatedAt": "2026-08-01T11:26:10.562Z",
+    "updatedBy": "you"
+  },
+  "The settings menu doesn't look clean. Refine it with UI UX d": {
+    "createdAt": "2026-08-01T04:58:54.760Z",
+    "updatedAt": "2026-08-01T05:26:01.259Z",
+    "updatedBy": "you"
+  },
+  "rewamp the pen tool: alt scroll should resize the brush size": {
+    "createdAt": "2026-08-01T05:15:02.629Z",
+    "updatedAt": "2026-08-01T05:25:55.119Z",
+    "updatedBy": "you"
+  },
+  "Add an eraser tool. Make sure it can erase in segments and n": {
+    "createdAt": "2026-08-01T05:17:43.147Z",
+    "updatedAt": "2026-08-01T05:25:50.815Z",
+    "updatedBy": "you"
+  },
+  "create a performance testing benchmark so we can test how re": {
+    "createdAt": "2026-08-01T05:19:16.573Z",
+    "updatedAt": "2026-08-01T05:25:40.019Z",
+    "updatedBy": "you"
+  },
+  "Implement a way to test mobile and prompt user about it and ": {
+    "createdAt": "2026-08-01T05:20:04.299Z",
+    "updatedAt": "2026-08-01T05:25:37.488Z",
+    "updatedBy": "you"
+  },
+  "For the theme settings add a way to \"return to default color": {
+    "createdAt": "2026-08-01T05:21:53.427Z",
+    "updatedAt": "2026-08-01T05:25:33.449Z",
+    "updatedBy": "you"
+  },
+  "accept color from theme setting should also control the defa": {
+    "createdAt": "2026-08-01T05:24:06.185Z",
+    "updatedAt": "2026-08-01T05:25:16.188Z",
+    "updatedBy": "you"
+  },
+  "the gradient at the bottom of overflowing markdown board can": {
+    "createdAt": "2026-08-01T05:24:58.033Z",
+    "updatedAt": "2026-08-01T05:24:58.033Z",
+    "updatedBy": "you"
+  },
+  "Where a board opens is decided by whoever last panned it. **": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T05:27:06.634Z",
+    "updatedBy": "you"
+  },
+  "There should be export as PDF option for markdown. as well a": {
+    "createdAt": "2026-08-01T05:28:52.374Z",
+    "updatedAt": "2026-08-01T05:31:04.277Z",
+    "updatedBy": "you"
+  },
+  "Could have a canvas system where canvasses can be presented ": {
+    "createdAt": "2026-08-01T05:29:11.288Z",
+    "updatedAt": "2026-08-01T05:31:20.446Z",
+    "updatedBy": "you"
+  },
+  "Add inertia to the browsing so you can fligh the browser aro": {
+    "createdAt": "2026-08-01T05:30:00.045Z",
+    "updatedAt": "2026-08-01T05:31:11.297Z",
+    "updatedBy": "you"
+  },
+  "The markdown editing image resizing etc. can be similar to h": {
+    "createdAt": "2026-08-01T05:30:44.848Z",
+    "updatedAt": "2026-08-01T05:31:16.016Z",
+    "updatedBy": "you"
+  },
+  "I should also be able to open a new \"canvas\" file and add it": {
+    "createdAt": "2026-08-01T05:36:53.476Z",
+    "updatedAt": "2026-08-01T05:36:58.909Z",
+    "updatedBy": "you"
+  },
+  "brainstorm a solution for sites that refuse to be embdeded. ": {
+    "createdAt": "2026-08-01T05:39:54.982Z",
+    "updatedAt": "2026-08-01T05:43:52.695Z",
+    "updatedBy": "you"
+  },
+  "ideate on how to integrate the file system from the PC into ": {
+    "createdAt": "2026-08-01T05:40:22.055Z",
+    "updatedAt": "2026-08-01T05:40:22.055Z",
+    "updatedBy": "you"
+  },
+  "Agents on the tracker board if they are not used for a while": {
+    "createdAt": "2026-08-01T05:41:47.771Z",
+    "updatedAt": "2026-08-01T05:41:47.771Z",
+    "updatedBy": "you"
+  },
+  "ontop of VNC would it be possible to have the RDP protocol. ": {
+    "createdAt": "2026-08-01T05:43:46.170Z",
+    "updatedAt": "2026-08-01T05:44:07.207Z",
+    "updatedBy": "you"
+  },
+  "Alt-drag copy is one undo now, however many strokes the draw": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T10:04:33.013Z",
+    "updatedBy": "you"
+  },
+  "[runtime] Standardized placement shipped: every centered spa": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T10:05:08.961Z",
+    "updatedBy": "you"
+  },
+  "The toolbar can auto-hide, and the board can be locked. Two ": {
+    "createdAt": null,
+    "updatedAt": "2026-08-01T10:05:23.129Z",
+    "updatedBy": "you"
+  },
+  "The hidden toolbar currently is a bit too high brom the bott": {
+    "createdAt": "2026-08-01T10:29:51.476Z",
+    "updatedAt": "2026-08-01T10:29:51.476Z",
+    "updatedBy": "you"
+  },
+  "the size increse decrease drag of the pen should be applied ": {
+    "createdAt": "2026-08-01T10:34:22.272Z",
+    "updatedAt": "2026-08-01T10:34:22.272Z",
+    "updatedBy": "you"
+  },
+  "Drawing color doesn't follow the accent color still. And als": {
+    "createdAt": "2026-08-01T10:35:49.281Z",
+    "updatedAt": "2026-08-01T10:35:49.281Z",
+    "updatedBy": "you"
+  },
+  "Canvas create button says no endpoint on host so canvas file": {
+    "createdAt": "2026-08-01T10:37:03.235Z",
+    "updatedAt": "2026-08-01T10:37:03.235Z",
+    "updatedBy": "you"
+  },
+  "There should be a setting option that enables you to re-arra": {
+    "createdAt": "2026-08-01T10:38:44.379Z",
+    "updatedAt": "2026-08-01T10:38:44.379Z",
+    "updatedBy": "you"
+  },
+  "Current drawing draws in segments as you drag along. Perform": {
+    "createdAt": "2026-08-01T11:12:55.166Z",
+    "updatedAt": "2026-08-01T11:12:55.166Z",
+    "updatedBy": "you"
+  },
+  "The base64 embed for the markdown is great. But maybe nice t": {
+    "createdAt": "2026-08-01T11:27:27.580Z",
+    "updatedAt": "2026-08-01T11:27:27.580Z",
+    "updatedBy": "you"
+  },
+  "still as you draw thin line shows. But when you let go i tgo": {
+    "createdAt": "2026-08-01T11:28:15.085Z",
+    "updatedAt": "2026-08-01T11:28:15.085Z",
+    "updatedBy": "you"
+  },
+  "Add a new shape tool. Should be able to drag draw rectangles": {
+    "createdAt": "2026-08-01T11:30:39.950Z",
+    "updatedAt": "2026-08-01T11:30:39.950Z",
+    "updatedBy": "you"
+  },
+  "R should act as rotation tool. If a shape is selected and R ": {
+    "createdAt": "2026-08-01T11:33:26.993Z",
+    "updatedAt": "2026-08-01T11:33:26.993Z",
     "updatedBy": "you"
   }
 }

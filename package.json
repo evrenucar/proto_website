@@ -5,8 +5,12 @@
   "scripts": {
     "sync:notion": "node scripts/sync-notion.mjs",
     "build": "node scripts/build-site.mjs",
+    "cosmo": "node scripts/cosmo.mjs",
     "preview": "node scripts/preview-server.mjs",
+    "mobile:diag": "node scripts/mobile-diag-server.mjs",
     "perf:audit": "node scripts/performance-audit.mjs",
+    "perf:bench": "node tests/perf/run-benchmark.mjs",
+    "perf:bench:diff": "node tests/perf/compare-benchmark-runs.mjs",
     "extract-assets": "node scripts/extract-assets.mjs"
   },
   "devDependencies": {

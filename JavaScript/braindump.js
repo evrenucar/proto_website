@@ -288,6 +288,24 @@ const toolbar =
 const toolbarShell =
   queryBoard('[data-board-ui="toolbar-shell"]') ||
   queryBoard(".braindump-toolbar-shell");
+// The eraser button is injected, not added to markup. The same toolbar pill is
+// copy-pasted into seven HTML files (three top-level board pages plus every
+// generated page under content/boards), so one insertion here reaches all of
+// them and no build has to run. It goes in before toolbarButtons is captured,
+// so the eraser is wired up by the same loops as every other tool.
+(function ensureEraserToolButton() {
+  const pill = toolbar || queryBoard(".braindump-toolbar");
+  if (!pill || pill.querySelector('[data-tool="erase"]')) return;
+  const penButton = pill.querySelector('[data-tool="draw"]');
+  if (!penButton) return;
+  const eraser = document.createElement("button");
+  eraser.type = "button";
+  eraser.dataset.tool = "erase";
+  eraser.setAttribute("aria-label", "Eraser (E)");
+  eraser.title = "Eraser (E)";
+  eraser.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a1.9 1.9 0 0 1 0-2.7l9.6-9.6a1.9 1.9 0 0 1 2.7 0l5.6 5.6a1.9 1.9 0 0 1 0 2.7L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>';
+  penButton.insertAdjacentElement("afterend", eraser);
+})();
 const toolbarButtons = toolbar?.querySelectorAll("button") || queryBoardAll(".braindump-toolbar button");
 const toolbarActions =
   queryBoard('[data-board-ui="toolbar-actions"]') ||
@@ -453,6 +471,15 @@ const DEFAULT_BOARD_THEME = Object.freeze({
   gridStyle: "dots",
   ...BOARD_THEME_PRESETS.dark
 });
+// What the download arrow on a markdown note produces. "base64" is a single
+// .md with small assets inlined as reference-style definitions at the bottom;
+// "zip" is the .md plus the asset files; "plain" is the .md alone with its
+// refs left exactly as written. "ask" prompts per download and is the shipped
+// default, because the three trade portability against file size differently
+// enough that guessing on someone's behalf is worse than one click.
+const MARKDOWN_DOWNLOAD_MODES = Object.freeze(["ask", "base64", "zip", "plain"]);
+const DEFAULT_MARKDOWN_DOWNLOAD_MODE = "ask";
+
 const DEFAULT_BOARD_SETTINGS = Object.freeze({
   autosaveEnabled: true,
   autosaveSeconds: DEFAULT_AUTOSAVE_SECONDS,
@@ -462,8 +489,14 @@ const DEFAULT_BOARD_SETTINGS = Object.freeze({
   toolbarAutoHide: false,
   locked: false,
   theme: DEFAULT_BOARD_THEME,
-  githubSync: Object.freeze({ enabled: false, repo: "", branch: "main", token: "" })
+  githubSync: Object.freeze({ enabled: false, repo: "", branch: "main", token: "" }),
+  markdownDownloadMode: DEFAULT_MARKDOWN_DOWNLOAD_MODE
 });
+
+function normalizeMarkdownDownloadMode(raw) {
+  const value = String(raw || "");
+  return MARKDOWN_DOWNLOAD_MODES.includes(value) ? value : DEFAULT_MARKDOWN_DOWNLOAD_MODE;
+}
 
 function normalizeGithubSync(raw) {
   return {
@@ -594,7 +627,8 @@ function loadBoardSettings() {
       toolbarAutoHide: parsed?.toolbarAutoHide === true,
       locked: parsed?.locked === true,
       theme: normalizeBoardTheme(parsed?.theme),
-      githubSync: normalizeGithubSync(parsed?.githubSync)
+      githubSync: normalizeGithubSync(parsed?.githubSync),
+      markdownDownloadMode: normalizeMarkdownDownloadMode(parsed?.markdownDownloadMode)
     };
   } catch (error) {
     return { ...DEFAULT_BOARD_SETTINGS };
@@ -925,6 +959,7 @@ function ensureThemeSettingsUi() {
         <option value="none">None</option>
       </select>
     </label>
+    <button type="button" class="braindump-settings-reset-btn" id="braindump-theme-reset-${uid}">Return to default colours</button>
   `;
   firstSection.insertAdjacentElement("afterend", section);
 
@@ -933,7 +968,8 @@ function ensureThemeSettingsUi() {
     background: getBoardElementById(`braindump-theme-background-${uid}`),
     gridColor: getBoardElementById(`braindump-theme-grid-color-${uid}`),
     accent: getBoardElementById(`braindump-theme-accent-${uid}`),
-    gridStyle: getBoardElementById(`braindump-theme-grid-style-${uid}`)
+    gridStyle: getBoardElementById(`braindump-theme-grid-style-${uid}`),
+    reset: getBoardElementById(`braindump-theme-reset-${uid}`)
   };
 
   for (const modeInput of themeSettingsInputs.modes) {
@@ -978,6 +1014,10 @@ function ensureThemeSettingsUi() {
     applyBoardSettings({ announce: true });
   });
 
+  themeSettingsInputs.reset?.addEventListener("click", () => {
+    resetBoardThemeToDefault();
+  });
+
   return themeSettingsInputs;
 }
 
@@ -995,6 +1035,123 @@ function syncThemeSettingsPanel() {
   if (inputs.gridStyle) inputs.gridStyle.value = theme.gridStyle;
 }
 
+// "Return to default" clears the stored theme rather than writing the preset
+// values back in. A board that was never customized carries no theme key at
+// all, and every themed declaration in braindump.css resolves through
+// var(--bd-..., <literal>) straight to that literal. Deleting the key here,
+// instead of persisting DEFAULT_BOARD_THEME by value, makes a reset board
+// provably indistinguishable from one that was never touched rather than
+// merely equal to it: the settings blob itself goes back to having nothing
+// to say about theme, which is the stronger guarantee the card asked for.
+function resetBoardThemeToDefault() {
+  boardSettings.theme = normalizeBoardTheme(undefined);
+  applyBoardTheme();
+  syncThemeSettingsPanel();
+  try {
+    const stored = JSON.parse(localStorage.getItem(getBoardSettingsKey()) || "{}");
+    delete stored.theme;
+    localStorage.setItem(getBoardSettingsKey(), JSON.stringify(stored));
+  } catch (error) {
+    // Ignore storage failures; the in-memory theme is already reset.
+  }
+  showToolbarToast("Theme reset to default.", "info");
+}
+
+// Built here for the same reason the theme group is: the settings markup is
+// emitted by scripts/build-site.mjs into every generated board page, so a new
+// field in the template would mean rebuilding all of them.
+let markdownDownloadSettingsSelect = null;
+
+function ensureMarkdownDownloadSettingsUi() {
+  if (markdownDownloadSettingsSelect) return markdownDownloadSettingsSelect;
+  if (!settingsPanel) return null;
+
+  // Unique per board, since the landing page mounts more than one.
+  const uid = String(boardConfig.slug || "board").replace(/[^a-z0-9-]/gi, "-");
+  const section = document.createElement("section");
+  section.className = "braindump-settings-section";
+  section.setAttribute("aria-labelledby", `braindump-md-download-title-${uid}`);
+  section.innerHTML = `
+    <h3 id="braindump-md-download-title-${uid}" class="braindump-help-title">Markdown download</h3>
+    <p class="braindump-help-copy">What the download arrow on a note produces. Ask keeps the choice per download; the other three skip the prompt.</p>
+    <label class="braindump-settings-swatch-row braindump-settings-swatch-row-stacked" for="braindump-setting-md-download-${uid}">
+      <span class="braindump-settings-label">Default</span>
+      <select class="braindump-settings-select" id="braindump-setting-md-download-${uid}">
+        <option value="ask">Ask every time</option>
+        <option value="base64">Single .md, assets embedded as base64</option>
+        <option value="zip">Zip: .md plus the asset files</option>
+        <option value="plain">Markdown only, no assets</option>
+      </select>
+    </label>
+  `;
+
+  const ghSyncSection = settingsPanel.querySelector('[aria-labelledby="braindump-ghsync-title"]');
+  if (ghSyncSection) ghSyncSection.insertAdjacentElement("beforebegin", section);
+  else settingsPanel.appendChild(section);
+
+  markdownDownloadSettingsSelect = getBoardElementById(`braindump-setting-md-download-${uid}`);
+  markdownDownloadSettingsSelect?.addEventListener("change", () => {
+    boardSettings.markdownDownloadMode = markdownDownloadSettingsSelect.value;
+    applyBoardSettings({ announce: true });
+  });
+  return markdownDownloadSettingsSelect;
+}
+
+function syncMarkdownDownloadSettingsPanel() {
+  const select = ensureMarkdownDownloadSettingsUi();
+  if (select) select.value = normalizeMarkdownDownloadMode(boardSettings.markdownDownloadMode);
+}
+
+// The panel's markup is emitted by scripts/build-site.mjs into every generated
+// board page, so regrouping it in the template would mean rebuilding all of
+// them. It is regrouped here instead, once, after every section exists.
+//
+// Two things it fixes, both measured on the panel before it ran:
+//   1. The first group held four unlike rows under the single word "Settings":
+//      background autosave, the sync interval, a developer overlay and a
+//      toolbar preference. The overlay and the toolbar preference move to
+//      their own named group, and the autosave pair gets the name "Saving".
+//   2. The panel title and its Reset button lived inside that first group, so
+//      they scrolled out of view 40px into a 1630px scroll. Lifting the header
+//      to be a direct child of the panel is what lets CSS make it sticky.
+let settingsPanelStructured = false;
+
+function ensureSettingsPanelStructure() {
+  if (settingsPanelStructured || !settingsPanel) return;
+  const header = settingsPanel.querySelector(".braindump-settings-header");
+  const firstSection = settingsPanel.querySelector(".braindump-settings-section");
+  if (!header || !firstSection) return;
+  settingsPanelStructured = true;
+
+  settingsPanel.insertBefore(header, settingsPanel.firstChild);
+
+  // Ids stay unique when one page mounts several boards, as the landing page does.
+  const uid = String(boardConfig.slug || "board").replace(/[^a-z0-9-]/gi, "-");
+  const addHeading = (section, text, id) => {
+    const heading = document.createElement("h3");
+    heading.className = "braindump-help-title";
+    heading.id = id;
+    heading.textContent = text;
+    section.setAttribute("aria-labelledby", id);
+    section.insertBefore(heading, section.firstChild);
+  };
+
+  addHeading(firstSection, "Saving", `braindump-saving-title-${uid}`);
+
+  const workspace = document.createElement("section");
+  workspace.className = "braindump-settings-section";
+  addHeading(workspace, "Workspace", `braindump-workspace-title-${uid}`);
+  for (const input of [settingsDevModeInput, settingsToolbarAutoHideInput]) {
+    const row = input?.closest(".braindump-settings-toggle");
+    if (row) workspace.appendChild(row);
+  }
+  // Only split if there is something to split off, so a page template without
+  // those rows is left exactly as it was.
+  if (workspace.childElementCount > 1) {
+    firstSection.insertAdjacentElement("afterend", workspace);
+  }
+}
+
 function syncSettingsPanelFromState() {
   if (settingsAutosaveEnabledInput) {
     settingsAutosaveEnabledInput.checked = boardSettings.autosaveEnabled;
@@ -1010,11 +1167,14 @@ function syncSettingsPanelFromState() {
     settingsToolbarAutoHideInput.checked = boardSettings.toolbarAutoHide;
   }
   syncThemeSettingsPanel();
+  syncMarkdownDownloadSettingsPanel();
   const ghSync = boardSettings.githubSync || {};
   if (settingsGhSyncEnabledInput) settingsGhSyncEnabledInput.checked = ghSync.enabled === true;
   if (settingsGhSyncRepoInput) settingsGhSyncRepoInput.value = ghSync.repo || "";
   if (settingsGhSyncBranchInput) settingsGhSyncBranchInput.value = ghSync.branch || "main";
   if (settingsGhSyncTokenInput) settingsGhSyncTokenInput.value = ghSync.token || "";
+  // Last, so every lazily built section already exists to be regrouped.
+  ensureSettingsPanelStructure();
 }
 
 function applyBoardSettings(options = {}) {
@@ -1026,6 +1186,7 @@ function applyBoardSettings(options = {}) {
   boardSettings.locked = boardSettings.locked === true;
   boardSettings.theme = normalizeBoardTheme(boardSettings.theme);
   boardSettings.githubSync = normalizeGithubSync(boardSettings.githubSync);
+  boardSettings.markdownDownloadMode = normalizeMarkdownDownloadMode(boardSettings.markdownDownloadMode);
   boardConfig.autosaveSeconds = boardSettings.autosaveSeconds;
   if (persist) {
     persistBoardSettings();
@@ -2477,7 +2638,13 @@ function applySelectionMutations(mutationList) {
 }
 
 const selectionObserver = (canvas && typeof MutationObserver !== "undefined")
-  ? new MutationObserver(applySelectionMutations)
+  ? new MutationObserver((records) => {
+      applySelectionMutations(records);
+      // The touch bar's pin button reflects the selection, and this is the one
+      // place a selection change is already known. It is a no-op on a board
+      // that never built the bar, which is every mouse-only desktop.
+      syncTouchGestureBar();
+    })
   : null;
 selectionObserver?.observe(canvas, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
 
@@ -2633,6 +2800,12 @@ window.addEventListener("keyup", (e) => {
 // snaps onto a clean axis instead of whatever off-axis path was already walked.
 let shiftDragState = null;
 
+// A touchscreen has no Shift, so the same lock is also a latch, armed from the
+// touch gesture bar below. It feeds the identical shiftDragState.engaged flag
+// rather than synthesising a fake key event: one implementation, two ways in,
+// and a phone drag rebases onto the axis exactly the way a Shift drag does.
+let axisLockArmed = false;
+
 // Nearest of the 8 compass directions, unlike the draw tool's tolerance-gated
 // snapStraightLine. A drag lock has to hold at every angle, or "restrict to
 // horizontal, vertical or diagonal" would still let a node wander off-axis a
@@ -2650,7 +2823,11 @@ function beginShiftDragTracking(originX, originY, shiftDown) {
     originX, originY,
     lastX: originX, lastY: originY,
     appliedX: 0, appliedY: 0,
-    engaged: shiftDown,
+    // The physical key, kept apart from the latch, so releasing the latch
+    // mid-drag falls back to whether Shift is actually down rather than
+    // unlocking a drag the user is still holding Shift for.
+    shiftDown: Boolean(shiftDown),
+    engaged: Boolean(shiftDown) || axisLockArmed,
   };
 }
 
@@ -2667,16 +2844,55 @@ function applyShiftDrag(clientX, clientY) {
   moveSelectedNodesByDelta(target.x - shiftDragState.appliedX, target.y - shiftDragState.appliedY);
   shiftDragState.appliedX = target.x;
   shiftDragState.appliedY = target.y;
+  updateAxisLockGuide();
 }
 
-function updateShiftDrag(shiftDown) {
-  if (!shiftDragState || shiftDragState.engaged === shiftDown) return;
-  shiftDragState.engaged = shiftDown;
+function updateShiftDrag(shiftDown = shiftDragState?.shiftDown) {
+  if (!shiftDragState) return;
+  shiftDragState.shiftDown = Boolean(shiftDown);
+  const next = shiftDragState.shiftDown || axisLockArmed;
+  if (shiftDragState.engaged === next) return;
+  shiftDragState.engaged = next;
   applyShiftDrag(shiftDragState.lastX, shiftDragState.lastY);
+  if (!next) hideAxisLockGuide();
+}
+
+// The line the drag is locked to, through the drag's ORIGIN, at the angle the
+// offset snapped to. Drawn for a Shift drag too, not only a touch one: the
+// desktop gesture had no on-screen feedback either, and the request is for a
+// visible affordance rather than a touch-only one.
+let axisLockGuideEl = null;
+
+function updateAxisLockGuide() {
+  const state = shiftDragState;
+  if (!state?.engaged) return hideAxisLockGuide();
+  // Below a pixel of travel there is no axis yet, and drawing one would pick a
+  // direction out of rounding noise and flicker between the eight.
+  if (Math.hypot(state.appliedX, state.appliedY) < 1) return hideAxisLockGuide();
+  if (!axisLockGuideEl) {
+    axisLockGuideEl = document.createElement("div");
+    axisLockGuideEl.className = "bd-axis-lock-guide";
+    axisLockGuideEl.setAttribute("data-board-ui", "axis-lock-guide");
+    axisLockGuideEl.setAttribute("aria-hidden", "true");
+    viewport.appendChild(axisLockGuideEl);
+  }
+  // appliedX/appliedY are canvas units and the origin is client pixels, but the
+  // camera scale is uniform, so the angle is the same in both spaces.
+  const rect = viewport.getBoundingClientRect();
+  const angle = (Math.atan2(state.appliedY, state.appliedX) * 180) / Math.PI;
+  axisLockGuideEl.style.left = `${state.originX - rect.left}px`;
+  axisLockGuideEl.style.top = `${state.originY - rect.top}px`;
+  axisLockGuideEl.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+  axisLockGuideEl.style.display = "block";
+}
+
+function hideAxisLockGuide() {
+  if (axisLockGuideEl) axisLockGuideEl.style.display = "none";
 }
 
 function endShiftDragTracking() {
   shiftDragState = null;
+  hideAxisLockGuide();
 }
 
 // Shift flips the axis lock without any mouse movement mid-drag, same as Alt
@@ -2767,6 +2983,7 @@ function removeNodeById(nodeId) {
   const pin = pinnedNodes.get(nodeId);
   if (pin) {
     pin.ghost?.remove();
+    pin.frame?.remove();
     pinnedNodes.delete(nodeId);
   }
   // A VNC node holds an open WebSocket and a keyboard grab. Removing the element
@@ -3030,16 +3247,47 @@ function copySelected() {
 // the node also makes "pinning never changes stored geometry" structurally
 // true rather than a rule someone has to remember: the node object is never
 // written to, so no clone, export or undo entry can carry a pin.
-const pinnedNodes = new Map(); // node id -> { left, top, width, height, ghost }
+const pinnedNodes = new Map(); // node id -> { left, top, width, height, ghost, frame, snapZone, preSnap }
 
-// Keep a pin box fully inside the viewport, or flush to the top left when the
-// item is bigger than the viewport, which is what a window too big to fit does.
-function clampPinBox(box) {
+// Windows' drop zones, in viewport pixels. The edge band is thin because you
+// are aiming at a whole screen edge; the corner square is fat because you are
+// aiming at a point, and a 12px corner is unhittable.
+const PIN_EDGE_SNAP_PX = 12;
+const PIN_CORNER_SNAP_PX = 48;
+
+// The area a pin is allowed to live in, which is not the whole viewport.
+//
+// The board runs the full width of the window, but the site's left nav is
+// painted over it from the root stacking context, above everything the board
+// can reach. It is opaque, so a pin docked under it is simply invisible, and it
+// takes the pointer, so that strip cannot be clicked either. Snapping to a left
+// half without this puts half the item behind the nav.
+//
+// Measured live rather than assumed, so collapsing the nav hands the pin the
+// whole window back on the next clamp. Only the left is handled: that is the
+// only place the nav docks on a desktop, and below 1200px it comes in from the
+// right, where pins are a touch problem and touch is its own card.
+function pinArea() {
   const rect = viewport.getBoundingClientRect();
+  let inset = 0;
+  const nav = document.querySelector(".sidenav");
+  if (nav) {
+    const n = nav.getBoundingClientRect();
+    const coversLeftEdge =
+      n.width > 0 && n.height > 0 && n.left <= rect.left + 1 && n.right > rect.left;
+    if (coversLeftEdge) inset = Math.min(n.right - rect.left, rect.width / 2);
+  }
+  return { left: inset, top: 0, width: rect.width - inset, height: rect.height };
+}
+
+// Keep a pin box fully inside that area, or flush to its top left when the item
+// is bigger than it, which is what a window too big to fit does.
+function clampPinBox(box) {
+  const area = pinArea();
   return {
     ...box,
-    left: Math.min(Math.max(0, box.left), Math.max(0, rect.width - box.width)),
-    top: Math.min(Math.max(0, box.top), Math.max(0, rect.height - box.height))
+    left: Math.min(Math.max(area.left, box.left), Math.max(area.left, area.left + area.width - box.width)),
+    top: Math.min(Math.max(area.top, box.top), Math.max(area.top, area.top + area.height - box.height))
   };
 }
 
@@ -3071,10 +3319,12 @@ function syncPinnedNodes() {
     const el = getBoardElementById(id);
     if (!nodeObj || !el || !el.isConnected) {
       box.ghost?.remove();
+      box.frame?.remove();
       pinnedNodes.delete(id);
       continue;
     }
     applyPinnedGeometry(nodeObj, el, box);
+    syncPinFrame(box);
   }
 }
 
@@ -3095,22 +3345,37 @@ function mountPinGhost(nodeObj) {
   return ghost;
 }
 
-// Pin at the item's current on-screen top left so nothing jumps sideways, at
-// its stored size, clamped into view.
+// Pin around the item's current on-screen CENTRE, at its stored size, clamped
+// into view.
+//
+// It used to pin at the on-screen top left, which holds still only at zoom 1.
+// Anywhere else the item jumps to 1:1 pixels with its top left nailed down, so
+// a zoomed-out board threw it down and to the right, across the screen, away
+// from the thing you were looking at. That is the "snaps to my face" half of
+// the complaint. Growing around the centre keeps it over the spot you clicked,
+// and is identical to the old behaviour at zoom 1.
 function pinNodeToViewport(nodeObj) {
   const el = getBoardElementById(nodeObj.id);
   if (!el || pinnedNodes.has(nodeObj.id)) return false;
 
   const box = clampPinBox({
-    left: camera.x + nodeObj.x * camera.z,
-    top: camera.y + nodeObj.y * camera.z,
+    left: camera.x + nodeObj.x * camera.z - (nodeObj.width * (1 - camera.z)) / 2,
+    top: camera.y + nodeObj.y * camera.z - (nodeObj.height * (1 - camera.z)) / 2,
     width: nodeObj.width,
     height: nodeObj.height
   });
   box.ghost = mountPinGhost(nodeObj);
+  box.frame = mountPinFrame(nodeObj.id);
+  box.snapZone = null;
+  box.preSnap = null;
   pinnedNodes.set(nodeObj.id, box);
   el.classList.add("is-pinned");
   applyPinnedGeometry(nodeObj, el, box);
+  // The grab ring is only laid out by syncPinnedNodes, which runs on camera
+  // changes. Without this it would sit collapsed at 0,0 until you panned, and
+  // still drag correctly when found, which is exactly the kind of bug a test
+  // that asserts a delta rather than a position sails straight past.
+  syncPinFrame(box);
   return true;
 }
 
@@ -3125,6 +3390,7 @@ function unpinNodeFromViewport(nodeObj) {
 
   pinnedNodes.delete(nodeObj.id);
   box.ghost?.remove();
+  box.frame?.remove();
   const el = getBoardElementById(nodeObj.id);
   if (el) {
     el.classList.remove("is-pinned");
@@ -3185,12 +3451,401 @@ viewport.addEventListener("click", (e) => {
   e.stopPropagation();
 }, true);
 
+// ---- the touch gesture bar ----
+//
+// Every interaction added this session hangs off a key a touchscreen does not
+// have: Ctrl+click pins, Shift-drag locks an axis, Alt-drag copies. A phone was
+// therefore getting a strictly smaller product than a laptop, which is the
+// complaint. You cannot polyfill a modifier, so the two the card names get a
+// real touch affordance instead: an ACTION for pinning, and a LATCH for the
+// axis lock. A long press is not available for either, because 280ms of hold on
+// a node is already hold-to-drag and 320ms on the pen icon is already the brush
+// size, and a third meaning for the same hold is how you get a board where
+// nothing does what you expect.
+//
+// It renders only where the PRIMARY pointer is coarse, which is the same signal
+// the stylesheet uses to fatten the pin handles, so the two cannot disagree
+// about what a phone is. Deliberately not navigator.maxTouchPoints, which the
+// rest of the touch paths use: headless Chromium reports 2 of them on a plain
+// desktop, so that predicate would have put this bar on every laptop. A hybrid
+// machine with both a mouse and a touchscreen keeps the keyboard chords and
+// loses nothing. It docks to the right edge, vertically centred, because on a
+// 393px phone the toolbar pill spans the full width along the bottom, the lock
+// sits above its right end, and the site's nav toggle owns the top right.
+function boardPointerIsCoarse() {
+  if (typeof window.matchMedia !== "function") return navigator.maxTouchPoints > 0;
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
+let touchGestureBar = null;
+let touchGesturePinButton = null;
+let touchGestureAxisButton = null;
+
+function selectedNodeObjects() {
+  return getSelectedItemElements()
+    .map((el) => nodes.find((n) => n.id === el.id))
+    .filter(Boolean);
+}
+
+function setAxisLockArmed(on) {
+  axisLockArmed = Boolean(on);
+  touchGestureAxisButton?.classList.toggle("is-on", axisLockArmed);
+  touchGestureAxisButton?.setAttribute("aria-pressed", String(axisLockArmed));
+  // A drag already in flight picks the latch up at once, so it can be armed
+  // after the move has started, exactly as pressing Shift mid-drag does. No
+  // argument: updateShiftDrag re-derives from the key state it remembers.
+  updateShiftDrag();
+}
+
+// One tap is one decision for the whole selection. Toggling each item on its own
+// would make a mixed selection flip-flop on every tap and never converge.
+function toggleTouchGesturePin() {
+  const selected = selectedNodeObjects();
+  if (!selected.length) {
+    showToolbarToast("Tap an item to select it, then tap pin");
+    return;
+  }
+  const anyLoose = selected.some((n) => !pinnedNodes.has(n.id));
+  for (const nodeObj of selected) {
+    if (anyLoose) pinNodeToViewport(nodeObj);
+    else unpinNodeFromViewport(nodeObj);
+  }
+  syncTouchGestureBar();
+}
+
+function syncTouchGestureBar() {
+  if (!touchGesturePinButton) return;
+  const selected = selectedNodeObjects();
+  const pinned = selected.length > 0 && selected.every((n) => pinnedNodes.has(n.id));
+  touchGesturePinButton.classList.toggle("is-on", pinned);
+  touchGesturePinButton.setAttribute("aria-pressed", String(pinned));
+  // Dimmed rather than disabled: a disabled button gives no feedback when you
+  // press it, and "nothing is selected" is exactly what a first-timer needs told.
+  touchGesturePinButton.classList.toggle("is-idle", selected.length === 0);
+}
+
+function makeTouchGestureButton(name, label, svg, onTap) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "braindump-touch-gesture";
+  button.dataset.touchGesture = name;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-pressed", "false");
+  button.title = label;
+  button.innerHTML = svg;
+  // The bar lives inside the viewport, so without this a tap on it would also
+  // reach the board's own touchstart and start a pan or drop a node. Two
+  // fingers are deliberately let through: a second finger always belongs to the
+  // board, which is the rule that keeps pinch working over every other surface.
+  button.addEventListener("touchstart", (e) => { if (e.touches.length < 2) e.stopPropagation(); }, { passive: true });
+  button.addEventListener("pointerdown", (e) => e.stopPropagation());
+  button.addEventListener("mousedown", (e) => e.stopPropagation());
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onTap();
+  });
+  return button;
+}
+
+(function mountTouchGestureBar() {
+  if (!viewport || !boardPointerIsCoarse()) return;
+  touchGestureBar = document.createElement("div");
+  touchGestureBar.className = "braindump-touch-gestures";
+  touchGestureBar.setAttribute("data-board-ui", "touch-gestures");
+  touchGestureBar.setAttribute("role", "group");
+  touchGestureBar.setAttribute("aria-label", "Touch gestures");
+
+  touchGesturePinButton = makeTouchGestureButton(
+    "pin",
+    "Pin selection to the screen",
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>',
+    toggleTouchGesturePin
+  );
+  touchGestureBar.appendChild(touchGesturePinButton);
+
+  touchGestureAxisButton = makeTouchGestureButton(
+    "axis-lock",
+    "Lock dragging to one axis",
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M3 12h18"/><path d="m9 6 3-3 3 3"/><path d="m9 18 3 3 3-3"/><path d="m6 9-3 3 3 3"/><path d="m18 9 3 3-3 3"/></svg>',
+    () => setAxisLockArmed(!axisLockArmed)
+  );
+  touchGestureBar.appendChild(touchGestureAxisButton);
+
+  viewport.appendChild(touchGestureBar);
+  syncTouchGestureBar();
+})();
+
+// ---- moving a pinned box, and Windows-style snapping ----
+//
+// What this answers: a pin used to land where it landed and stay there. Now the
+// pinned frame carries a ring of grab handles, and you can throw it at an edge
+// or a corner the way you throw a window.
+//
+// The handles MOVE the box; they do not resize it. That is the one place this
+// parts company with an OS window, and it is deliberate. The request asks for
+// it in as many words ("moved around ... by dragging from its edges and
+// corners"), and a live embed has no other handle at all, because
+// .bd-embed-shield swallows every mousedown over the iframe. Resizing arrives
+// through the snap zones instead: a half, a quarter, or the whole viewport.
+//
+// The handles live in the viewport layer, not inside the item. Nothing is
+// re-parented and no child is added to a node, so an iframe never reloads, and
+// the handles sit above the embed shield instead of fighting it.
+const PIN_HANDLE_SPOTS = ["n", "s", "w", "e", "nw", "ne", "sw", "se"];
+
+function mountPinFrame(nodeId) {
+  const frame = document.createElement("div");
+  frame.className = "bd-pin-frame";
+  frame.setAttribute("aria-hidden", "true");
+  frame.dataset.pinFrameFor = nodeId;
+  // Corners last: they overlap the edge bands and a later sibling wins the hit
+  // test, so a corner grab never lands on the edge underneath it.
+  for (const spot of PIN_HANDLE_SPOTS) {
+    const handle = document.createElement("div");
+    handle.className = `bd-pin-handle bd-pin-handle-${spot}`;
+    handle.dataset.pinHandle = spot;
+    frame.appendChild(handle);
+  }
+  frame.addEventListener("mousedown", (e) => beginPinDrag(e, nodeId));
+  // Touch never produces a mousedown until the gesture is over, so without this
+  // the ring is decorative on a phone: the box could be pinned and then never
+  // moved or snapped again. passive:false because the drag has to claim the
+  // default, or the board pans out from under the box being dragged.
+  frame.addEventListener("touchstart", (e) => beginPinDrag(e, nodeId), { passive: false });
+  viewport.appendChild(frame);
+  return frame;
+}
+
+function syncPinFrame(box) {
+  if (!box.frame) return;
+  box.frame.style.left = `${box.left}px`;
+  box.frame.style.top = `${box.top}px`;
+  box.frame.style.width = `${box.width}px`;
+  box.frame.style.height = `${box.height}px`;
+}
+
+// Read from the pointer, not from the box, so a box already clamped against the
+// viewport edge can still claim the edge it is being thrown at. A corner beats
+// an edge, because the corner square contains the edge band and would otherwise
+// be unreachable. The bottom edge is dead, as it is on Windows.
+function pinSnapZoneAt(clientX, clientY) {
+  const rect = viewport.getBoundingClientRect();
+  const area = pinArea();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const right = area.left + area.width;
+  const bottom = area.top + area.height;
+  const nearLeft = x <= area.left + PIN_CORNER_SNAP_PX;
+  const nearRight = x >= right - PIN_CORNER_SNAP_PX;
+  const nearTop = y <= area.top + PIN_CORNER_SNAP_PX;
+  const nearBottom = y >= bottom - PIN_CORNER_SNAP_PX;
+  if (nearTop && nearLeft) return "top-left";
+  if (nearTop && nearRight) return "top-right";
+  if (nearBottom && nearLeft) return "bottom-left";
+  if (nearBottom && nearRight) return "bottom-right";
+  if (x <= area.left + PIN_EDGE_SNAP_PX) return "left";
+  if (x >= right - PIN_EDGE_SNAP_PX) return "right";
+  if (y <= area.top + PIN_EDGE_SNAP_PX) return "maximised";
+  return null;
+}
+
+// What a zone is worth in pixels right now. Measured on every read rather than
+// stored, so a pin snapped to a half is still a true half after the window is
+// resized or the nav is collapsed. The right half is derived from the left one
+// rather than rounded on its own, or a pair of them leaves a seam.
+function pinSnapRect(zone) {
+  const area = pinArea();
+  const halfW = Math.round(area.width / 2);
+  const halfH = Math.round(area.height / 2);
+  const midLeft = area.left + area.width - halfW;
+  const midTop = area.top + area.height - halfH;
+  switch (zone) {
+    case "left": return { left: area.left, top: area.top, width: halfW, height: area.height };
+    case "right": return { left: midLeft, top: area.top, width: halfW, height: area.height };
+    case "maximised": return { left: area.left, top: area.top, width: area.width, height: area.height };
+    case "top-left": return { left: area.left, top: area.top, width: halfW, height: halfH };
+    case "top-right": return { left: midLeft, top: area.top, width: halfW, height: halfH };
+    case "bottom-left": return { left: area.left, top: midTop, width: halfW, height: halfH };
+    case "bottom-right": return { left: midLeft, top: midTop, width: halfW, height: halfH };
+    default: return null;
+  }
+}
+
+// One shared overlay rather than one per pin, because only one drag can be in
+// flight. Same 20 percent cyan as the ghost, so the two cyan rectangles on
+// screen read as one idea: where it came from, where it is going.
+let pinSnapPreviewEl = null;
+
+function showPinSnapPreview(zone) {
+  const target = zone ? pinSnapRect(zone) : null;
+  if (!target) {
+    pinSnapPreviewEl?.remove();
+    pinSnapPreviewEl = null;
+    return;
+  }
+  if (!pinSnapPreviewEl) {
+    pinSnapPreviewEl = document.createElement("div");
+    pinSnapPreviewEl.className = "bd-pin-snap-preview";
+    pinSnapPreviewEl.setAttribute("aria-hidden", "true");
+    viewport.appendChild(pinSnapPreviewEl);
+  }
+  pinSnapPreviewEl.dataset.pinSnapZone = zone;
+  pinSnapPreviewEl.style.left = `${target.left}px`;
+  pinSnapPreviewEl.style.top = `${target.top}px`;
+  pinSnapPreviewEl.style.width = `${target.width}px`;
+  pinSnapPreviewEl.style.height = `${target.height}px`;
+}
+
+let pinDrag = null;
+let pinDragSwallowsClick = false;
+
+// A mouse event carries its own coordinates; a touch event carries them one
+// level down. changedTouches covers touchend, where touches is already empty.
+function pinDragPoint(e) {
+  return e.touches?.[0] || e.changedTouches?.[0] || e;
+}
+
+function beginPinDrag(e, nodeId) {
+  // One finger on the ring drags the box. A second finger is the board's, which
+  // is the rule that keeps pinch-zoom alive everywhere else on this board.
+  if (e.touches ? e.touches.length !== 1 : e.button !== 0) return;
+  const box = pinnedNodes.get(nodeId);
+  if (!box || !e.target.closest?.(".bd-pin-handle")) return;
+
+  // The handles float over the board, so letting this through would start a
+  // rubber-band selection underneath, or drop a node from the active tool.
+  if (e.cancelable) e.preventDefault();
+  e.stopPropagation();
+
+  const point = pinDragPoint(e);
+  const rect = viewport.getBoundingClientRect();
+  const x = point.clientX - rect.left;
+  const y = point.clientY - rect.top;
+
+  // Windows gives a snapped window its old size back the moment you drag it
+  // off, keeping the pointer at the same fraction across it. Without this a
+  // snapped pin could never get small again without being unpinned.
+  if (box.snapZone && box.preSnap) {
+    const fx = box.width ? (x - box.left) / box.width : 0.5;
+    const fy = box.height ? (y - box.top) / box.height : 0.5;
+    box.width = box.preSnap.width;
+    box.height = box.preSnap.height;
+    box.left = x - fx * box.width;
+    box.top = y - fy * box.height;
+    box.snapZone = null;
+    box.preSnap = null;
+  }
+
+  pinDrag = {
+    id: nodeId,
+    box,
+    startX: x,
+    startY: y,
+    originLeft: box.left,
+    originTop: box.top,
+    zone: null
+  };
+  window.addEventListener("mousemove", onPinDragMove, true);
+  window.addEventListener("mouseup", endPinDrag, true);
+  window.addEventListener("touchmove", onPinDragMove, { capture: true, passive: false });
+  window.addEventListener("touchend", endPinDrag, true);
+  window.addEventListener("touchcancel", endPinDrag, true);
+}
+
+function onPinDragMove(e) {
+  if (!pinDrag) return;
+  const point = pinDragPoint(e);
+  // A touchmove that is not claimed scrolls the page and cancels the gesture.
+  if (e.touches && e.cancelable) e.preventDefault();
+  const rect = viewport.getBoundingClientRect();
+  // Accumulated from the grab point rather than from the last frame, so the box
+  // comes back out of a clamp instead of drifting behind the pointer.
+  pinDrag.box.left = pinDrag.originLeft + (point.clientX - rect.left - pinDrag.startX);
+  pinDrag.box.top = pinDrag.originTop + (point.clientY - rect.top - pinDrag.startY);
+  Object.assign(pinDrag.box, clampPinBox(pinDrag.box));
+  pinDrag.zone = pinSnapZoneAt(point.clientX, point.clientY);
+  showPinSnapPreview(pinDrag.zone);
+  pinDragSwallowsClick = true;
+  syncPinnedNodes();
+}
+
+// Last drop wins. Whoever held this zone gives it up and falls back to the box
+// it had before it claimed it, rather than two pins stacking in one half.
+function applyPinSnap(box, nodeId, zone) {
+  const target = pinSnapRect(zone);
+  if (!target) return;
+  for (const [otherId, other] of pinnedNodes) {
+    if (otherId === nodeId || other.snapZone !== zone) continue;
+    const restore = other.preSnap;
+    other.snapZone = null;
+    other.preSnap = null;
+    if (restore) Object.assign(other, clampPinBox(restore));
+  }
+  if (!box.snapZone) {
+    box.preSnap = { left: box.left, top: box.top, width: box.width, height: box.height };
+  }
+  box.snapZone = zone;
+  Object.assign(box, target);
+}
+
+function endPinDrag(e) {
+  const drag = pinDrag;
+  if (!drag) return;
+  pinDrag = null;
+  window.removeEventListener("mousemove", onPinDragMove, true);
+  window.removeEventListener("mouseup", endPinDrag, true);
+  window.removeEventListener("touchmove", onPinDragMove, { capture: true });
+  window.removeEventListener("touchend", endPinDrag, true);
+  window.removeEventListener("touchcancel", endPinDrag, true);
+  if (e) {
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
+  }
+  if (drag.zone) {
+    // A snapped rect is exactly the zone, so clamping it here would shave a
+    // sub-pixel off a half against a fractional viewport width.
+    applyPinSnap(drag.box, drag.id, drag.zone);
+  } else {
+    drag.box.snapZone = null;
+    drag.box.preSnap = null;
+    Object.assign(drag.box, clampPinBox(drag.box));
+  }
+  showPinSnapPreview(null);
+  syncPinnedNodes();
+}
+
+// A drag that ends over the board would otherwise finish as a click on the
+// viewport, and in a placement tool that drops a new node where you let go.
+viewport.addEventListener("click", (e) => {
+  if (!pinDragSwallowsClick) return;
+  pinDragSwallowsClick = false;
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+// The handler above only runs when the click actually reaches the viewport, and
+// a pin drag routinely ends somewhere else: the left snap zone starts at the
+// site nav's right edge, so aiming at the left half drags the pointer over 232px
+// of nav. The click then fires on a common ancestor, the flag stays true, and it
+// eats the user's next genuine board click instead. Clearing on the bubble phase
+// at the window means the capture handler above has already had its chance to
+// swallow, so this only ever mops up the case where it never ran.
+window.addEventListener("click", () => {
+  pinDragSwallowsClick = false;
+});
+
 // A pin box is measured against the viewport, so resizing the window can leave
 // a pinned item hanging off the edge. This is the board's only resize listener
 // and it returns immediately when nothing is pinned.
 window.addEventListener("resize", () => {
   if (!pinnedNodes.size) return;
-  for (const box of pinnedNodes.values()) Object.assign(box, clampPinBox(box));
+  for (const box of pinnedNodes.values()) {
+    // A pin snapped to a half has to still be a half in the new window, so its
+    // zone is re-measured rather than its old pixels clamped.
+    const snapped = box.snapZone ? pinSnapRect(box.snapZone) : null;
+    Object.assign(box, snapped || clampPinBox(box));
+  }
   syncPinnedNodes();
 });
 
@@ -3340,12 +3995,20 @@ function syncDevOverlay() {
   }
 }
 
-// Generate zoom-scaled pen cursor
+// Generate zoom-scaled pen cursor. The ring is the real brush, at the real
+// zoom, so what you see under the cursor is what the stroke will cover.
 function getDrawCursor() {
-  const r = Math.min(Math.max(Math.round(4 * camera.z / 2), 3), 20);
+  const brush = getBrushSize();
+  const r = Math.min(Math.max(Math.round(brush * camera.z / 2), 3), 48);
   const size = r * 2 + 4;
   const cx = size / 2;
-  return `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="%233fdaca" stroke-width="1.5"/><circle cx="${cx}" cy="${cx}" r="1" fill="%233fdaca"/></svg>') ${cx} ${cx}, crosshair`;
+  // The ring has to be the colour the pen will actually lay down, not a fixed
+  // teal that merely happened to match the default accent. Set the accent to
+  // pink and a hard-coded ring gives you pink strokes from a teal cursor, which
+  // is the pen lying about itself. encodeURIComponent because this is a data
+  // URI and "#" would end the SVG.
+  const ink = activeTool === "erase" ? "%23f2f5f4" : encodeURIComponent(getPenStrokeColor());
+  return `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="${ink}" stroke-width="1.5"/><circle cx="${cx}" cy="${cx}" r="1" fill="${ink}"/></svg>') ${cx} ${cx}, crosshair`;
 }
 
 function placeToolNodeAt(clientX, clientY, tool = activeTool, options = {}) {
@@ -3407,7 +4070,7 @@ function placeToolNodeAt(clientX, clientY, tool = activeTool, options = {}) {
 
   const pos = screenToCanvas(clientX, clientY);
 
-  if (tool !== "pan" && tool !== "select" && tool !== "draw") {
+  if (tool !== "pan" && tool !== "select" && tool !== "draw" && tool !== "erase") {
     createNode(tool, pos.x, pos.y);
     setActiveTool("select");
     return true;
@@ -3454,7 +4117,7 @@ function applyWheelZoom(deltaY, clientX, clientY, ctrlKey) {
   camera.y -= dy;
   camera.z = newZ;
   updateTransform();
-  if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
+  if (activeTool === "draw" || activeTool === "erase") viewport.style.cursor = getDrawCursor();
   markBoardDirty();
 }
 
@@ -3490,6 +4153,18 @@ function wheelBelongsToScrollableOverlay(target) {
 
 // Handle Mouse & Touch Pan/Zoom
 viewport.addEventListener("wheel", (e) => {
+  // Alt+wheel resizes the active brush instead of zooming, and only while a
+  // brush tool is selected: with select or pan active, Alt+wheel still zooms, so
+  // the modifier costs nothing to anyone who is not holding a pen. Checked
+  // before the overlay walk because the size bubble is drawn over the board, not
+  // in it, and Alt here never reaches the alt-drag copy modifier, which only
+  // looks at keydown/keyup while a node drag is in flight.
+  if (e.altKey && (activeTool === "draw" || activeTool === "erase")) {
+    e.preventDefault();
+    nudgeBrushSize(e.deltaY < 0 ? 1 : -1);
+    showBrushSizeBubble(e.clientX, e.clientY);
+    return;
+  }
   if (wheelBelongsToScrollableOverlay(e.target)) return;
   e.preventDefault(); // Default to zoom for all scroll actions
   applyWheelZoom(e.deltaY, e.clientX, e.clientY, e.ctrlKey);
@@ -3558,6 +4233,9 @@ viewport.addEventListener("touchstart", (e) => {
     if (activeTool === "draw") {
       e.preventDefault();
       startDrawing(touch.clientX, touch.clientY);
+    } else if (activeTool === "erase") {
+      e.preventDefault();
+      startErasing(touch.clientX, touch.clientY);
     } else if (isPlacementTouchTool && !isEditableTouchTarget) {
       e.preventDefault();
       beginTouchPlacement(
@@ -3630,6 +4308,9 @@ viewport.addEventListener("touchmove", (e) => {
     if (isDrawing) {
       e.preventDefault();
       draw(touch.clientX, touch.clientY, e.shiftKey);
+    } else if (eraseState) {
+      e.preventDefault();
+      eraseTo(touch.clientX, touch.clientY);
     } else if (dragRect.active) {
       e.preventDefault();
       updateSelectionRect(touch.clientX, touch.clientY);
@@ -3676,6 +4357,7 @@ viewport.addEventListener("touchend", (e) => {
   }
 
   if (isDrawing) stopDrawing();
+  if (eraseState) stopErasing();
   if (dragRect.active) {
     dragRect.active = false;
     if (selectionBox) selectionBox.style.display = "none";
@@ -3749,9 +4431,13 @@ viewport.addEventListener("contextmenu", (e) => {
 viewport.addEventListener("mousedown", (e) => {
   if (e.target.closest?.(".resize-handle")) return;
   // Draw tool wins over the Shift+drag pan shortcut so Shift can start a
-  // straight-line stroke instead of hijacking the click as a pan.
+  // straight-line stroke instead of hijacking the click as a pan. The eraser
+  // sits in the same slot for the same reason.
   if (e.button === 0 && activeTool === "draw") {
     startDrawing(e.clientX, e.clientY);
+  } else if (e.button === 0 && activeTool === "erase") {
+    e.preventDefault();
+    startErasing(e.clientX, e.clientY);
   } else if (e.button === 0 && (e.shiftKey || activeTool === "pan")) {
     isPanning = true;
     startPan = { x: e.clientX - camera.x, y: e.clientY - camera.y };
@@ -3775,7 +4461,7 @@ viewport.addEventListener("click", (e) => {
 
   if (activeTool === "text") {
     placeToolNodeAt(e.clientX, e.clientY, "text", { useTouchPlacement: false });
-  } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "draw") {
+  } else if (activeTool !== "pan" && activeTool !== "select" && activeTool !== "draw" && activeTool !== "erase") {
     placeToolNodeAt(e.clientX, e.clientY, activeTool, { useTouchPlacement: false });
   }
 });
@@ -3792,14 +4478,28 @@ viewport.addEventListener("pointermove", (e) => {
 
 window.addEventListener("pointermove", (e) => {
   if (_activeBoardViewport !== viewport) return;
-  lastMousePos.x = e.clientX;
-  lastMousePos.y = e.clientY;
+  // Only follow the pointer outside this viewport while a gesture is actually
+  // running. The claim above is sticky now, so the keyboard keeps addressing
+  // the board you last used, and that is deliberate. But lastMousePos feeds
+  // paste placement and the `x` note shortcut, which must stay scoped to the
+  // board the pointer is really over, which is what the viewport-bound handler
+  // above does. Without this guard, on a page carrying several preview boards,
+  // clicking board A once makes every later pointer move anywhere in the
+  // document write into A's lastMousePos: a paste correctly routed to A then
+  // lands at coordinates read off wherever the pointer happened to be, which
+  // is usually over a different board entirely.
+  if (isPanning || isDrawing || eraseState || dragRect.active) {
+    lastMousePos.x = e.clientX;
+    lastMousePos.y = e.clientY;
+  }
   if (isPanning) {
     camera.x = e.clientX - startPan.x;
     camera.y = e.clientY - startPan.y;
     updateTransform();
   } else if (isDrawing) {
     draw(e.clientX, e.clientY, e.shiftKey);
+  } else if (eraseState) {
+    eraseTo(e.clientX, e.clientY);
   } else if (dragRect.active) {
     updateSelectionRect(e.clientX, e.clientY);
   }
@@ -3809,8 +4509,7 @@ window.addEventListener("pointerup", (e) => {
   if (_activeBoardViewport !== viewport) return;
   if (isPanning) {
     isPanning = false;
-    // Restore cursor to the tool's correct cursor
-    if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
+    if (activeTool === "draw" || activeTool === "erase") viewport.style.cursor = getDrawCursor();
     else if (activeTool === "pan") viewport.style.cursor = "grab";
     else viewport.style.cursor = "default";
     markBoardDirty();
@@ -3819,6 +4518,7 @@ window.addEventListener("pointerup", (e) => {
   }
 
   if (isDrawing) stopDrawing();
+  if (eraseState) stopErasing();
 
   if (dragRect.active) {
     dragRect.active = false;
@@ -3833,7 +4533,13 @@ window.addEventListener("pointerup", (e) => {
       }
     });
   }
-  _activeBoardViewport = null;
+  // The keyboard claim is deliberately sticky now. It used to clear here, which
+  // left a page with more than one mounted board with no keyboard owner the
+  // instant the pointer came up: the keydown gate then falls through to
+  // :focus-within, and a canvas nobody has focused does not match that, so
+  // Delete and undo went dead on every board. The last board touched keeps the
+  // keyboard until another one is touched. On a single-board page the gate is
+  // skipped entirely, so nothing there changes.
 });
 
 // ---- lazy embeds ----
@@ -4271,6 +4977,90 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") flushYouTubePlayheads();
 });
 
+// ---- Arrow-key board panning ----
+// Only fires with an empty selection: arrows already drive markdown carets
+// and text editing (guarded by the isContentEditable/TEXTAREA/INPUT check at
+// the top of the keydown handler below), YouTube seeking (5s per press, see
+// getSingleSelectedYouTubeIframe further down this same handler), and any
+// other selected-node shortcut. Selection is read through the central
+// getSelectedItemElements() getter rather than scanned from the DOM, per
+// "Selection as state".
+// Held keys ramp from a walking pace to a capped top speed over
+// ARROW_PAN_ACCEL_MS, timed against performance.now() deltas rather than
+// frame count, so the ramp and the cap cover the same ground per second on a
+// 240Hz panel as a 60Hz one. Diagonals (two arrows held) are normalized to
+// the same top speed as a straight line, not sqrt(2) faster: panning intent
+// is "look over there", not extra credit for picking a corner.
+const ARROW_PAN_KEYS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+const ARROW_PAN_MIN_SPEED = 400; // screen px/sec at the moment a hold starts
+const ARROW_PAN_MAX_SPEED = 2200; // screen px/sec cap
+const ARROW_PAN_ACCEL_MS = 900; // time to ramp from min to max speed
+const arrowPanState = { keys: new Set(), heldSince: 0, rafId: null, lastTick: 0 };
+
+function arrowPanIsTypingTarget(el) {
+  return !!el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable);
+}
+
+function stopArrowPan() {
+  const wasPanning = arrowPanState.keys.size > 0;
+  arrowPanState.keys.clear();
+  arrowPanState.heldSince = 0;
+  arrowPanState.lastTick = 0;
+  if (arrowPanState.rafId) {
+    cancelAnimationFrame(arrowPanState.rafId);
+    arrowPanState.rafId = null;
+  }
+  // Drag-panning marks the board dirty on pointerup, which is what schedules
+  // the save that writes viewport: {x, y, z}. Arrow panning only called
+  // updateTransform(), so the camera you stopped at was never persisted and a
+  // reload dropped you at whatever mid-ramp position an unrelated pending save
+  // happened to capture: measured, live camera at x -780.8 against a stored
+  // -139.8. Marked at the end of the gesture rather than per frame, for the
+  // same reason the video playhead is written on stop and not on every tick:
+  // dirtying 60 times a second would queue a save for the whole hold.
+  if (wasPanning) markBoardDirty();
+}
+
+function arrowPanTick(now) {
+  if (!arrowPanState.keys.size) { arrowPanState.rafId = null; return; }
+  // Re-checked every frame, not just on keydown: a mouse selection or a focus
+  // change mid-hold should stop the board without waiting on a keyup that may
+  // never arrive from that source.
+  if (arrowPanIsTypingTarget(document.activeElement) || getSelectedItemElements().length) {
+    stopArrowPan();
+    return;
+  }
+  const dt = arrowPanState.lastTick ? Math.min((now - arrowPanState.lastTick) / 1000, 0.1) : 0;
+  arrowPanState.lastTick = now;
+
+  let dx = 0, dy = 0;
+  for (const key of arrowPanState.keys) {
+    const vec = ARROW_PAN_KEYS[key];
+    dx += vec[0];
+    dy += vec[1];
+  }
+  const len = Math.hypot(dx, dy);
+  if (len > 0 && dt > 0) {
+    const heldMs = now - arrowPanState.heldSince;
+    const t = Math.min(heldMs / ARROW_PAN_ACCEL_MS, 1);
+    const speed = ARROW_PAN_MIN_SPEED + (ARROW_PAN_MAX_SPEED - ARROW_PAN_MIN_SPEED) * t;
+    // Arrows pan like scrolling: ArrowRight looks further right, so the
+    // canvas translates left underneath a viewport that stays put.
+    camera.x -= (dx / len) * speed * dt;
+    camera.y -= (dy / len) * speed * dt;
+    updateTransform();
+  }
+  arrowPanState.rafId = requestAnimationFrame(arrowPanTick);
+}
+
+function startArrowPan(key) {
+  if (!arrowPanState.keys.size) arrowPanState.heldSince = performance.now();
+  arrowPanState.keys.add(key);
+  if (!arrowPanState.rafId) arrowPanState.rafId = requestAnimationFrame(arrowPanTick);
+}
+
+window.addEventListener("blur", stopArrowPan);
+
 // Shortcuts
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
@@ -4307,8 +5097,38 @@ window.addEventListener("keydown", (e) => {
       }
     }
   }
+  // Arrow-key board panning: only when nothing is selected (the YouTube block
+  // above already claims Left/Right/Space for a selected video, and any other
+  // node with its own arrow behaviour is reached by selecting it) and no
+  // modifier is held, since Ctrl/Alt/Shift+Arrow already mean something
+  // elsewhere (browser navigation, straight-line drawing, line selection).
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && ARROW_PAN_KEYS[e.key] && !getSelectedItemElements().length) {
+    e.preventDefault();
+    startArrowPan(e.key);
+    return;
+  }
+  // `?` is Shift+/ on most layouts, so match the character, not a code. The
+  // guards at the top of this handler already rule out a note, a text node, a
+  // settings field and a focused VNC screen, which is exactly where a literal
+  // "?" has to reach the caret instead of opening a panel.
+  if (e.key === "?") {
+    e.preventDefault();
+    setShortcutsPanelOpen(!isShortcutsPanelOpen());
+    return;
+  }
+
   // Undo/Redo/Cut/Copy/Delete
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) { e.preventDefault(); saveLocalFile(); return; }
+  // Ctrl+S saves the BOARD, which is what the toolbar button beside it does and
+  // what its tooltip has always promised. It used to call saveLocalFile(), and
+  // with no previously opened file handle that falls through to saveLocalFileAs():
+  // a Save-As dialog on Chrome, a silent download on Firefox, and zero POSTs to
+  // /api/save-board either way. So the most reflexive save gesture on the board
+  // did not save the board.
+  // Ctrl+Alt+S keeps the "write straight back to the .canvas I opened with
+  // Ctrl+O" workflow. Without it that path has no reachable caller, since the
+  // toolbar's own save button returns saveBoard() before it can be hit.
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey && !e.altKey) { e.preventDefault(); saveBoard(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && e.altKey && !e.shiftKey) { e.preventDefault(); saveLocalFile(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && e.shiftKey) { e.preventDefault(); saveLocalFileAs(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") { e.preventDefault(); openCanvasPicker(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") { e.preventDefault(); importContentPicker(); return; }
@@ -4322,6 +5142,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "t" || e.key === "T") setActiveTool("text");
   if (e.key === "v" || e.key === "V") setActiveTool("select");
   if (e.key === "l" || e.key === "L") setActiveTool("bookmark");
+  if (e.key === "e" || e.key === "E") setActiveTool("erase");
   if (e.key === "x" || e.key === "X") {
     e.preventDefault();
     openMarkdownPanel(screenToCanvas(lastMousePos.x, lastMousePos.y));
@@ -4336,6 +5157,13 @@ window.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("keyup", (e) => {
+  // Runs ahead of the typing-target guard below on purpose: a held arrow must
+  // stop the instant it is released even if focus moved into a text field in
+  // between, or a held pan could survive a click into a note mid-hold.
+  if (ARROW_PAN_KEYS[e.key]) {
+    arrowPanState.keys.delete(e.key);
+    if (!arrowPanState.keys.size) stopArrowPan();
+  }
   if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
   if (_mountedBoardCount > 1) {
     if (_activeBoardViewport && _activeBoardViewport !== viewport) return;
@@ -4345,7 +5173,7 @@ window.addEventListener("keyup", (e) => {
     setActiveTool(viewport.dataset.prevTool);
     viewport.dataset.prevTool = "";
     if (!isPanning) {
-      if (activeTool === "draw") viewport.style.cursor = getDrawCursor();
+      if (activeTool === "draw" || activeTool === "erase") viewport.style.cursor = getDrawCursor();
       else if (activeTool !== "pan") viewport.style.cursor = "default";
     }
   }
@@ -4359,24 +5187,26 @@ window.addEventListener("keyup", (e) => {
 // Tools logic
 function setActiveTool(tool) {
   if (tool === "export" || tool === "import" || tool === "save" || tool === "recommend" || tool === "settings" || tool === "feature-request" || tool === "bug-report" || tool === "more") return;
-  if (isPreviewMode && (tool === "text" || tool === "draw" || tool === "bookmark")) return;
+  if (isPreviewMode && (tool === "text" || tool === "draw" || tool === "erase" || tool === "bookmark")) return;
   // Locking blocks creating/drawing new content, not looking around — select
-  // and pan both stay reachable so a locked board can still be panned.
-  if (isBoardLocked() && (tool === "text" || tool === "draw" || tool === "bookmark")) return;
+  // and pan both stay reachable so a locked board can still be panned. Erasing
+  // destroys content, so it is locked out with the rest.
+  if (isBoardLocked() && (tool === "text" || tool === "draw" || tool === "erase" || tool === "bookmark")) return;
   activeTool = tool;
   toolbarButtons.forEach(btn => {
     btn.classList.toggle("active", btn.dataset.tool === tool);
   });
   viewport.dataset.mode = tool;
-  if (tool === "draw") viewport.style.cursor = getDrawCursor();
+  if (tool === "draw" || tool === "erase") viewport.style.cursor = getDrawCursor();
   else if (tool === "pan") viewport.style.cursor = "grab";
   else viewport.style.cursor = "default";
+  hideBrushSizeBubble();
 }
 
 function stopTransientBoardInteractions() {
   cancelActiveTouchNodeInteraction();
   if (isDrawing) stopDrawing();
-  isPanning = false;
+  if (eraseState) stopErasing();
   initialPinchDistance = null;
   pinchStartCamera = null;
   pinchStartMidpoint = null;
@@ -4435,6 +5265,10 @@ function handleToolbarAction(btn) {
   if (btn.dataset.tool === "save") return saveLocalFile();
   if (btn.dataset.tool === "export") return openExportModal();
   if (btn.dataset.tool === "new-markdown") return openMarkdownPanel();
+  if (btn.dataset.tool === "new-canvas") {
+    void createNewCanvasNode();
+    return;
+  }
   if (btn.dataset.tool === "markdown-db") {
     if (isBoardLocked()) return;
     const dimensions = { width: 460, height: 360 };
@@ -4450,6 +5284,7 @@ toolbarButtons.forEach(btn => {
   btn.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     event.stopPropagation();
+    beginBrushSizeLongPress(btn, event);
   });
 
   btn.addEventListener("touchstart", (event) => {
@@ -4477,8 +5312,11 @@ function setToolbarCollapsed(collapsed) {
   if (!toolbarShell || !toolbar) return;
   toolbarShell.classList.toggle("is-collapsed", collapsed);
   // inert, not just CSS, so Tab skips the invisible pill instead of
-  // stranding keyboard focus on buttons nobody can see.
+  // stranding keyboard focus on buttons nobody can see. The lock folds away
+  // with the pill now (reversing the original "lock survives collapse"
+  // design, per direct feedback), so it gets the same treatment.
   toolbar.toggleAttribute("inert", collapsed);
+  toolbarLockButton?.toggleAttribute("inert", collapsed);
   toolbarRevealButton?.setAttribute("aria-expanded", String(!collapsed));
 }
 
@@ -4575,6 +5413,52 @@ function buildToolbarLockDock() {
 }
 
 buildToolbarLockDock();
+
+// The canvas tool sits next to the markdown tool in the actions drawer. Built
+// here rather than in the page template for the same reason the auto-hide
+// toggle in the settings panel is: it then exists on every already-generated
+// board page without a rebuild, and there is one copy of it to keep correct
+// instead of one per page.
+function buildCanvasToolbarButton() {
+  if (isPreviewMode) return;
+  if (!toolbarActions) return;
+  if (toolbarActions.querySelector('[data-tool="new-canvas"]')) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "braindump-toolbar-action";
+  button.dataset.tool = "new-canvas";
+  button.setAttribute("aria-label", "New canvas");
+  button.title = "New canvas";
+  button.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><rect x="6.5" y="6.5" width="6" height="5" rx="1"></rect><rect x="14" y="12" width="4.5" height="5.5" rx="1"></rect><line x1="12.5" y1="10" x2="15" y2="12"></line></svg>
+    <span class="braindump-toolbar-action-label">Canvas</span>
+  `;
+  // Same three listeners the template buttons get in the loop above; a button
+  // added after that loop has run has to wire itself.
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  button.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    lastToolbarTouchTime = Date.now();
+    handleToolbarAction(button);
+  }, { passive: false });
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (Date.now() - lastToolbarTouchTime < 500) return;
+    handleToolbarAction(button);
+  });
+
+  const markdownButton = toolbarActions.querySelector('[data-tool="new-markdown"]');
+  if (markdownButton) markdownButton.after(button);
+  else toolbarActions.appendChild(button);
+}
+
+buildCanvasToolbarButton();
 
 if (isPreviewMode && boardConfig.fullBoardHref) {
   const cornerLink = document.createElement("a");
@@ -4905,6 +5789,16 @@ window.addEventListener("pointerdown", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  // Precedence: the shortcuts panel is the top layer whenever it is open, so it
+  // takes Escape first and stops there. One Escape per visible layer, and the
+  // selection underneath survives, which is the existing Escape behaviour and
+  // is not touched.
+  if (event.key === "Escape" && isShortcutsPanelOpen()) {
+    event.preventDefault();
+    setShortcutsPanelOpen(false);
+    return;
+  }
+
   // Crop mode owns ESC and Enter while active.
   const cropping = findCroppingNode();
   if (cropping) {
@@ -5267,6 +6161,253 @@ function exportCanvas() {
   return result;
 }
 
+// Brush sizes, in canvas units, one per brush tool. The pen's 4 is the width
+// every stroke used to be hard-coded to, so a board nobody has touched keeps
+// drawing exactly as it did. The eraser starts wider because it is a blunt
+// instrument and nobody wants to erase with a 4px tip.
+const BRUSH_MIN_SIZE = 1;
+const BRUSH_MAX_SIZE = 120;
+const DEFAULT_BRUSH_SIZES = { draw: 4, erase: 24 };
+const brushSizes = { ...DEFAULT_BRUSH_SIZES };
+
+function getBrushSizeKey() {
+  return `${boardConfig.storageKey}:brush`;
+}
+
+function clampBrushSize(value) {
+  const size = Number(value);
+  if (!Number.isFinite(size)) return DEFAULT_BRUSH_SIZES.draw;
+  return Math.min(BRUSH_MAX_SIZE, Math.max(BRUSH_MIN_SIZE, Math.round(size)));
+}
+
+function normalizeBrushTool(tool) {
+  return tool === "erase" ? "erase" : "draw";
+}
+
+function getBrushSize(tool = activeTool) {
+  return brushSizes[normalizeBrushTool(tool)];
+}
+
+function setBrushSize(size, tool = activeTool) {
+  const key = normalizeBrushTool(tool);
+  const next = clampBrushSize(size);
+  if (next !== brushSizes[key]) {
+    brushSizes[key] = next;
+    try {
+      localStorage.setItem(getBrushSizeKey(), JSON.stringify(brushSizes));
+    } catch (error) {
+      // A full or blocked localStorage must not cost you the brush size you
+      // just set. It only costs you the size surviving a reload.
+    }
+    if (activeTool === key) viewport.style.cursor = getDrawCursor();
+    updateBrushSizeBubble();
+  }
+  return next;
+}
+
+// One wheel notch is 15% of the current size, floored at 1. Proportional so
+// 2 -> 3 and 80 -> 92 both feel like the same gesture, integers so repeated
+// nudges never drift into 4.000000001.
+function nudgeBrushSize(direction) {
+  const size = getBrushSize();
+  const step = Math.max(1, Math.round(size * 0.15));
+  return setBrushSize(size + direction * step, activeTool);
+}
+
+(function loadBrushSizes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(getBrushSizeKey()) || "null");
+    if (!stored) return;
+    brushSizes.draw = clampBrushSize(stored.draw ?? DEFAULT_BRUSH_SIZES.draw);
+    brushSizes.erase = clampBrushSize(stored.erase ?? DEFAULT_BRUSH_SIZES.erase);
+  } catch (error) {
+    // Unreadable key: fall back to defaults rather than refusing to boot.
+  }
+})();
+
+// The size bubble: a true-to-scale circle under the pointer, shown while you
+// are changing the size and never while you are drawing (the cursor ring
+// already covers that case). It lives on <body> with pointer-events none so it
+// can sit over the toolbar during a long press without eating the drag.
+let brushBubbleElement = null;
+let brushBubbleHideTimer = null;
+
+function ensureBrushBubble() {
+  if (brushBubbleElement?.isConnected) return brushBubbleElement;
+  brushBubbleElement = document.createElement("div");
+  brushBubbleElement.className = "bd-brush-size-bubble";
+  brushBubbleElement.setAttribute("data-board-ui", "brush-size-bubble");
+  brushBubbleElement.style.cssText = [
+    "position:fixed",
+    "left:0",
+    "top:0",
+    "width:0",
+    "height:0",
+    "border-radius:50%",
+    "border:1px solid rgba(255,255,255,0.9)",
+    "box-shadow:0 0 0 1px rgba(0,0,0,0.35)",
+    "background:rgba(63,218,202,0.25)",
+    "transform:translate(-50%,-50%)",
+    "pointer-events:none",
+    "z-index:2147483000",
+    "display:none"
+  ].join(";");
+  document.body.appendChild(brushBubbleElement);
+  return brushBubbleElement;
+}
+
+function updateBrushSizeBubble() {
+  if (!brushBubbleElement || brushBubbleElement.style.display === "none") return;
+  const diameter = Math.max(2, getBrushSize() * camera.z);
+  brushBubbleElement.style.width = `${diameter}px`;
+  brushBubbleElement.style.height = `${diameter}px`;
+  brushBubbleElement.dataset.brushSize = String(getBrushSize());
+}
+
+function showBrushSizeBubble(clientX, clientY, options = {}) {
+  const bubble = ensureBrushBubble();
+  if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+    bubble.style.left = `${clientX}px`;
+    bubble.style.top = `${clientY}px`;
+  }
+  // Recoloured every time it is shown, for the same reason the cursor ring is:
+  // the bubble previews the brush, so a fixed teal fill contradicts a pink pen.
+  // Set here rather than in the cssText above because the bubble lives on
+  // document.body, outside the element the theme's custom properties are set
+  // on, so a var() would not resolve. The erase brush stays neutral: it is not
+  // laying down ink.
+  bubble.style.background = activeTool === "erase"
+    ? "rgba(242, 245, 244, 0.25)"
+    : `rgba(${hexToRgbTriple(getPenStrokeColor())}, 0.25)`;
+  bubble.style.display = "block";
+  updateBrushSizeBubble();
+  if (brushBubbleHideTimer) window.clearTimeout(brushBubbleHideTimer);
+  brushBubbleHideTimer = options.sticky
+    ? null
+    : window.setTimeout(() => hideBrushSizeBubble(), 700);
+}
+
+function hideBrushSizeBubble() {
+  if (brushBubbleHideTimer) window.clearTimeout(brushBubbleHideTimer);
+  brushBubbleHideTimer = null;
+  if (brushBubbleElement) brushBubbleElement.style.display = "none";
+}
+
+// Long-press the pen or eraser icon, then drag: up is bigger, down is smaller.
+// 320ms because a shorter hold turns an ordinary slow click into a resize, and
+// 4px of travel per unit so the whole 1..120 range is one comfortable stroke.
+const BRUSH_LONG_PRESS_MS = 320;
+const BRUSH_UNITS_PER_PIXEL = 0.25;
+let brushLongPress = null;
+
+function beginBrushSizeLongPress(button, event) {
+  if (event.button !== 0 && event.pointerType === "mouse") return;
+  const tool = button?.dataset?.tool;
+  if (tool !== "draw" && tool !== "erase") return;
+  endBrushSizeLongPress();
+  brushLongPress = {
+    tool,
+    button,
+    pointerId: event.pointerId,
+    startY: event.clientY,
+    x: event.clientX,
+    y: event.clientY,
+    startSize: getBrushSize(tool),
+    engaged: false,
+    // Accumulated separately from clientY so the drag can outlive the screen.
+    // See onBrushLongPressMove.
+    rise: 0,
+    locked: false,
+    timer: window.setTimeout(() => {
+      if (!brushLongPress) return;
+      brushLongPress.engaged = true;
+      brushLongPress.timer = null;
+      showBrushSizeBubble(brushLongPress.x, brushLongPress.y, { sticky: true });
+      // Pointer lock is what lets you keep dragging down after the cursor has
+      // hit the bottom of the screen. Without it clientY stops changing there,
+      // and since the pen icon already sits near the bottom edge there is very
+      // little room to drag DOWN, so small sizes were effectively unreachable.
+      // Locked, the mouse reports movement forever and the cursor stays put.
+      // Requested only once the press has engaged, so an ordinary click on the
+      // tool never grabs the pointer. Failure is survivable: the move handler
+      // falls back to absolute clientY, which is exactly today's behaviour.
+      if (event.pointerType === "mouse") {
+        try {
+          const result = button.requestPointerLock?.();
+          if (result && typeof result.then === "function") result.catch(() => {});
+        } catch (error) {
+          // Not available, or refused for want of user activation. Fall back.
+        }
+      }
+    }, BRUSH_LONG_PRESS_MS)
+  };
+  try {
+    button.setPointerCapture(event.pointerId);
+  } catch (error) {
+    // No capture is survivable: the window listeners below still see the drag.
+  }
+  window.addEventListener("pointermove", onBrushLongPressMove, true);
+  window.addEventListener("pointerup", onBrushLongPressEnd, true);
+  window.addEventListener("pointercancel", onBrushLongPressEnd, true);
+}
+
+function onBrushLongPressMove(event) {
+  if (!brushLongPress) return;
+  const locked = document.pointerLockElement === brushLongPress.button;
+  brushLongPress.locked = locked;
+  if (!locked) {
+    brushLongPress.x = event.clientX;
+    brushLongPress.y = event.clientY;
+  }
+  if (!brushLongPress.engaged) return;
+  event.preventDefault();
+
+  // Two ways to measure the same gesture. Locked, the cursor does not move, so
+  // the only truth is the accumulated movement, and it keeps arriving however
+  // long you drag: that is what makes the bottom of the range reachable.
+  // Unlocked (touch, or a browser that refused the lock) fall back to the
+  // absolute distance from the press point, which is the original behaviour.
+  if (locked) {
+    brushLongPress.rise -= event.movementY || 0;
+  } else {
+    brushLongPress.rise = brushLongPress.startY - event.clientY;
+  }
+  setBrushSize(brushLongPress.startSize + brushLongPress.rise * BRUSH_UNITS_PER_PIXEL, brushLongPress.tool);
+  // Anchored at the press point while locked, because there is no live pointer
+  // to follow and a bubble pinned to a stale coordinate reads as frozen.
+  showBrushSizeBubble(brushLongPress.x, brushLongPress.y, { sticky: true });
+}
+
+function onBrushLongPressEnd() {
+  endBrushSizeLongPress();
+}
+
+function endBrushSizeLongPress() {
+  const state = brushLongPress;
+  brushLongPress = null;
+  window.removeEventListener("pointermove", onBrushLongPressMove, true);
+  window.removeEventListener("pointerup", onBrushLongPressEnd, true);
+  window.removeEventListener("pointercancel", onBrushLongPressEnd, true);
+  // Released unconditionally rather than only when we think we took it: a lock
+  // left on is a cursor the user cannot get back, which is a far worse failure
+  // than releasing one we never held.
+  if (document.pointerLockElement) {
+    try {
+      document.exitPointerLock?.();
+    } catch (error) {
+      // Nothing to undo if it was already gone.
+    }
+  }
+  if (!state) return;
+  if (state.timer) window.clearTimeout(state.timer);
+  try {
+    state.button.releasePointerCapture(state.pointerId);
+  } catch (error) {
+    // Capture may already be gone; nothing to undo.
+  }
+  if (state.engaged) window.setTimeout(() => hideBrushSizeBubble(), 400);
+}
+
 // Drawing logic
 let lastDrawPoint = { x: 0, y: 0 };
 
@@ -5317,6 +6458,18 @@ function bakeShiftSegment() {
   wasShiftHeld = false;
 }
 
+// The pen and the accent are the same value: --bd-accent's shipped fallback
+// throughout braindump.css is this exact literal, and the drawing code used
+// to hard-code it a second time rather than read it from the theme. Reading
+// it here means changing the accent changes what the pen draws NEXT. It
+// deliberately does not touch ink already on the board: a stroke stores its
+// own colour in its node text once drawn, and repainting existing strokes
+// would mean rewriting board data on a settings change, which is a much
+// bigger and more destructive claim than this card asked for.
+function getPenStrokeColor() {
+  return boardSettings?.theme?.accent || BOARD_THEME_PRESETS.dark.accent;
+}
+
 function startDrawing(x, y) {
   if (isPreviewMode) return;
   isDrawing = true;
@@ -5332,8 +6485,8 @@ function startDrawing(x, y) {
   currentPathData = `M ${pos.x} ${pos.y}`;
   currentPath.setAttribute("d", currentPathData);
   currentPath.setAttribute("fill", "none");
-  currentPath.setAttribute("stroke", "#3fdaca");
-  currentPath.setAttribute("stroke-width", "4");
+  currentPath.setAttribute("stroke", getPenStrokeColor());
+  currentPath.setAttribute("stroke-width", String(getBrushSize("draw")));
   currentPath.setAttribute("stroke-linecap", "round");
   currentPath.setAttribute("stroke-linejoin", "round");
   svgLayer.appendChild(currentPath);
@@ -5383,21 +6536,245 @@ function stopDrawing() {
   isDrawing = false;
   bakeShiftSegment();
   if (currentPath) {
-    const isSinglePoint = !currentPathData.includes(" L ");
-    let w = Math.max(maxX - minX, 10);
-    let h = Math.max(maxY - minY, 10);
-    const viewBox = `${minX - 5} ${minY - 5} ${w + 10} ${h + 10}`;
-    const drawingMarkup = isSinglePoint
-      ? `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><circle cx="${minX}" cy="${minY}" r="3" fill="#3fdaca"></circle></svg>`
-      : `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;"><path d="${currentPathData}" fill="none" stroke="#3fdaca" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
-    createNode("text", minX - 5, minY - 5, { 
-      width: w + 10, 
-      height: h + 10, 
-      text: drawingMarkup
-    });
+    const spec = buildDrawingSpec(parseDrawingPathPoints(currentPathData), getPenStrokeColor(), getBrushSize("draw"));
+    if (spec) {
+      createNode("text", spec.x, spec.y, {
+        width: spec.width,
+        height: spec.height,
+        text: spec.markup
+      });
+    }
     svgLayer.removeChild(currentPath);
   }
   currentPath = null;
+}
+
+// ---- eraser ----
+// Every stroke of a drawing is its own node, so erasing "a segment" is not
+// deleting a node: it is clipping that node's polyline against the eraser disc
+// and writing whatever survives back as fresh stroke nodes. A cut through the
+// middle of a line leaves two nodes with a real gap between them; a nick off one
+// end leaves one shorter node; a full pass leaves none.
+//
+// The gesture is one undo entry however many nodes it splits, removes or
+// creates, using the same `batch` action the alt-drag copy fix uses. Without
+// that, rubbing out one line would take a dozen Ctrl+Z presses to put back.
+let eraseState = null;
+
+function isDrawingNode(node) {
+  return !!node && node.type === "text" && typeof node.text === "string" && node.text.includes('class="bd-drawing"');
+}
+
+function parseDrawingPathPoints(pathData) {
+  const numbers = String(pathData || "").match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
+  const points = [];
+  for (let i = 0; i + 1 < numbers.length; i += 2) {
+    const x = Number(numbers[i]);
+    const y = Number(numbers[i + 1]);
+    if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+  }
+  return points;
+}
+
+// A drawing node's SVG is authored in canvas units and then stretched to the
+// node box by preserveAspectRatio="none", so a drawing that was resized after
+// it was drawn has a viewBox that no longer matches its width and height. Every
+// point is mapped through that scale here, which is why erasing a stretched
+// drawing cuts where the ink actually looks like it is.
+function readDrawingGeometry(node) {
+  const markup = String(node?.text || "");
+  const viewBox = /viewBox="([^"]+)"/.exec(markup);
+  if (!viewBox) return null;
+  const box = viewBox[1].trim().split(/[\s,]+/).map(Number);
+  if (box.length !== 4 || !box.every(Number.isFinite) || box[2] <= 0 || box[3] <= 0) return null;
+  const [vx, vy, vw, vh] = box;
+  const sx = (Number(node.width) > 0 ? node.width : vw) / vw;
+  const sy = (Number(node.height) > 0 ? node.height : vh) / vh;
+  const meanScale = (Math.abs(sx) + Math.abs(sy)) / 2;
+  const toCanvas = (px, py) => ({ x: node.x + (px - vx) * sx, y: node.y + (py - vy) * sy });
+
+  const pathTag = /<path\b[^>]*>/.exec(markup);
+  if (pathTag) {
+    const data = /\bd="([^"]+)"/.exec(pathTag[0]);
+    const points = data ? parseDrawingPathPoints(data[1]).map((p) => toCanvas(p.x, p.y)) : [];
+    if (!points.length) return null;
+    const width = Number(/stroke-width="([\d.]+)"/.exec(pathTag[0])?.[1]);
+    return {
+      points,
+      stroke: /stroke="([^"]+)"/.exec(pathTag[0])?.[1] || "#3fdaca",
+      strokeWidth: Number.isFinite(width) && width > 0 ? width * meanScale : 4
+    };
+  }
+
+  const circleTag = /<circle\b[^>]*>/.exec(markup);
+  if (circleTag) {
+    const cx = Number(/\bcx="([-\d.]+)"/.exec(circleTag[0])?.[1]);
+    const cy = Number(/\bcy="([-\d.]+)"/.exec(circleTag[0])?.[1]);
+    const r = Number(/\br="([\d.]+)"/.exec(circleTag[0])?.[1]);
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) return null;
+    return {
+      points: [toCanvas(cx, cy)],
+      stroke: /fill="([^"]+)"/.exec(circleTag[0])?.[1] || "#3fdaca",
+      strokeWidth: (Number.isFinite(r) && r > 0 ? r * 2 : 4) * meanScale
+    };
+  }
+  return null;
+}
+
+// Node box padding. At the old fixed width of 4 this is exactly the 5 the
+// original code hard-coded, so existing strokes keep their geometry; a fatter
+// brush gets a box that actually contains its ink.
+function drawingBoxPadding(strokeWidth) {
+  return Math.max(5, strokeWidth / 2 + 2);
+}
+
+function buildDrawingSpec(points, stroke, strokeWidth) {
+  if (!points?.length) return null;
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const left = Math.min(...xs);
+  const right = Math.max(...xs);
+  const top = Math.min(...ys);
+  const bottom = Math.max(...ys);
+  const w = Math.max(right - left, 10);
+  const h = Math.max(bottom - top, 10);
+  const pad = drawingBoxPadding(strokeWidth);
+  const viewBox = `${left - pad} ${top - pad} ${w + pad * 2} ${h + pad * 2}`;
+  const head = `<svg class="bd-drawing" viewBox="${viewBox}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible; display:block;">`;
+  const body = points.length < 2
+    ? `<circle cx="${left}" cy="${top}" r="${Math.max(strokeWidth / 2, 1)}" fill="${stroke}"></circle>`
+    : `<path d="${points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ")}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"></path>`;
+  return {
+    markup: `${head}${body}</svg>`,
+    x: left - pad,
+    y: top - pad,
+    width: w + pad * 2,
+    height: h + pad * 2
+  };
+}
+
+// The portion of segment a->b that lies inside the disc, as a [t0, t1] slice of
+// the segment, or null when it misses. Solved rather than sampled: a sampled
+// test misses a thin line crossing the disc between two samples, which reads as
+// the eraser refusing to cut.
+function segmentInsideCircle(a, b, cx, cy, radius) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const fx = a.x - cx;
+  const fy = a.y - cy;
+  const qa = dx * dx + dy * dy;
+  if (qa < 1e-9) return fx * fx + fy * fy <= radius * radius ? [0, 1] : null;
+  const qb = 2 * (fx * dx + fy * dy);
+  const qc = fx * fx + fy * fy - radius * radius;
+  const discriminant = qb * qb - 4 * qa * qc;
+  if (discriminant <= 0) return null;
+  const root = Math.sqrt(discriminant);
+  const t0 = Math.max(0, (-qb - root) / (2 * qa));
+  const t1 = Math.min(1, (-qb + root) / (2 * qa));
+  return t1 > t0 ? [t0, t1] : null;
+}
+
+function lerpPoint(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+/* @export-for-test:erasePolylineWithDisc */
+function erasePolylineWithDisc(points, cx, cy, radius) {
+  if (!points?.length) return { pieces: [], changed: false };
+  if (points.length === 1) {
+    const hit = Math.hypot(points[0].x - cx, points[0].y - cy) <= radius;
+    return { pieces: hit ? [] : [points], changed: hit };
+  }
+  const pieces = [];
+  let current = [];
+  let changed = false;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    const inside = segmentInsideCircle(a, b, cx, cy, radius);
+    if (!inside) {
+      if (!current.length) current.push(a);
+      current.push(b);
+      continue;
+    }
+    changed = true;
+    const [t0, t1] = inside;
+    if (t0 > 0) {
+      if (!current.length) current.push(a);
+      current.push(lerpPoint(a, b, t0));
+    }
+    if (current.length > 1) pieces.push(current);
+    current = [];
+    if (t1 < 1) current.push(lerpPoint(a, b, t1), b);
+  }
+  if (current.length > 1) pieces.push(current);
+  return { pieces, changed };
+}
+
+function eraseAtCanvasPoint(center, radius) {
+  if (!eraseState) return;
+  // Snapshot: the loop deletes and recreates nodes as it goes.
+  for (const node of nodes.slice()) {
+    if (!isDrawingNode(node)) continue;
+    if (center.x < node.x - radius || center.x > node.x + node.width + radius) continue;
+    if (center.y < node.y - radius || center.y > node.y + node.height + radius) continue;
+    const geometry = readDrawingGeometry(node);
+    if (!geometry) continue;
+    const { pieces, changed } = erasePolylineWithDisc(geometry.points, center.x, center.y, radius);
+    if (!changed) continue;
+    eraseState.actions.push({ type: "delete", nodeId: node.id, nodeData: JSON.parse(JSON.stringify(node)) });
+    removeNodeById(node.id);
+    const wasLoading = isLoadingState;
+    isLoadingState = true; // history is written once, at the end of the gesture
+    for (const piece of pieces) {
+      const spec = buildDrawingSpec(piece, geometry.stroke, geometry.strokeWidth);
+      if (!spec) continue;
+      const created = createNode("text", spec.x, spec.y, {
+        width: spec.width,
+        height: spec.height,
+        text: spec.markup
+      });
+      if (created) {
+        eraseState.actions.push({ type: "create", nodeId: created.id, nodeData: JSON.parse(JSON.stringify(created)) });
+      }
+    }
+    isLoadingState = wasLoading;
+  }
+}
+
+function startErasing(clientX, clientY) {
+  if (isPreviewMode || isBoardLocked()) return;
+  const start = screenToCanvas(clientX, clientY);
+  eraseState = { last: start, actions: [] };
+  eraseAtCanvasPoint(start, getBrushSize("erase") / 2);
+}
+
+function eraseTo(clientX, clientY) {
+  if (!eraseState) return;
+  const radius = getBrushSize("erase") / 2;
+  const to = screenToCanvas(clientX, clientY);
+  const dx = to.x - eraseState.last.x;
+  const dy = to.y - eraseState.last.y;
+  // Step along the move at half the eraser radius. A pointer sample can jump a
+  // long way at speed, and erasing only at the sample points leaves untouched
+  // islands of ink in the middle of a fast sweep.
+  const steps = Math.min(80, Math.max(1, Math.ceil(Math.hypot(dx, dy) / Math.max(radius, 1))));
+  for (let step = 1; step <= steps; step++) {
+    eraseAtCanvasPoint(
+      { x: eraseState.last.x + (dx * step) / steps, y: eraseState.last.y + (dy * step) / steps },
+      radius
+    );
+  }
+  eraseState.last = to;
+}
+
+function stopErasing() {
+  const state = eraseState;
+  eraseState = null;
+  if (!state || !state.actions.length) return;
+  // One gesture, one entry, however many nodes it touched.
+  pushAction({ type: "batch", actions: state.actions });
+  markBoardDirty();
 }
 
 function uuid() {
@@ -5447,10 +6824,15 @@ function createNode(type, x, y, data = {}) {
     nodeObj.title = String(data.title || "Base");
     nodeObj.width = Number(data.width) > 0 ? Number(data.width) : 680;
     nodeObj.height = Number(data.height) > 0 ? Number(data.height) : 480;
-  } else if (type === "vnc") {
+  } else if (type === "vnc" || type === "computer") {
+    // The stored type stays "vnc" so every board already carrying one keeps
+    // working untouched; "computer" is accepted as an alias for anything
+    // written from here on. What actually varies is nodeObj.protocol, which is
+    // what the switch in the form writes.
     nodeObj.type = "vnc";
+    nodeObj.protocol = COMPUTER_PROTOCOLS[data.protocol] ? String(data.protocol) : "vnc";
     nodeObj.url = String(data.url || "");            // ws:// or wss:// RFB target
-    nodeObj.title = String(data.title || "VNC session");
+    nodeObj.title = String(data.title || COMPUTER_PROTOCOLS[nodeObj.protocol].label);
     nodeObj.autoConnect = data.autoConnect !== false; // resume on load when a password is stored
     nodeObj.viewOnly = !!data.viewOnly;
     nodeObj.scaleViewport = data.scaleViewport !== false;
@@ -5797,6 +7179,96 @@ function getRuntimeScriptBase() {
   return new URL(".", src);
 }
 
+// ---- the computer window: one node, several protocols ----
+//
+// The ask was a "computer window" that switches between VNC, RDP and local. A
+// browser has no raw TCP, so every protocol here has to arrive over a
+// WebSocket, and VNC is the only one of them with servers that already speak
+// one (KasmVNC, x11vnc's websocket build, websockify). The rest need a host
+// that does not exist on this machine yet:
+//
+//   rdp       there is no JavaScript RDP client, in this or any codebase.
+//             Every product that puts RDP in a tab (Apache Guacamole,
+//             myrtille, TSplus) runs a gateway that terminates RDP and
+//             re-serves its own protocol over a WebSocket.
+//   terminal  a PTY is a local process, so it needs a local host, and handing
+//             one out over a WebSocket hands out a shell.
+//   local     streaming a single local window needs a capture source. Filed as
+//             future work by the user, and it still is.
+//
+// So the switch is honest rather than complete: it persists the choice, and a
+// protocol that cannot connect says what it needs, in the node, instead of
+// opening a socket that will never speak. `ready` is the only flag that
+// decides. Nothing without it reaches connectVncSession.
+const COMPUTER_PROTOCOLS = {
+  vnc: {
+    option: "VNC (RFB over WebSocket)",
+    label: "VNC session",
+    ready: true,
+    placeholder: "wss://desktop.local:6901",
+  },
+  rdp: {
+    option: "RDP (needs a gateway)",
+    label: "RDP session",
+    ready: false,
+    needs: "a Guacamole gateway",
+    placeholder: "ws://127.0.0.1:8080/guac",
+    why: "A browser cannot speak RDP. There is no TCP socket and no JavaScript RDP client, so RDP in a tab always means a gateway that terminates RDP and re-serves it over a WebSocket.",
+    steps: [
+      "Run guacd, the Guacamole proxy daemon: docker run --rm -p 4822:4822 guacamole/guacd",
+      "Run a WebSocket tunnel in front of it: guacamole-lite, or full Apache Guacamole.",
+      "Put that tunnel's ws:// address in Target. Nothing here connects until you do.",
+    ],
+    caveat: "The gateway holds the RDP credential and can reach port 3389, so it is a service you run on purpose, not a checkbox. guacd has no native Windows build either: on Windows it means Docker or WSL.",
+  },
+  terminal: {
+    option: "Terminal (needs a PTY host)",
+    label: "Terminal",
+    ready: false,
+    needs: "a local PTY host",
+    placeholder: "ws://127.0.0.1:4174/pty",
+    why: "A terminal is a PTY, and a PTY is a local process. Nothing in a browser can start one, so this needs a program on your machine serving it over a WebSocket.",
+    steps: [
+      "Not shipped. The preview server is the natural host and does not do this yet.",
+      "Four things first: bind 127.0.0.1 only, check the Origin header, require a per-run token, and stay off unless a flag turns it on.",
+      "Missing any one of them, anything on your network, or any page you happen to visit, gets a shell.",
+    ],
+    caveat: "A WebSocket is not covered by CORS, so a site you open can connect to a port on your own machine unless the server checks Origin. The preview server does not check it today. That is why this is off.",
+  },
+  local: {
+    option: "Local app (future work)",
+    label: "Local app",
+    ready: false,
+    needs: "a capture source",
+    placeholder: "",
+    why: "Streaming one local application into the board rather than a whole desktop. You filed it as future work and nothing is designed for it yet.",
+    steps: [],
+    caveat: "The nearest thing that works in a browser today is getDisplayMedia, which can share a single window, but only after you pick it in a browser dialog every session, and it sends no input back.",
+  },
+};
+
+function computerProtocolSpec(nodeObj) {
+  return COMPUTER_PROTOCOLS[nodeObj?.protocol] || COMPUTER_PROTOCOLS.vnc;
+}
+
+function computerProtocolOptions(selected) {
+  return Object.keys(COMPUTER_PROTOCOLS).map((key) =>
+    `<option value="${key}"${key === selected ? " selected" : ""}>${escapeHtml(COMPUTER_PROTOCOLS[key].option)}</option>`
+  ).join("");
+}
+
+// What a protocol needs, spelled out in the node, where whoever just switched
+// to it is looking. A dead tab that says nothing is worse than no tab.
+function computerRequirementsHtml(spec) {
+  return `
+        <div class="bd-vnc-requirements">
+          <p class="bd-vnc-req-head">${escapeHtml(spec.label)} needs ${escapeHtml(spec.needs)}, so it will not connect from here.</p>
+          <p class="bd-vnc-req-why">${escapeHtml(spec.why)}</p>
+          ${(spec.steps || []).length ? `<ol class="bd-vnc-req-steps">${spec.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>` : ""}
+          ${spec.caveat ? `<p class="bd-vnc-note">${escapeHtml(spec.caveat)}</p>` : ""}
+        </div>`;
+}
+
 function setVncStatus(el, state, message) {
   const shell = el.querySelector(".bd-vnc-shell");
   if (!shell) return;
@@ -5815,6 +7287,14 @@ function disconnectVncSession(el) {
 }
 
 async function connectVncSession(nodeObj, el, credentials) {
+  // The load-bearing guard. Whatever route gets here, a protocol with no
+  // client must not open a socket: a connection that cannot speak is worse
+  // than a refusal that explains itself.
+  const spec = computerProtocolSpec(nodeObj);
+  if (!spec.ready) {
+    setVncStatus(el, "needs-host", `Needs ${spec.needs}.`);
+    return;
+  }
   const target = String(nodeObj.url || "").trim();
   if (!target) {
     setVncStatus(el, "error", "No target set. Add a ws:// or wss:// address.");
@@ -5892,6 +7372,8 @@ async function connectVncSession(nodeObj, el, credentials) {
 
 function renderVncNode(nodeObj, el, options = {}) {
   let shell = el.querySelector(".bd-vnc-shell");
+  const spec = computerProtocolSpec(nodeObj);
+  const protocol = COMPUTER_PROTOCOLS[nodeObj.protocol] ? nodeObj.protocol : "vnc";
   const stored = readVncCredentials(nodeObj.id);
   const connected = !!el.__vncSession;
   // The screen shows whenever a session is wanted, connected or not, so a
@@ -5911,17 +7393,23 @@ function renderVncNode(nodeObj, el, options = {}) {
       <span class="bd-vnc-dot" aria-hidden="true"></span>
       <span class="bd-vnc-title">${escapeHtml(nodeObj.title || "VNC session")}</span>
       <span class="bd-vnc-status-text">${escapeHtml(previousStatus)}</span>
+      ${spec.ready ? `
       <div class="bd-vnc-actions">
         <button type="button" class="bd-vnc-settings-btn" aria-label="Session settings" title="Session settings">Settings</button>
         <button type="button" class="bd-vnc-connect-btn">${connected || el.__vncWantsSession ? "Disconnect" : "Connect"}</button>
-      </div>
+      </div>` : ""}
     </div>
     ${showForm ? `
       <form class="bd-vnc-form">
         <label class="bd-vnc-field">
-          <span>Target</span>
-          <input type="text" class="bd-vnc-url" placeholder="wss://desktop.local:6901" value="${escapeHtml(nodeObj.url || "")}">
+          <span>Protocol</span>
+          <select class="bd-vnc-protocol">${computerProtocolOptions(protocol)}</select>
         </label>
+        <label class="bd-vnc-field">
+          <span>Target</span>
+          <input type="text" class="bd-vnc-url" placeholder="${escapeHtml(spec.placeholder)}" value="${escapeHtml(nodeObj.url || "")}">
+        </label>
+        ${spec.ready ? `
         <label class="bd-vnc-field">
           <span>Password</span>
           <input type="password" class="bd-vnc-password" placeholder="${stored?.password ? "saved in this browser" : "server password"}" autocomplete="off">
@@ -5931,10 +7419,31 @@ function renderVncNode(nodeObj, el, options = {}) {
           <span>Remember on this browser and reconnect on load</span>
         </label>
         <p class="bd-vnc-note">The address is saved with the board. The password never is: it stays in this browser only.</p>
-        <button type="submit" class="bd-vnc-submit">Connect</button>
+        <button type="submit" class="bd-vnc-submit">Connect</button>` : computerRequirementsHtml(spec)}
       </form>
     ` : `<div class="bd-vnc-screen"></div>`}
   `;
+
+  // A protocol with no client says so on every render, rather than sitting on
+  // whatever the last status happened to be.
+  if (!spec.ready) setVncStatus(el, "needs-host", `Needs ${spec.needs}.`);
+
+  const protocolSelect = shell.querySelector(".bd-vnc-protocol");
+  protocolSelect?.addEventListener("mousedown", (e) => e.stopPropagation());
+  protocolSelect?.addEventListener("change", (e) => {
+    e.stopPropagation();
+    const next = COMPUTER_PROTOCOLS[protocolSelect.value] ? protocolSelect.value : "vnc";
+    if (next === protocol) return;
+    // A live session belongs to the protocol that opened it, so switching
+    // drops it. Nothing about an RFB socket carries over to anything else.
+    disconnectVncSession(el);
+    el.__vncWantsSession = false;
+    el.__vncFailureReason = "";
+    nodeObj.protocol = next;
+    markBoardDirty();
+    renderVncNode(nodeObj, el, { forceForm: true });
+    if (COMPUTER_PROTOCOLS[next].ready) setVncStatus(el, "idle", "Not connected");
+  });
 
   // Everything inside the node is a control, so no gesture in here should start
   // a node drag. The header is the handle, as with every other node type.
@@ -5948,13 +7457,19 @@ function renderVncNode(nodeObj, el, options = {}) {
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
     const url = form.querySelector(".bd-vnc-url").value.trim();
-    const password = form.querySelector(".bd-vnc-password").value;
-    const remember = form.querySelector(".bd-vnc-remember").checked;
 
     if (url !== nodeObj.url) {
       nodeObj.url = url;
       markBoardDirty();
     }
+    // Enter in the target field still submits when the credential fields are
+    // not rendered. Keep the address, connect nothing.
+    if (!spec.ready) {
+      setVncStatus(el, "needs-host", `Needs ${spec.needs}.`);
+      return;
+    }
+    const password = form.querySelector(".bd-vnc-password").value;
+    const remember = form.querySelector(".bd-vnc-remember").checked;
     // A blank field means one of two things: reuse what is already saved, or,
     // if nothing is saved, this server wants no password. Storing the empty one
     // is deliberate, since that is what lets a passwordless session resume too.
@@ -6008,6 +7523,9 @@ function renderVncNode(nodeObj, el, options = {}) {
 function resumeVncNode(nodeObj, el) {
   if (el.__vncResumed) return;
   el.__vncResumed = true;
+  // A board saved on RDP or terminal must open silent. Auto-resume is the one
+  // path that runs without anybody pressing anything.
+  if (!computerProtocolSpec(nodeObj).ready) return;
   if (!nodeObj.autoConnect || !nodeObj.url) return;
   const credentials = readVncCredentials(nodeObj.id);
   if (!credentials) return;
@@ -6152,7 +7670,14 @@ function renderBoardPreviewNode(nodeObj, el) {
   const cachedEntry = previewSource ? _boardPreviewStateCache.get(previewSource) : null;
 
   if (!cachedEntry && previewSource) {
-    fetchBoardPreviewState(previewSource).then(() => {
+    fetchBoardPreviewState(previewSource).then((entry) => {
+      // A sub-canvas is addressed by path but identified by canvasId. When the
+      // file has been renamed or moved that path 404s, so ask which file
+      // carries the id now, repair the node, and let the repair re-render.
+      if (entry?.status === "missing" && nodeObj.canvasRef) {
+        void healCanvasNodeSource(nodeObj);
+        return;
+      }
       const currentNode = nodes.find((candidate) => candidate.id === nodeObj.id);
       const currentElement = getBoardElementById(nodeObj.id);
       if (currentNode && currentElement) {
@@ -6209,11 +7734,13 @@ function renderBoardPreviewNode(nodeObj, el) {
     </div>
     <div class="bd-board-preview-actions">
       ${
-        previewHref
-          ? `<a class="board-preview-open-link bd-board-preview-link" href="${escapeHtml(
-              previewHref
-            )}" aria-label="Open ${escapeHtml(previewTitle)}" draggable="false">Open board</a>`
-          : `<span class="bd-board-preview-action-disabled">No board page</span>`
+        nodeObj.canvasRef
+          ? `<button type="button" class="bd-board-preview-open-canvas">Open canvas</button>`
+          : previewHref
+            ? `<a class="board-preview-open-link bd-board-preview-link" href="${escapeHtml(
+                previewHref
+              )}" aria-label="Open ${escapeHtml(previewTitle)}" draggable="false">Open board</a>`
+            : `<span class="bd-board-preview-action-disabled">No board page</span>`
       }
     </div>
   `;
@@ -6223,6 +7750,32 @@ function renderBoardPreviewNode(nodeObj, el) {
     link.addEventListener("touchstart", (event) => { if (event.touches.length < 2) event.stopPropagation(); }, { passive: true });
     link.addEventListener("click", (event) => event.stopPropagation());
   });
+
+  // A sub-canvas has no board page to link to, so it opens as a real nested
+  // board instead, and its title is a label the user owns: renaming it
+  // rewrites no file, which is exactly why a rename cannot break a link here.
+  if (nodeObj.canvasRef) {
+    ensureSubCanvasStyles();
+    const openBtn = shell.querySelector(".bd-board-preview-open-canvas");
+    openBtn?.addEventListener("mousedown", (event) => event.stopPropagation());
+    openBtn?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openCanvasFullscreen(nodeObj);
+    });
+    const canvasTitleEl = shell.querySelector(".bd-board-preview-title");
+    if (canvasTitleEl && !isPreviewMode) bindMarkdownTitleRename(canvasTitleEl, nodeObj);
+    // renderBoardPreviewNode runs on every re-render, so this one goes on the
+    // node element and is bound once, not once per paint.
+    if (el.dataset.canvasOpenBound !== "1") {
+      el.dataset.canvasOpenBound = "1";
+      el.addEventListener("dblclick", (event) => {
+        if (event.target?.closest?.(".bd-board-preview-title")) return;
+        event.stopPropagation();
+        const live = nodes.find((candidate) => candidate.id === nodeObj.id);
+        openCanvasFullscreen(live || nodeObj);
+      });
+    }
+  }
 
   syncBoardPreviewNodeSize(nodeObj, el);
 }
@@ -6321,6 +7874,18 @@ function matchWholeLineImage(rawLine) {
   return { alt: match[1], src: match[2] };
 }
 
+// Whole-line canvas embed: `![[name.canvas]]` on its own line renders that
+// canvas inside the note. Obsidian's embed syntax rather than `![](x.canvas)`
+// for two reasons: a canvas is not an image, and a viewer that does not know
+// this syntax shows the literal text instead of a broken image icon.
+// One shared predicate feeds the renderer, the line class and the caret map,
+// exactly as matchWholeLineImage does, so the three cannot disagree.
+function matchWholeLineCanvas(rawLine) {
+  const match = String(rawLine || "").trim().match(/^!\[\[([^\]|]+\.canvas)(?:\|([^\]]*))?\]\]$/i);
+  if (!match) return null;
+  return { ref: match[1].trim(), label: (match[2] || "").trim() };
+}
+
 function renderMarkdownLineToHtml(rawLine) {
   // Inline markup only. Block-level prefixes (headings, list bullet, blockquote)
   // are handled by class hooks on the line wrapper so the line stays a single DOM
@@ -6340,6 +7905,13 @@ function renderMarkdownLineToHtml(rawLine) {
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
 
   if (!rawLine.trim()) return "&nbsp;";
+
+  const canvasEmbed = matchWholeLineCanvas(rawLine);
+  if (canvasEmbed) {
+    const canvasSrc = resolveCanvasEmbedSource(canvasEmbed.ref);
+    const canvasLabel = canvasEmbed.label || canvasEmbed.ref;
+    return `<span class="bd-md-line-canvas" data-canvas-embed="${escapeHtml(canvasSrc)}"><span class="bd-md-line-canvas-label">${escapeHtml(canvasLabel)}</span><span class="bd-md-line-canvas-stage">Loading canvas...</span></span>`;
+  }
 
   const image = matchWholeLineImage(rawLine);
   if (image) {
@@ -6371,6 +7943,7 @@ function renderMarkdownLineToHtml(rawLine) {
 
 function getMarkdownLineClass(rawLine) {
   if (!rawLine.trim()) return "bd-md-line bd-md-line--blank";
+  if (matchWholeLineCanvas(rawLine)) return "bd-md-line bd-md-line--canvas";
   if (matchWholeLineImage(rawLine)) return "bd-md-line bd-md-line--image";
   const heading = rawLine.match(/^(#{1,6})\s+/);
   if (heading) return `bd-md-line bd-md-line--h${heading[1].length}`;
@@ -6454,7 +8027,7 @@ function buildVisibleToRawMap(raw) {
   const bullet = raw.match(/^(\s*)([-*+])\s+(.+)$/);
   const ordered = raw.match(/^(\s*)(\d+)\.\s+(.+)$/);
   const quote = raw.match(/^>\s?(.*)$/);
-  if (matchWholeLineImage(raw)) return noVisibleText;
+  if (matchWholeLineImage(raw) || matchWholeLineCanvas(raw)) return noVisibleText;
   if (heading) prefixRawLen = raw.length - heading[2].length;
   else if (bullet) prefixRawLen = raw.length - bullet[3].length;
   else if (ordered) prefixRawLen = raw.length - ordered[3].length;
@@ -6520,6 +8093,7 @@ function buildMarkdownLineEl(rawLine) {
   lineEl.dataset.raw = rawLine;
   lineEl.innerHTML = renderMarkdownLineToHtml(rawLine);
   applyMarkdownLineIndent(lineEl, rawLine);
+  hydrateMarkdownCanvasEmbeds(lineEl);
   return lineEl;
 }
 
@@ -6530,6 +8104,7 @@ function setMarkdownLineRendered(lineEl) {
   lineEl.innerHTML = renderMarkdownLineToHtml(raw);
   lineEl.classList.remove("bd-md-line--active");
   applyMarkdownLineIndent(lineEl, raw);
+  hydrateMarkdownCanvasEmbeds(lineEl);
 }
 
 function setMarkdownLineRaw(lineEl) {
@@ -7355,6 +8930,12 @@ function attachMarkdownEditor(nodeObj, body) {
 }
 
 function bindMarkdownTitleRename(titleEl, nodeObj) {
+  // Commit rebuilds the element, so remember what it was. This binds a
+  // markdown note's <span class="bd-markdown-title"> and a sub-canvas node's
+  // <h3 class="bd-board-preview-title">; hard-coding the span dropped the
+  // heading's styling and every selector looking for it.
+  const titleTag = titleEl.tagName || "SPAN";
+  const titleClass = titleEl.className || "bd-markdown-title";
   titleEl.title = "Double-click to rename";
   const stopMd = (e) => e.stopPropagation();
   // The span itself does NOT stopPropagation on mousedown — single-click on
@@ -7379,8 +8960,8 @@ function bindMarkdownTitleRename(titleEl, nodeObj) {
       if (committed) return;
       committed = true;
       const next = (input.value || "").trim() || current;
-      const span = document.createElement("span");
-      span.className = "bd-markdown-title";
+      const span = document.createElement(titleTag);
+      span.className = titleClass;
       span.textContent = next;
       input.replaceWith(span);
       if (next !== nodeObj.title) {
@@ -7519,7 +9100,213 @@ function triggerBlobDownload(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-async function downloadMarkdownNode(nodeObj) {
+// ---------------------------------------------------------------------------
+// Markdown download: base64 embedding
+// ---------------------------------------------------------------------------
+
+// "Small enough" for base64. 512 KB of bytes becomes about 700 KB of base64,
+// and every asset in a note shares one file, so three screenshots still land
+// around 2 MB: mailable, and openable in an editor that has already given up
+// on syntax-highlighting the definition lines. Above this the asset keeps its
+// original path and the toast says how many were left out. Silently dropping
+// the picture and silently producing a 30 MB .md are both worse than a link
+// the reader can see is a link.
+const MARKDOWN_BASE64_MAX_BYTES = 512 * 1024;
+
+// Both markdown reference forms in one pass: `![alt](src)` and `[text](src)`.
+// A ref is embeddable when it carries no scheme (repo-relative or
+// root-relative), or when it already is bytes (`data:`) or a browser-cached
+// asset (`idb:`). Anything with another scheme is left exactly as written, so
+// http(s) and blob: stay links and `javascript:` never becomes a reference
+// definition — unsafe schemes keep rendering as literal text either way.
+function isEmbeddableMarkdownAssetRef(src, isImage) {
+  const value = String(src || "");
+  if (!value || value.startsWith("#") || value.startsWith("//")) return false;
+  if (/^(?:data:|idb:)/i.test(value)) return true;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return false;
+  if (isImage) return true;
+  // A non-image link counts as an asset only when it names a file. Board
+  // navigation targets are excluded on purpose: no current browser will open
+  // a data: URI as a top-level document, so inlining one would break the link
+  // rather than make it portable.
+  if (/\.(?:md|markdown|canvas|html?|json)(?:[?#]|$)/i.test(value)) return false;
+  return /\.[a-z0-9]{1,8}(?:[?#]|$)/i.test(value);
+}
+
+// `chart.png` becomes `chart-1`, the shape the request asked for. The index is
+// the ref's order of first appearance, which keeps the label stable for a
+// given file and collision-free by construction, so two `screenshot.png` from
+// different folders cannot land on the same definition.
+function deriveMarkdownAssetLabel(src, index) {
+  const base = String(src).split(/[?#]/)[0].split("/").pop() || "";
+  const slug = base
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return `${slug || "asset"}-${index}`;
+}
+
+function collectMarkdownAssetRefs(markdown) {
+  const refs = [];
+  const seen = new Set();
+  for (const match of String(markdown).matchAll(/(!?)\[[^\]]*\]\(([^)\s]+)\)/g)) {
+    const src = match[2];
+    if (seen.has(src)) continue;
+    if (!isEmbeddableMarkdownAssetRef(src, match[1] === "!")) continue;
+    seen.add(src);
+    refs.push({ src, label: deriveMarkdownAssetLabel(src, refs.length + 1) });
+  }
+  return refs;
+}
+
+function markdownBytesToBase64(bytes) {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+// GET only. Nothing in the base64 path writes, which is why it still works on
+// a static host where /api/save-asset is refused.
+async function readMarkdownAssetBytes(src) {
+  const resolved = /^idb:/i.test(src) ? resolveStoredAssetUrl(src) : src;
+  if (/^idb:/i.test(resolved)) return null;
+  const init = /^data:/i.test(resolved) ? undefined : { cache: "no-store" };
+  const response = await fetch(resolved, init);
+  if (!response.ok) return null;
+  const blob = await response.blob();
+  return {
+    bytes: new Uint8Array(await blob.arrayBuffer()),
+    // A data: URL and a served file both carry their own type; the extension
+    // map is only for a server that answered with nothing useful.
+    mime: blob.type || getBundleEntryMime(src)
+  };
+}
+
+// Reference style, as asked for: the point of use keeps its alt text and turns
+// into `![Growth Chart][chart-1]`, and every definition is collected at the
+// bottom of the file. The YAML frontmatter stays where it is at the top, so a
+// re-import still finds the identity block on line one.
+async function buildBase64Markdown(serialized) {
+  const refs = collectMarkdownAssetRefs(serialized);
+  const definitions = [];
+  let body = serialized;
+  let oversize = 0;
+  let unreadable = 0;
+
+  for (const ref of refs) {
+    let asset = null;
+    try {
+      asset = await readMarkdownAssetBytes(ref.src);
+    } catch {
+      asset = null;
+    }
+    if (!asset) {
+      unreadable += 1;
+      continue;
+    }
+    if (asset.bytes.length > MARKDOWN_BASE64_MAX_BYTES) {
+      oversize += 1;
+      continue;
+    }
+    body = body.split(`](${ref.src})`).join(`][${ref.label}]`);
+    definitions.push(`[${ref.label}]: data:${asset.mime};base64,${markdownBytesToBase64(asset.bytes)}`);
+  }
+
+  const markdown = definitions.length
+    ? `${body.replace(/\n+$/, "")}\n\n${definitions.join("\n")}\n`
+    : serialized;
+  return { markdown, embedded: definitions.length, oversize, unreadable };
+}
+
+let markdownDownloadModal = null;
+
+// Resolves to a mode, or to null when dismissed. Dismissing has to mean "no
+// download": falling back to some mode would hand the user a file they did not
+// pick, which is the exact thing the prompt exists to avoid.
+function askMarkdownDownloadMode() {
+  return new Promise((resolve) => {
+    if (!markdownDownloadModal) {
+      markdownDownloadModal = document.createElement("div");
+      markdownDownloadModal.className = "braindump-modal";
+      markdownDownloadModal.setAttribute("data-board-ui", "md-download-modal");
+      markdownDownloadModal.setAttribute("role", "dialog");
+      markdownDownloadModal.setAttribute("aria-modal", "true");
+      markdownDownloadModal.setAttribute("aria-label", "Markdown download format");
+      // The fullscreen note viewer sits at z-index 9999 and its own download
+      // button opens this, so the prompt has to clear it.
+      markdownDownloadModal.style.zIndex = "10050";
+      markdownDownloadModal.hidden = true;
+      markdownDownloadModal.innerHTML = `
+        <div class="braindump-modal-panel">
+          <h2 class="braindump-modal-title">Download this note</h2>
+          <p class="braindump-modal-description">Pick what happens to the images and files this note references.</p>
+          <div class="braindump-modal-actions braindump-md-download-choices" style="flex-direction: column; align-items: stretch;">
+            <button type="button" data-md-download-mode="base64" class="braindump-modal-button braindump-modal-button-primary">Single .md, assets embedded as base64</button>
+            <button type="button" data-md-download-mode="zip" class="braindump-modal-button braindump-modal-button-secondary">Zip: .md plus the asset files</button>
+            <button type="button" data-md-download-mode="plain" class="braindump-modal-button braindump-modal-button-secondary">Markdown only, no assets</button>
+          </div>
+          <label class="braindump-modal-checkbox" for="braindump-md-download-remember">
+            <input type="checkbox" id="braindump-md-download-remember">
+            <span>Remember this choice. Changeable under Settings, Markdown download.</span>
+          </label>
+          <div class="braindump-modal-actions">
+            <button type="button" data-md-download-mode="" class="braindump-modal-button braindump-modal-button-secondary">Cancel</button>
+          </div>
+        </div>
+      `;
+      // document.body, not the viewport. .braindump-viewport is position:fixed
+      // with z-index 1, which makes it a stacking context, so a child's z-index
+      // of 10050 is clamped to 1 against the root and the modal paints BEHIND
+      // the fullscreen note viewer (z-index 9999, itself appended to body).
+      // The fullscreen viewer's own download button opens this prompt, so that
+      // is the one path the high z-index exists for. Clicking through it landed
+      // on the fullscreen backdrop and just closed the viewer, producing no file
+      // and no visible prompt.
+      document.body.appendChild(markdownDownloadModal);
+    }
+
+    const remember = markdownDownloadModal.querySelector("#braindump-md-download-remember");
+    if (remember) remember.checked = false;
+    markdownDownloadModal.hidden = false;
+
+    const finish = (mode) => {
+      markdownDownloadModal.hidden = true;
+      markdownDownloadModal.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey, true);
+      if (mode && remember?.checked) {
+        boardSettings.markdownDownloadMode = mode;
+        applyBoardSettings({ announce: false });
+      }
+      resolve(mode || null);
+    };
+    const onClick = (event) => {
+      if (event.target === markdownDownloadModal) {
+        finish("");
+        return;
+      }
+      const button = event.target?.closest?.("[data-md-download-mode]");
+      if (!button) return;
+      event.stopPropagation();
+      finish(button.getAttribute("data-md-download-mode"));
+    };
+    const onKey = (event) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      finish("");
+    };
+
+    markdownDownloadModal.addEventListener("click", onClick);
+    markdownDownloadModal.addEventListener("mousedown", (event) => event.stopPropagation());
+    document.addEventListener("keydown", onKey, true);
+  });
+}
+
+async function downloadMarkdownNode(nodeObj, options = {}) {
   if (!nodeObj) return;
   let content = typeof nodeObj._rawMarkdown === "string" ? nodeObj._rawMarkdown : null;
   if (content == null) {
@@ -7540,6 +9327,39 @@ async function downloadMarkdownNode(nodeObj) {
   if (!nodeObj.markdownId) Object.assign(nodeObj, newMarkdownIdentity());
   const serialized = serializeMarkdownWithFrontmatter(nodeObj, content);
   const filename = deriveMarkdownDownloadFilename(nodeObj);
+
+  // Mode order: an explicit call wins, then the stored default, then the
+  // prompt. Dismissing the prompt cancels the download outright.
+  let mode = normalizeMarkdownDownloadMode(options.mode || boardSettings.markdownDownloadMode);
+  if (mode === "ask") {
+    mode = await askMarkdownDownloadMode();
+    if (!mode) return;
+  }
+
+  if (mode === "base64") {
+    const built = await buildBase64Markdown(serialized);
+    triggerBlobDownload(new Blob([built.markdown], { type: "text/markdown;charset=utf-8" }), filename);
+    const left = built.oversize + built.unreadable;
+    if (built.embedded > 0 && left === 0) {
+      showToolbarToast(`Downloaded ${filename} with ${built.embedded} asset${built.embedded === 1 ? "" : "s"} embedded.`, "success");
+    } else if (left > 0) {
+      // Named, not swallowed: an asset that stayed a path is a link that will
+      // not resolve away from this board, and the user has to know to re-run
+      // the download as a zip.
+      showToolbarToast(`Downloaded ${filename}; ${left} asset${left === 1 ? "" : "s"} stayed a link (too large or unreadable). Use the zip mode for those.`, "info");
+    } else {
+      showToolbarToast(`Downloaded ${filename}.`, "success");
+    }
+    return;
+  }
+
+  // Markdown only: the bare file, refs left exactly as the note wrote them.
+  // Deleting the user's image lines would be the destructive reading of
+  // "without assets"; this one only declines to carry the bytes.
+  if (mode === "plain") {
+    triggerBlobDownload(new Blob([serialized], { type: "text/markdown;charset=utf-8" }), filename);
+    return;
+  }
 
   // A note that references repo-local images downloads as a zip carrying the
   // markdown plus those images, so the file works away from this repo. Plain
@@ -7935,6 +9755,460 @@ async function createNewMarkdownNote(spawnAt = null) {
 // exist. Kept as a named function because the toolbar and the X shortcut call it.
 function openMarkdownPanel(spawnAt = null) {
   void createNewMarkdownNote(spawnAt);
+}
+
+// ---------------------------------------------------------------------------
+// Sub-canvases: the canvas tool, nesting, and rename
+// ---------------------------------------------------------------------------
+//
+// A sub-canvas is a sidecar `.canvas` file sitting beside this board's own
+// current.canvas, created one click at a time exactly the way a markdown note
+// is. It is deliberately NOT a registry board. A registry board costs an entry
+// in src/registry.json, a generated page, a slug inside every other board
+// page's data-board-index, a localStorage namespace and a directory named
+// after it, and every one of those is something a rename would have to
+// rewrite. A sidecar has two referrers: the node that points at it, and its
+// own canvasId.
+//
+// So rename is two gestures with two different answers:
+//   * renaming the title relabels the node and touches no file at all, which
+//     is already how markdown notes behave, so nothing can break;
+//   * renaming the file (in Explorer, in git, anywhere) breaks the stored
+//     path, and the canvasId is what puts it back. See healCanvasNodeSource.
+
+// Same character set as sanitizeCanvasFilename in scripts/preview-server.mjs.
+// If the two ever disagree the board writes one name and reads another; that
+// symmetry has already broken once for markdown.
+function sanitizeCanvasFilename(value) {
+  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "canvas";
+  const base = raw
+    .replace(/\.canvas$/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "") || `canvas-${Date.now()}`;
+  return `${base}.canvas`;
+}
+
+function defaultCanvasTimestampName() {
+  return `canvas-${formatTimestamp()}`;
+}
+
+function newSubCanvasId() {
+  return (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `canvas-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// A sub-canvas reference is stored as a bare filename in markdown and as a
+// path on a node. Both resolve against the board's own canvas directory,
+// because that is the one place sidecars live.
+function resolveCanvasEmbedSource(ref) {
+  const raw = String(ref || "").trim();
+  if (!raw) return "";
+  if (/^[a-z]+:/i.test(raw) || raw.startsWith("//") || raw.startsWith("/")) return raw;
+  try {
+    return new URL(raw, new URL(boardConfig.sourcePath, window.location.href)).pathname;
+  } catch (error) {
+    return raw;
+  }
+}
+
+// Writes through /api/save-board rather than a route of its own: that handler
+// already refuses an empty overwrite, refuses a stale tab, and preserves
+// canvasId and createdAt. A second write path would have had to grow all
+// three again. `path` retargets an existing sidecar, `filename` creates one.
+async function trySaveCanvasSidecar({ filename = "", path = "", state }) {
+  if (repositoryServerDetected === false) return null;
+  try {
+    const url = new URL("/api/save-board", window.location.origin);
+    if (boardConfig.slug) url.searchParams.set("slug", boardConfig.slug);
+    if (path) url.searchParams.set("path", path);
+    else if (filename) url.searchParams.set("filename", filename);
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state)
+    });
+    if (!response.ok) return null;
+    const result = await response.json().catch(() => null);
+    if (!result?.url) return null;
+    return result;
+  } catch (error) {
+    return null;
+  }
+}
+
+// The path is how a sub-canvas is addressed; the canvasId is what it is. When
+// the path stops resolving because the file was renamed or moved, ask the
+// server which file now carries this id and rewrite the node to match. Nothing
+// else in the repo references a sidecar, so this is the whole rename story.
+const _canvasHealAttempted = new Set();
+
+async function healCanvasNodeSource(nodeObj) {
+  if (!nodeObj?.canvasRef) return false;
+  if (repositoryServerDetected === false) return false;
+  if (_canvasHealAttempted.has(nodeObj.id)) return false;
+  _canvasHealAttempted.add(nodeObj.id);
+  try {
+    const url = new URL("/api/list-canvas", window.location.origin);
+    if (boardConfig.slug) url.searchParams.set("slug", boardConfig.slug);
+    const response = await fetch(url.toString(), { cache: "no-store" });
+    if (!response.ok) return false;
+    const result = await response.json().catch(() => null);
+    const match = (result?.files || []).find((file) => file && file.canvasId === nodeObj.canvasRef);
+    if (!match?.url || match.url === nodeObj.boardSource) return false;
+    nodeObj.boardSource = match.url;
+    nodeObj.canvasPath = match.path || "";
+    markBoardDirty();
+    if (getBoardElementById(nodeObj.id)) renderNode(nodeObj);
+    showToolbarToast(`Canvas file is now ${match.filename}; the link was repaired.`, "info");
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Styling lives here rather than in CSS/braindump.css only because this patch
+// is not the owner of that file. Move these rules into braindump.css when
+// convenient; nothing depends on them being injected.
+let _subCanvasStylesInjected = false;
+
+function ensureSubCanvasStyles() {
+  if (_subCanvasStylesInjected || document.getElementById("bd-subcanvas-styles")) {
+    _subCanvasStylesInjected = true;
+    return;
+  }
+  _subCanvasStylesInjected = true;
+  const style = document.createElement("style");
+  style.id = "bd-subcanvas-styles";
+  style.textContent = `
+.bd-canvas-fullscreen .bd-canvas-fullscreen-container {
+  width: 94vw;
+  max-width: 1400px;
+  height: 90vh;
+  max-height: none;
+}
+.bd-canvas-fullscreen-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.bd-subcanvas-viewport.braindump-viewport {
+  position: absolute;
+  inset: 0;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: 100%;
+  z-index: auto;
+}
+.bd-md-line--canvas {
+  padding: 0 !important;
+}
+.bd-md-line-canvas {
+  display: block;
+  margin: 6px 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.28);
+  border-radius: 8px;
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
+}
+.bd-md-line-canvas-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+.bd-md-line-canvas-stage {
+  display: block;
+  min-height: 62px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.bd-md-line-canvas-stage .bd-board-preview-map {
+  width: 100%;
+  height: auto;
+}
+.bd-board-preview-open-canvas {
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.4);
+  background: transparent;
+  color: var(--bd-accent, #3fdaca);
+}
+`;
+  document.head.appendChild(style);
+}
+
+// Fills every `![[name.canvas]]` placeholder inside `root` with the same
+// minimap a board-preview node draws, reusing its fetch and its cache.
+function hydrateMarkdownCanvasEmbeds(root) {
+  if (!root || typeof root.querySelectorAll !== "function") return;
+  ensureSubCanvasStyles();
+  root.querySelectorAll("[data-canvas-embed]").forEach((holder) => {
+    if (holder.dataset.canvasHydrated === "1") return;
+    holder.dataset.canvasHydrated = "1";
+    const stage = holder.querySelector(".bd-md-line-canvas-stage");
+    const src = holder.dataset.canvasEmbed || "";
+    if (!stage) return;
+    if (!src) {
+      stage.textContent = "Canvas not available";
+      return;
+    }
+    void fetchBoardPreviewState(src).then((entry) => {
+      if (entry?.status === "ready") {
+        stage.innerHTML = renderBoardPreviewSnapshotSvg(entry);
+      } else if (entry?.status === "empty") {
+        stage.textContent = "Empty canvas";
+      } else {
+        stage.textContent = "Canvas not available";
+      }
+    });
+  });
+}
+
+// The other half of "add it inside a markdown block": with exactly one note
+// selected, the new canvas is appended to that note instead of spawning loose
+// on the board. Returns true when it did.
+//
+// Selection, not the caret. Measured: clicking any toolbar button blurs the
+// markdown editor and clears the active line before the handler runs, so a
+// caret-based rule reads well and never fires. The selected outline survives,
+// it is visible, and the user put it there on purpose.
+function insertCanvasEmbedIntoSelectedNote(sourceUrl) {
+  const selected = canvas.querySelectorAll(".bd-item.selected");
+  if (selected.length !== 1) return false;
+  const el = selected[0];
+  const noteObj = nodes.find((candidate) => candidate.id === el.id);
+  if (!noteObj || noteObj.type !== "markdown") return false;
+  const body = el.querySelector(".bd-markdown-body");
+  if (!body) return false;
+  const filename = String(sourceUrl || "").split("/").pop();
+  if (!filename) return false;
+
+  // Same shape as pasteImageIntoMarkdown: build the line, render it, then let
+  // the debounced editor save write both _rawMarkdown and the .md sidecar.
+  const embedLine = buildMarkdownLineEl(`![[${filename}]]`);
+  body.appendChild(embedLine);
+  setMarkdownLineRendered(embedLine);
+  scheduleMarkdownSave(noteObj, body);
+  return true;
+}
+
+let _canvasFullscreenEl = null;
+let _canvasFullscreenNode = null;
+const _canvasMounts = new Map();
+
+function buildSubCanvasHost(nodeObj, source) {
+  const repoPath = String(nodeObj.canvasPath || "").replace(/^\/+/, "");
+  const gridId = `bd-subcanvas-grid-${String(nodeObj.id).replace(/[^A-Za-z0-9_-]/g, "")}`;
+  const host = document.createElement("div");
+  host.className = "braindump-viewport bd-subcanvas-viewport";
+  // Focusable, so that clicking anywhere inside it makes it :focus-within and
+  // the shared keydown gate hands this board the keyboard rather than the
+  // parent underneath it.
+  host.tabIndex = -1;
+  host.dataset.boardApp = "true";
+  host.dataset.boardSlug = boardConfig.slug;
+  host.dataset.boardTitle = nodeObj.title || "Canvas";
+  host.dataset.boardSource = source;
+  host.dataset.boardRepoPath = repoPath;
+  host.dataset.boardIndex = viewport?.dataset.boardIndex || "[]";
+  host.dataset.boardStorageKey = `${boardConfig.storageKey}:canvas:${nodeObj.canvasRef || nodeObj.id}`;
+  // Explicitly empty, not absent: boardConfig falls back to the original
+  // braindump legacy paths when these datasets are undefined.
+  host.dataset.boardLegacyStorageKey = "";
+  host.dataset.boardLegacySource = "";
+  // Retarget the save at the sidecar rather than the board's own file. The
+  // client appends ?slug and ?base to whatever this endpoint already carries,
+  // so the query string here survives.
+  host.dataset.boardSaveEndpoint = repoPath
+    ? `/api/save-board?path=${encodeURIComponent(repoPath)}`
+    : "/api/save-board";
+  host.innerHTML = `
+    <div class="braindump-canvas" data-board-role="canvas">
+      <svg class="braindump-grid" aria-hidden="true" viewBox="-120000 -120000 240000 240000">
+        <defs>
+          <pattern id="${gridId}" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
+            <circle class="braindump-grid-dot" cx="1" cy="1" r="1"></circle>
+          </pattern>
+        </defs>
+        <rect x="-120000" y="-120000" width="240000" height="240000" fill="url(#${gridId})"></rect>
+      </svg>
+      <svg data-board-role="svg-layer"></svg>
+    </div>
+    <div class="braindump-toolbar-shell" data-board-ui="toolbar-shell">
+      <div class="braindump-toolbar" data-board-ui="toolbar">
+        <button type="button" data-tool="select" aria-label="Select (V)" title="Select (V)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+        </button>
+        <button type="button" data-tool="pan" aria-label="Pan (Space)" title="Pan (Space)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heroicon-hand"><path d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
+        </button>
+        <button type="button" data-tool="text" aria-label="Add Text (T)" title="Text (T)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M12 4v16M9 20h6"/></svg>
+        </button>
+        <button type="button" data-tool="draw" aria-label="Draw (P)" title="Pen (P)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        </button>
+        <button type="button" data-tool="bookmark" aria-label="Add Bookmark (L)" title="Link (L)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+        <button type="button" class="braindump-toolbar-action" data-tool="save" aria-label="Save canvas (Ctrl+S)" title="Save (Ctrl+S)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        </button>
+      </div>
+      <div class="braindump-toolbar-toast" data-board-ui="toolbar-toast" role="status" aria-live="polite" hidden></div>
+    </div>
+  `;
+  return host;
+}
+
+function closeCanvasFullscreen() {
+  if (!_canvasFullscreenEl || _canvasFullscreenEl.hidden) return;
+  _canvasFullscreenEl.classList.remove("is-open");
+  _canvasFullscreenEl.hidden = true;
+  document.body.style.overflow = "";
+  // Hand the keyboard back to the board that owns this node, so Delete and undo
+  // do not land on a canvas that is no longer on screen.
+  _canvasFullscreenEl.querySelectorAll(".bd-subcanvas-viewport").forEach((child) => child.blur());
+  _activeBoardViewport = viewport;
+  // The child board has just been edited, so the parent's cached minimap of it
+  // is out of date. Drop the cache entry and redraw the node that owns it.
+  const node = _canvasFullscreenNode;
+  _canvasFullscreenNode = null;
+  if (node?.boardSource) {
+    _boardPreviewStateCache.delete(node.boardSource);
+    if (getBoardElementById(node.id)) renderNode(node);
+  }
+}
+
+// Opening a nested canvas mounts a second, real board on the sidecar file.
+// Not an iframe (that would reload on every re-parent) and not a static
+// picture: mountCosmoboard already mounts one board per [data-board-app]
+// element and already arbitrates keyboard input between mounts.
+function openCanvasFullscreen(nodeObj) {
+  const source = String(nodeObj?.boardSource || "");
+  if (!source) return;
+  ensureSubCanvasStyles();
+
+  if (!_canvasFullscreenEl) {
+    _canvasFullscreenEl = document.createElement("div");
+    _canvasFullscreenEl.className = "bd-markdown-fullscreen bd-canvas-fullscreen";
+    _canvasFullscreenEl.hidden = true;
+    _canvasFullscreenEl.innerHTML = `
+      <div class="bd-markdown-fullscreen-backdrop"></div>
+      <div class="bd-markdown-fullscreen-container bd-canvas-fullscreen-container">
+        <div class="bd-markdown-fullscreen-header">
+          <h2 class="bd-markdown-fullscreen-title"></h2>
+          <button type="button" class="bd-markdown-fullscreen-close" aria-label="Close canvas">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="bd-canvas-fullscreen-stage" data-board-ui="canvas-fullscreen-stage"></div>
+      </div>
+    `;
+    document.body.appendChild(_canvasFullscreenEl);
+    _canvasFullscreenEl
+      .querySelector(".bd-markdown-fullscreen-close")
+      ?.addEventListener("click", closeCanvasFullscreen);
+    _canvasFullscreenEl
+      .querySelector(".bd-markdown-fullscreen-backdrop")
+      ?.addEventListener("click", closeCanvasFullscreen);
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (!_canvasFullscreenEl || _canvasFullscreenEl.hidden) return;
+      closeCanvasFullscreen();
+    });
+  }
+
+  const stage = _canvasFullscreenEl.querySelector(".bd-canvas-fullscreen-stage");
+  stage.querySelectorAll(".bd-subcanvas-viewport").forEach((existing) => {
+    existing.style.display = "none";
+  });
+
+  const key = nodeObj.canvasRef || source;
+  let host = _canvasMounts.get(key);
+  if (!host) {
+    host = buildSubCanvasHost(nodeObj, source);
+    stage.appendChild(host);
+    _canvasMounts.set(key, host);
+    // Mounted once per canvas and then kept: mountCosmoboard registers
+    // document-level listeners with no teardown, so re-mounting on every open
+    // would stack a fresh set each time.
+    mountCosmoboard(host);
+  }
+  host.style.display = "";
+
+  _canvasFullscreenNode = nodeObj;
+  const titleEl = _canvasFullscreenEl.querySelector(".bd-markdown-fullscreen-title");
+  if (titleEl) titleEl.textContent = nodeObj.title || "Canvas";
+  _canvasFullscreenEl.hidden = false;
+  _canvasFullscreenEl.classList.add("is-open");
+  document.body.style.overflow = "hidden";
+  // Release the parent's keyboard claim and take focus, so a Delete pressed
+  // straight after opening deletes inside the canvas rather than behind it.
+  _activeBoardViewport = null;
+  host.focus({ preventScroll: true });
+}
+
+async function createNewCanvasNode(spawnAt = null) {
+  if (isPreviewMode) return null;
+  if (isBoardLocked()) return null;
+
+  const title = defaultCanvasTimestampName();
+  const filename = sanitizeCanvasFilename(`${title}.canvas`);
+  const now = new Date().toISOString();
+  // No title in the file on purpose. serializeState rebuilds the canvas from a
+  // fixed set of keys, so a title written here would vanish on the child's
+  // first save; a field that quietly disappears is worse than no field. The
+  // display name lives on the node, which is the whole rename argument.
+  const state = {
+    canvasId: newSubCanvasId(),
+    createdAt: now,
+    updatedAt: now,
+    nodes: [],
+    edges: []
+  };
+  const result = await trySaveCanvasSidecar({ filename, state });
+  if (!result?.url) {
+    showToolbarToast("No save endpoint on this host, so a canvas file could not be created.", "error");
+    return null;
+  }
+
+  if (insertCanvasEmbedIntoSelectedNote(result.url)) {
+    showToolbarToast(`Embedded ${filename} in the selected note.`, "success");
+    return null;
+  }
+
+  const dimensions = { width: 360, height: 300 };
+  let spawnX;
+  let spawnY;
+  if (spawnAt) {
+    spawnX = spawnAt.x - dimensions.width / 2;
+    spawnY = spawnAt.y - dimensions.height / 2;
+  } else {
+    const center = getCenteredNodeCanvasPosition(dimensions.width, dimensions.height);
+    spawnX = center.x;
+    spawnY = center.y - 80;
+  }
+
+  const node = createNode("board-preview", spawnX, spawnY, {
+    ...dimensions,
+    title,
+    boardSource: result.url,
+    canvasRef: state.canvasId,
+    canvasPath: result.path || ""
+  });
+  markBoardDirty();
+  flushLocalStateSave();
+  showToolbarToast(`Created ${filename}`, "success");
+  return node;
 }
 
 function ensureDropOverlay() {
@@ -10126,10 +12400,223 @@ function renderNode(nodeObj) {
   }
 }
 
+// ---- the shortcuts panel, behind `?` ----
+//
+// Every gesture this board grew is invisible. Alt-drag copy, the axis lock,
+// Ctrl+click pin, the brush-size long press and the single-letter tool keys are
+// discoverable only by being told, and a first-time visitor is the whole point
+// of the site, so an undiscoverable feature is close to an unbuilt one.
+//
+// The list below is derived from the handlers in this file, not written from a
+// changelog. Every row is a gesture that is bound above, at the line noted next
+// to it. A panel that advertises a shortcut which does not work is worse than
+// no panel, so if a binding is deleted, delete its row in the same commit.
+//
+// Built in JS rather than in markup for the same reason the eraser button and
+// the auto-hide toggle are: the toolbar shell is copy-pasted into seven HTML
+// files (three board pages plus every generated page under content/boards), so
+// one insertion here reaches all of them and no build has to run.
+//
+// Deliberately not a command palette. This is the reference, not a launcher.
+const SHORTCUT_GROUPS = [
+  {
+    title: "Tools",
+    note: "Single keys, whenever you are not typing.",
+    items: [
+      [["V"], "Select"],
+      [["P"], "Pen"],
+      [["E"], "Eraser"],
+      [["T"], "Text note"],
+      [["L"], "Link"],
+      [["X"], "New markdown note where the pointer is"],
+      [["Space"], "Hold to pan, release to go back to the tool you had"],
+    ],
+  },
+  {
+    title: "Moving around",
+    items: [
+      [["Wheel"], "Zoom, centred on the pointer"],
+      [["Middle-drag"], "Pan from anywhere on the board"],
+      [["Right-drag"], "Pan from anywhere on the board"],
+      [["Shift", "drag"], "Pan, starting on empty board"],
+      [["Drag"], "Sweep-select, starting on empty board with Select"],
+    ],
+  },
+  {
+    title: "Moving things",
+    items: [
+      [["Shift", "click"], "Add an item to the selection"],
+      [["Alt", "drag"], "Leave a copy behind. Alt can go down or up mid-drag"],
+      [["Shift", "drag"], "Lock the move to horizontal, vertical or 45°"],
+      [["Ctrl", "click"], "Pin an item to the screen. Again to unpin"],
+      [["Drag a pinned edge"], "Move a pinned item, and throw it at an edge or corner to snap it"],
+      [["Delete"], "Delete the selection"],
+    ],
+  },
+  {
+    title: "Pen and eraser",
+    items: [
+      [["Shift"], "Hold while drawing for a straight line from the last point"],
+      [["Alt", "wheel"], "Brush size, with a true-to-scale circle"],
+      [["Long-press the tool"], "Then drag up or down for brush size"],
+    ],
+  },
+  {
+    title: "A selected video",
+    items: [
+      [["Space"], "Play or pause"],
+      [["←"], "Back five seconds"],
+      [["→"], "Forward five seconds"],
+    ],
+  },
+  {
+    title: "Files and history",
+    note: "Ctrl is Cmd on a Mac.",
+    items: [
+      [["Ctrl", "Z"], "Undo"],
+      [["Ctrl", "Shift", "Z"], "Redo"],
+      [["Ctrl", "X"], "Cut"],
+      [["Ctrl", "C"], "Copy"],
+      [["Ctrl", "V"], "Paste where the pointer is"],
+      [["Ctrl", "S"], "Save"],
+      [["Ctrl", "Shift", "S"], "Save a copy"],
+      [["Ctrl", "O"], "Open a canvas"],
+      [["Ctrl", "I"], "Import a file"],
+      [["Double-click an address"], "Select and copy an embed's link"],
+    ],
+  },
+  {
+    title: "Getting out",
+    items: [
+      [["?"], "This panel"],
+      [["Esc"], "Closes the panel on top. Then leaves a note. Then clears the selection"],
+    ],
+  },
+];
+
+// One panel per document, not per mounted board: a nested canvas and the
+// landing page's previews each run this file, and two overlays stacked on each
+// other would be two Escapes to dismiss.
+const SHORTCUTS_PANEL_SELECTOR = '[data-board-ui="shortcuts-panel"]';
+
+function ensureShortcutsPanelStyle() {
+  if (document.getElementById("bd-shortcuts-style")) return;
+  const style = document.createElement("style");
+  style.id = "bd-shortcuts-style";
+  // The fit rule every other overlay here follows: a fixed, padded box, and the
+  // card is capped at 100% of it and scrolls inside. No vh arithmetic, so it
+  // survives a mobile URL bar and needs no media query to fit 390px.
+  style.textContent = `
+.bd-shortcuts{position:fixed;inset:0;z-index:2147483001;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+.bd-shortcuts[hidden]{display:none;}
+.bd-shortcuts-backdrop{position:absolute;inset:0;background:rgba(4,10,14,0.62);backdrop-filter:blur(2px);}
+.bd-shortcuts-card{position:relative;width:min(780px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--bd-panel-bg,#11181d);color:var(--bd-panel-fg,#e8f1f2);border:1px solid rgba(63,218,202,0.28);border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,0.5);padding:18px 20px 20px;font-size:13px;line-height:1.45;}
+.bd-shortcuts-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 12px;}
+.bd-shortcuts-title{margin:0;font-size:15px;font-weight:600;letter-spacing:0.01em;}
+.bd-shortcuts-close{background:none;border:1px solid rgba(255,255,255,0.18);color:inherit;border-radius:8px;padding:3px 9px;font:inherit;cursor:pointer;}
+.bd-shortcuts-groups{columns:2;column-gap:26px;}
+.bd-shortcuts-group{break-inside:avoid;margin:0 0 14px;}
+.bd-shortcuts-group h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;opacity:0.62;font-weight:600;}
+.bd-shortcuts-group p{margin:0 0 6px;opacity:0.6;font-size:12px;}
+.bd-shortcuts-group ul{list-style:none;margin:0;padding:0;}
+.bd-shortcuts-group li{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:4px 10px;padding:2px 0;align-items:baseline;}
+.bd-shortcuts-keys{white-space:nowrap;}
+.bd-shortcuts-what{opacity:0.82;min-width:0;}
+.bd-shortcuts kbd{display:inline-block;border:1px solid rgba(255,255,255,0.22);border-bottom-width:2px;border-radius:5px;padding:0 5px;font:inherit;font-size:11.5px;background:rgba(255,255,255,0.06);}
+.bd-shortcuts-plus{opacity:0.4;padding:0 2px;}
+.bd-shortcuts-foot{margin:14px 0 0;opacity:0.55;font-size:12px;}
+.braindump-help-inline-button{background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer;}
+@media (max-width:560px){.bd-shortcuts{padding:10px;}.bd-shortcuts-card{padding:14px;}.bd-shortcuts-groups{columns:1;}}
+`;
+  document.head.appendChild(style);
+}
+
+function renderShortcutKeys(keys) {
+  return keys
+    .map((key) => `<kbd>${escapeHtml(key)}</kbd>`)
+    .join('<span class="bd-shortcuts-plus">+</span>');
+}
+
+function ensureShortcutsPanel() {
+  const existing = document.querySelector(SHORTCUTS_PANEL_SELECTOR);
+  if (existing) return existing;
+  ensureShortcutsPanelStyle();
+  const overlay = document.createElement("div");
+  overlay.className = "bd-shortcuts";
+  overlay.dataset.boardUi = "shortcuts-panel";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Shortcuts");
+  overlay.hidden = true;
+  const groups = SHORTCUT_GROUPS.map((group) => `
+      <div class="bd-shortcuts-group">
+        <h3>${escapeHtml(group.title)}</h3>
+        ${group.note ? `<p>${escapeHtml(group.note)}</p>` : ""}
+        <ul>
+          ${group.items.map(([keys, what]) => `
+            <li>
+              <span class="bd-shortcuts-keys">${renderShortcutKeys(keys)}</span>
+              <span class="bd-shortcuts-what">${escapeHtml(what)}</span>
+            </li>`).join("")}
+        </ul>
+      </div>`).join("");
+  overlay.innerHTML = `
+    <div class="bd-shortcuts-backdrop" data-shortcuts-dismiss="true"></div>
+    <div class="bd-shortcuts-card">
+      <div class="bd-shortcuts-head">
+        <h2 class="bd-shortcuts-title">Shortcuts</h2>
+        <button type="button" class="bd-shortcuts-close" data-shortcuts-dismiss="true">Esc</button>
+      </div>
+      <div class="bd-shortcuts-groups">${groups}</div>
+      <p class="bd-shortcuts-foot">Press <kbd>?</kbd> from the board at any time. Nothing here fires while you are typing.</p>
+    </div>`;
+  overlay.addEventListener("mousedown", (event) => {
+    // The board treats a stray mousedown as a click on the canvas, and the
+    // pointerdown pan handler is on window. Keep both off the overlay.
+    event.stopPropagation();
+    if (event.target.closest("[data-shortcuts-dismiss]")) setShortcutsPanelOpen(false);
+  });
+  overlay.addEventListener("wheel", (event) => event.stopPropagation(), { passive: false });
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function isShortcutsPanelOpen() {
+  const overlay = document.querySelector(SHORTCUTS_PANEL_SELECTOR);
+  return !!overlay && !overlay.hidden;
+}
+
+function setShortcutsPanelOpen(open) {
+  const overlay = open ? ensureShortcutsPanel() : document.querySelector(SHORTCUTS_PANEL_SELECTOR);
+  if (!overlay) return;
+  overlay.hidden = !open;
+  if (open) overlay.querySelector(".bd-shortcuts-card")?.scrollTo?.(0, 0);
+}
+
+// The line in the settings help. Injected, like the panel, so it lands on the
+// generated board pages too. It is a button, not prose, because the panel has
+// to be reachable without a keyboard at all.
+(function addShortcutsHelpLine() {
+  const list = queryBoard(".braindump-help-list");
+  if (!list || list.querySelector("[data-shortcuts-open]")) return;
+  ensureShortcutsPanelStyle();
+  const item = document.createElement("li");
+  item.innerHTML = `<strong>All shortcuts:</strong> press <code>?</code> anywhere on the board, or <button type="button" data-shortcuts-open="true" class="braindump-help-inline-button">open the list</button>. It covers alt-drag copy, the shift axis lock, Ctrl+click pinning, brush size and the tool keys.`;
+  item.querySelector("[data-shortcuts-open]").addEventListener("click", () => setShortcutsPanelOpen(true));
+  list.insertBefore(item, list.firstChild);
+})();
+
 // Paste Handling
 document.addEventListener("paste", (e) => {
   if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA" || document.activeElement.hasAttribute("contenteditable")) {
     return; // Don't intercept if they're actively typing !
+  }
+  // Same arbitration the keydown handlers use. Without it a page with more
+  // than one board mounted (a nested canvas open, or the landing page's
+  // previews) creates one pasted node per mount instead of one.
+  if (_mountedBoardCount > 1) {
+    if (_activeBoardViewport && _activeBoardViewport !== viewport) return;
+    if (!_activeBoardViewport && !viewport.matches(":focus-within")) return;
   }
   if (isBoardLocked()) return;
   // Track paste location to last mouse coordinate
@@ -10358,7 +12845,7 @@ function normalizeNodeAssetUrls(n) {
   // host off it (which is what portability wants for a same-origin or localhost
   // asset) would turn ws://127.0.0.1:6080 into "/", and a websockify or KasmVNC
   // on the same machine is the ordinary case.
-  if (n.type === "vnc") return { ...n };
+  if (n.type === "vnc" || n.type === "computer") return { ...n };
   const next = { ...n };
   for (const key of ["file", "url", "href", "boardSource", "boardHref", "source"]) {
     if (typeof next[key] === "string" && next[key]) {

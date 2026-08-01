@@ -62,9 +62,133 @@ card there within seconds.
 
 ## Now
 
-- [ ] In the task management tracker board when I click items move things drag items the scroll position of items disappear and it becomes hard to find them fix this. Also maybe best to add ID numbers to thm that are visible and easy to manage.top left # ()
+- [A] the size increse decrease drag of the pen should be applied in the same manner to the eraser as well. Al going down to decrease the size there is not a lot of space. Maybe it should possible to keep dragging down even when you reach the edge of the screen to be able to scale it down more.
+  **The eraser already had it**, and it kept its own size separately from the pen, which is what
+  you want. So that half was true before you asked; it just was not discoverable. It is in the
+  new shortcuts panel now.
+  **The screen-edge problem was real and is the interesting half.** The drag measured the
+  absolute distance from where you pressed, so once the cursor reached the bottom of the screen
+  it stopped changing and the size stopped shrinking. Since the toolbar sits near the bottom
+  edge, there was barely any room to drag down at all, which made small brush sizes effectively
+  unreachable. Your instinct in the card was right.
+  It takes a pointer lock once the press engages, the way an OS-level slider does: the cursor
+  stops moving, the mouse keeps reporting movement forever, and the range has no edge. The lock
+  is requested only after the long press engages, so an ordinary click on the tool never grabs
+  your pointer, and it is released unconditionally on release, because a lock left on is a cursor
+  you cannot get back. Touch and any browser that refuses the lock fall back to exactly the old
+  behaviour rather than breaking.
+  **How to check:** press and hold the eraser icon, drag down past the bottom of the screen and
+  keep going. The size keeps falling. The same works on the pen.
 
-- [ ] Lets have a option to embed the images and other assets that are small enough into markdow via embedding them in BASE 64. Maybe for now can ask after you click the download icon. ANd also would be nice to have a setting for it in settings. Currently the default behavior should be asking the user. In settings alternatives can be: base64 embded markdown, download makrdown with content as zip, download markdown with assests without assets. Also when embedding base-64 it would be ideal if in markdown its formatted as a reference: Where the image is: ![Growth Chart][chart-1] (at the bototm of the file: [chart-1]: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAA.
+- [A] I should also be able to open a new "canvas" file and add it either inside a markdow block or in another canvas. Just like the markdown tool add a canvas tool. You should also be able to re-name it. renaming the board shouldn't break things and links. !p1
+  Built. There is a canvas tool beside the markdown tool, and it works the same way: one click
+  writes a real `.canvas` sidecar next to the board's own `current.canvas`, carrying its own
+  `canvasId`. A canvas nests inside another canvas and inside a markdown block.
+  **On rename, the design answer matters more than the code.** The choice was rename-with-rewrite
+  (hunt down every referrer and update it) versus stable-id-plus-display-name (the file keeps an
+  immutable id, the title is only a label). The second won, because `canvasId` already exists and
+  import already reconciles on it, so there is nothing to rewrite and therefore nothing to miss.
+  Renaming changes what you see, never what resolves. That is why renaming cannot break a link:
+  no link ever pointed at the name.
+  Sub-canvas writes go through the existing `/api/save-board` with `?path=` or `?filename=`
+  rather than a new endpoint, on purpose: a nested canvas then inherits the empty-save refusal,
+  the stale-tab refusal, and canvasId/createdAt preservation instead of getting a second, weaker
+  write path that would have to grow all three again. The board's own file is deliberately
+  unreachable that way, and a path outside the board directory is refused with a 403.
+  **Two things worth knowing.** A reviewer caught that this patch made the board's keyboard claim
+  sticky, which also un-scoped hover tracking: on a page with several preview boards, clicking one
+  made every later pointer move anywhere in the document write into that board's cursor position,
+  so a paste routed correctly still landed at coordinates taken from over a different board. Fixed
+  by scoping the window handler to real gestures. And two of its server hunks were dead on arrival
+  because the CLI work refactored `preview-server.mjs` underneath it mid-session; re-seated by hand.
+  **How to check:** open any board, press the canvas tool, and a new canvas appears as a node. Open
+  it, put something in it, reload: it is still there, and a new `.canvas` file sits beside the
+  board's own. Rename it and confirm the parent still opens it.
+
+- [A] the gradient at the bottom of overflowing markdown board can be half the height.
+  Halved, 44px to 22px, measured with `getComputedStyle` in a running page before and after
+  rather than eyeballed.
+  **How to check:** open a note long enough to overflow; the fade at its bottom edge is half as
+  tall as it was.
+
+- [x] The auto hide is cool and all but it should hide together with the lock icon. Also it should be at the bottom of the window centerd !p1
+  Both halves done, and the second half took two passes, which is worth recording.
+  **The lock folds with the toolbar now.** It was deliberately put in its own always-visible dock
+  so it would survive the collapse; you have overruled that, so it hides with the pill and, like
+  the pill, it goes `inert` rather than merely invisible, so Tab never lands focus on a button
+  nobody can see.
+  **Centred: the first attempt measured the wrong thing.** It reported the toolbar was already
+  centred, which is true of the expanded shell and guaranteed by `left: 50%`. But the card is
+  about auto-hide, and in the collapsed state the only thing on screen is the small reveal tab,
+  which rode to the right of centre because the hidden pill keeps its layout box. Measured: 1023.5
+  against a 720 centre at 1440px, so 303px out. The tab is now positioned against the shell's
+  centre, which is the window's centre in both the desktop and the mobile rule.
+  Deliberately not done by changing the shell's width: the 1024px panel-overflow fix depends on
+  it, and an attempt that did touch it failed 8 of 30 measurements in
+  `toolbar-panel-viewport-fit-e2e`. That suite is still green, 30/30.
+  A test case was added that fails without the fix (`E: the collapsed reveal tab's center
+  (1023.5) must equal the viewport center (720)`), because the existing case A passed happily
+  while the thing you reported was broken.
+  **How to check:** turn on auto-hide, move the mouse away. The little grab tab is centred at the
+  bottom of the window, and the lock is gone with the toolbar. Move back: both return together,
+  and the pill arrives centred under the cursor that reached for the tab.
+
+- [A] In the task management tracker board when I click items move things drag items the scroll position of items disappear and it becomes hard to find them fix this. Also maybe best to add ID numbers to thm that are visible and easy to manage.top left # () !p2
+  Both done. Every re-render now snapshots each column's `scrollTop` plus the page scroll and
+  restores them, so clicking a chip, sending feedback, dragging a card, or a background poll all
+  leave you where you were.
+  **The ids are stable, which was the hard part.** A line number or an array index would have
+  been useless: you and several agents rewrite `todo.md` all day, so the number under a card
+  would change whenever anything above it moved. The id is derived from the card itself, the same
+  way feedback and `card-meta.json` already key on lane plus title, so a card keeps its number
+  when lines are inserted above it. Short enough to say out loud to an agent, which is the point.
+  **How to check:** scroll a column down, click any chip, and the column stays where it was.
+  Insert a few lines at the top of `todo.md` and confirm the numbers on the cards below do not
+  shift.
+
+- [x] Lets have a option to embed the images and other assets that are small enough into markdow via embedding them in BASE 64. Maybe for now can ask after you click the download icon. ANd also would be nice to have a setting for it in settings. Currently the default behavior should be asking the user. In settings alternatives can be: base64 embded markdown, download makrdown with content as zip, download markdown with assests without assets. Also when embedding base-64 it would be ideal if in markdown its formatted as a reference: Where the image is: ![Growth Chart][chart-1] (at the bototm of the file: [chart-1]: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAA. !p1
+
+- [ ] Nothing built in the last two sessions is pushed. Five commits exist on this machine !p1
+  and nowhere else: the sprint that cleared the To do lane, the merge of main, the landing and
+  PDF answers, and the handoff. `origin/main` has none of it, and neither does this branch's own
+  remote. Two separate consequences, worth not conflating.
+  **Backup.** A week of work lives in one working tree on one laptop. A reflog is not a backup.
+  **Proof.** `.github/workflows/board-tests.yml` runs the stage gate and the perf budget on every
+  PR, and it has never run on this branch, so every green suite quoted on this board is a local
+  claim on one machine with one Chromium build. That is exactly the class of thing CI exists to
+  catch.
+  Filed as a card because the handoff lists pushing as yours, and it has now stayed undone across
+  two sessions, which is how a thing stops being visible. Not doing it unasked: pushing is
+  outward-facing and yours to trigger.
+  **How to check:** `git log --oneline origin/main..HEAD` lists five commits. After a push it
+  lists none, and the Actions tab shows a run.
+
+- [ ] The four PDFs are off the boards but still in git history, and that decision is still !p1
+  open. Deleting a file in a later commit removes it from the working tree, never from history:
+  `de79c7c` and `ff18a7f` are reachable from `origin/main` and still carry the bytes, so anyone
+  who clones this repo can recover `participant-information.pdf` and the Maker Faire exhibitor
+  lists that named 119 people with their zone and set-up assignments. The removal card records
+  this as something it deliberately does not do, which means it is invisible on the board. It gets
+  its own card so it is a decision you take rather than one that lapses by default.
+  **The choice.** Leave it, on the grounds that nothing links to the files and recovering them
+  takes deliberate effort. Or scrub with `git filter-repo`, which rewrites every commit hash from
+  the first touch onward and needs a force-push of `main` plus a fresh clone anywhere the repo
+  exists. The bytes are already on `origin`, so this is not the cheap local-only rewrite it would
+  have been before the first push.
+  Tell me which and I will do it. I am not rewriting published history on my own initiative.
+
+- [ ] The Review queue is the bottleneck, not the building: 47 cards sit in `[A]` waiting on !p2
+  you, against 20 open in To do. And the queue has been wrong before, in the way that matters:
+  one proof block asserted the cosmoboard canvas contained an `entity` node, which it never did
+  in any commit. So `[A]` currently means "an agent said so".
+  **What I want to do about it.** One pass that mechanically re-checks every `[A]` card whose
+  "How to check" line is machine-checkable, which is most of them: a named test file gets run, a
+  file that must exist or must be gone gets stat'd, a claimed string gets grepped. Output is one
+  short list in three groups: verified by machine, contradicted by machine, and needs your eyes
+  because it is a judgement about how something looks or feels. That turns 47 manual checks into
+  a handful, and any contradiction it finds is a real bug hiding behind a green-looking board.
+  **How to check:** the report names each card and the command that settled it, so you can re-run
+  any line yourself.
 
 - [x] Tracker: agents are declared, not guessed. !p2
   [`.tracker/agents.json`](../.tracker/agents.json) holds one entry per agent: id, number, the
@@ -116,7 +240,7 @@ card there within seconds.
   address in the VNC node, type the password, tick remember, connect. Then reload the page: it
   should come back on its own, straight into the desktop.
 
-- [A] [sync] Stale-tab clobber guard shipped, the interim fix for the worst main-feature bug !p1
+- [x] [sync] Stale-tab clobber guard shipped, the interim fix for the worst main-feature bug !p1
   observed this session (three silent overwrites by stale tabs). Every save now carries the
   on-disk updatedAt the tab loaded against; the server refuses a save whose base is older than
   the file and answers stale, and the tab shows "board changed elsewhere, reload" while keeping
@@ -149,7 +273,7 @@ card there within seconds.
   Alt-release disengaged, re-engage finalized with correct selection and zero leftover classes.
   **How to check:** drag any node, tap Alt mid-drag and watch the copy appear with both glows;
   release Alt, it vanishes; hold Alt and let go of the mouse, the copy stays behind.
-- [A] [runtime] Standardized placement shipped: every centered spawn and click placement runs !p2
+- [x] [runtime] Standardized placement shipped: every centered spawn and click placement runs !p2
   through findFreeCanvasPosition, a spiral probe against existing node rects with 16px padding,
   so new items land beside neighbors instead of on top of them (deliberate placements only nudge
   when they would overlap). Stage gate passes.
@@ -231,7 +355,7 @@ work area. Parked without timelines; pull cards out as direction firms up.
 
 Priorities are my call, as asked. Reasoning is on each card so you can overrule it.
 
-- [ ] [cli] A CLI over the same board data, the peer interface the migration plan names and !p2
+- [A] [cli] A CLI over the same board data, the peer interface the migration plan names and !p2
   nothing has started. `COSMOBOARD_MIGRATION.md` stage 2 is explicit that canvas, markdown and
   CLI should be three views over one store, not three stores, and two of the three exist. This
   is the highest-value **gap** on the roadmap rather than the highest-value feature: boards are
@@ -240,29 +364,109 @@ Priorities are my call, as asked. Reasoning is on each card so you can overrule 
   agent control of a board, which the vision names as a first-class use.
   Smallest useful version: list boards, list and grep nodes, add a note, export a board. p2 and
   not p1 because nothing today is blocked on it.
-- [ ] [runtime] A terminal node, the other half of migration stage 3. VNC landed and proved !p3
+  **Built, exactly that surface.** `npm run cosmo` gives `boards`, `nodes`, `grep`, `add-note`
+  and `export`, with `--json` on every read command and a non-zero exit on failure, because the
+  card says the point is giving an agent control of a board.
+  **The correctness constraint was the stale-base guard, and it holds.** A CLI write carries the
+  `updatedAt` it read against, and the server refuses a write whose base is older than the file,
+  which is the same rule the browser obeys. Verified: `--base 2020-01-01` is refused with exit 3
+  and the board is untouched. Without that, the CLI would have been a new way to reproduce the
+  silent-clobber bug that guard exists to stop.
+  **It did not write a third copy of the filename sanitizer.** That had already drifted once
+  between the browser and the server, flattening underscores on one side only. Board path
+  resolution, the sanitizer and the stale-base guard now live in `scripts/lib/board-store.mjs`,
+  shared by the CLI and `preview-server.mjs`, so there are two callers of one implementation
+  rather than three implementations.
+  **Caveat worth recording:** this agent hit the API session limit before it filed a report, and
+  its reviewer never ran. The code and its test are on disk and green, and I exercised the
+  commands by hand against real boards, but nobody adversarially reviewed it the way the other
+  cards were.
+  **How to check:** `npm run cosmo boards` lists all six with node counts.
+  `npm run cosmo grep Cosmoboard --json` returns matches. `node tests/cli/cli-over-board-data.test.mjs`.
+- [A] [runtime] A terminal node, the other half of migration stage 3. !p3
+  **Not built, deliberately, and the reason is worth reading.** The client half is easy:
+  xterm.js plus node-pty over ConPTY, which this machine supports. The host is the blocker.
+  A PTY served from `scripts/preview-server.mjs` would be a shell for **every website you have
+  open**, not just your LAN, because that server binds broadly, checks no Origin, and a WebSocket
+  upgrade is not covered by CORS. Building it on top of that would have been handing out a shell.
+  Four requirements written up before it ships: loopback-only bind, an Origin allowlist on the
+  upgrade, a per-run token, and off behind an explicit flag. The first two are filed as their own
+  `!p1` card because they are worth doing whether or not a terminal ever exists.
+  A Terminal entry does appear on the new computer-window protocol switch, showing what it needs
+  and carrying no Connect button, so nothing can dial a service that is not there. VNC landed and proved !p3
   the pattern (vendored client, credentials in localStorage and never in the board file, lazy
   import so a board without one costs nothing). A terminal is the same shape over a PTY, but
   unlike VNC it has **no host that already speaks the protocol**: it needs something local to
   serve the PTY, which is a real dependency and the reason this is p3 rather than p2. Revisit
   when the desktop shell card thaws, since that shell is the natural host.
-- [ ] [runtime] Touch parity for the gestures added this session. Pin is Ctrl+click and !p2
+- [A] [runtime] Touch parity for the gestures added this session. !p2
+  Touch paths for the gestures that needed a key a touchscreen does not have, and the pin
+  handles grow to 44px on a coarse pointer, which is what every touch guideline asks for.
+  **One reviewer catch that would have been nasty.** The first version grew those handles
+  *outward*, so every pinned item sat inside a ring reaching 32px past its own edges, and a
+  handle takes the pointer and swallows the event. A tap on an ordinary node within 32px of a
+  pinned one would have started a pin drag instead of selecting that node, and nothing tested it.
+  They grow inward now, keeping 6px of outward reach so a pin flush against a screen edge is
+  still grabbable. The cost is paid by the pinned item's own content, which is the item you are
+  deliberately manipulating.
+  Desktop is unregressed: pin, shift-drag, alt-drag copy and the drawing suites are all green.
+  **How to check:** on a phone, pin something and drag it by an edge. Then tap a node sitting
+  just outside the pinned one; it should select that node, not grab the pin. Pin is Ctrl+click and !p2
   shift-drag needs a Shift key, so **neither exists on a phone or tablet**, and mobile is not a
   side case here: the open crash report and the pinch fixes are all mobile. Wants a long-press
   or a node action for pinning and a visible axis-lock affordance while dragging. p2 because
   every new interaction this session is desktop-only, which quietly makes the board two
   different products.
-- [ ] [ux] Nothing tells you the shortcuts exist. The board now has alt-drag copy, shift-axis !p2
+- [A] [ux] Nothing tells you the shortcuts exist. !p2
+  A panel behind `?`, 36 rows in 7 groups.
+  **The list was derived from the handlers, not from the card**, which matters because the card
+  was already out of date. Enumerated: all 13 keydown handlers, every `.key ===` string, and the
+  pointer handlers behind the pin chord, the pin frame, wheel zoom, alt-wheel brush size,
+  middle and right-drag pan, draw, erase, the pen icon long-press, node drag, and the embed
+  address double-click.
+  **Three things nobody knew were true.** There is no keyboard shortcut for the canvas tool at
+  all, it is a drawer button only. Right-drag pans, and the context-menu suppression exists
+  solely to serve that. And Shift+click adds to a selection, so shift-drag means two different
+  things depending on where it starts; both are listed separately.
+  `?` is four lines inserted inside the existing board keydown handler rather than a new one, so
+  it inherits that handler's bail-outs for text fields, a focused VNC session and multi-board
+  arbitration instead of re-deriving them and getting one wrong. Escape takes the panel first,
+  then stops, so your selection underneath survives and a second Escape clears it as before.
+  **One claim on the card was wrong and a reviewer caught it.** It said `?` already works on the
+  landing page's preview boards. It does on `cosmoboard-landing.html`, which mounts one board,
+  but not on `index.html`, which mounts two: the multi-board arbitration makes both handlers
+  return until a board has focus. So on the actual landing page you must click a board first.
+  **How to check:** press `?` on any board. Press `?` while typing in a note and you get a
+  literal question mark instead. Escape closes it. The board now has alt-drag copy, shift-axis !p2
   lock, Ctrl+click pin, space and arrows on a selected video, Escape, and more, and every one of
   them is invisible. A first-time visitor is the whole objective, so undiscoverable features are
   close to unbuilt features. Smallest useful version: one shortcuts panel behind `?` and a line
   in the settings help, listing what exists. Deliberately not a command palette yet.
-- [ ] [test] Tests should assert outcomes, not mechanisms. `markdown-wheel-routing` asserted !p3
+- [A] [test] Tests should assert outcomes, not mechanisms. `markdown-wheel-routing` asserted !p3
   that a synthetic wheel *reached the viewport* and passed happily while the board had stopped
   zooming for real, which is how the markdown zoom regression got in. Worth one pass over the
   suites for the same shape: anywhere we assert a listener fired, a class was toggled, or an
   event propagated, check whether the user-visible result is asserted anywhere. Not urgent, but
   it is the difference between a green suite and a working board.
+  **Done. The audit is
+  [`whiteboard/test_audit_2026-08-01.md`](./whiteboard/test_audit_2026-08-01.md)**, covering the
+  46 suites that existed before today, ranked by risk rather than by count, and every headline
+  finding proved rather than suspected: the feature was deliberately broken in a mirror of the
+  tree, the suite was run against the break, and the exit code recorded.
+  **It found a live bug, not just weak tests.** Ctrl+S does not save the board, and the two
+  suites holding that down cannot fail. Filed as its own `!p1` card in Bugs, because fixing it
+  is a product decision.
+  Also found: bundle export is guarded by five regexes against the source text and nothing ever
+  clicks the button, so `return;` after `closeExportModal()` leaves all three export suites green
+  while the button downloads nothing, ever.
+  **What was deliberately not applied.** The agent's `patch.json` contained only the Ctrl+S
+  behaviour change, which it correctly marked as needing your decision, so it is yours to take,
+  not mine. Its four proposed replacement suites are parked in `.tmp/scratch/opus5-25/proposed/`
+  rather than swapped in: a reviewer found one is red by design against today's runtime, and one
+  reads and restores `content/boards/cosmoboard/current.canvas`, which would silently revert
+  concurrent work on a dirty tree. They are worth landing, carefully, one at a time.
+  **How to check:** read the audit. Press Ctrl+S on any board with the network tab open and
+  watch nothing happen.
 
 - [A] Lazy embeds shipped, item 1 of the performance plan. Live iframes (YouTube, Wikipedia, !p1
   apps) render a light placeholder until their node comes within 600px of the viewport, activate
@@ -590,6 +794,145 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 ## Bugs
 
+- [ ] still as you draw thin line shows. But when you let go i tgoes to the set thickness. Needs to draw as the set thickness.
+
+- [A] **The preview server binds broadly and checks no Origin.** Origin check built; the !p1
+  bind is deliberately left alone and that is the one judgement here.
+  **What was fixed.** Every POST, PUT and DELETE is now refused unless its `Origin` is one of
+  this machine's own addresses. That closes the actual attack: a website open in another tab
+  could previously POST to `http://127.0.0.1:4174/api/save-board` and rewrite your boards, and
+  the same-origin policy does not stop it, because it only blocks reading the *response*, never
+  the request. Proved both ways: `Origin: https://evil.example` gets 403, and the board's own
+  origin passes through to the normal empty-save guard and gets its usual 409.
+  A **missing** Origin is allowed on purpose. Browsers always send it on a POST, so a real attack
+  cannot hide by omitting it, while curl, the test suites and any non-browser tool send nothing
+  and would otherwise be locked out of their own dev server for no security gain.
+  **The bind stays 0.0.0.0, deliberately.** Loopback-only would have been the tidier line in a
+  security note, but it breaks the thing you asked for two cards ago: testing a board on your
+  phone means loading it over wifi, and that needs the LAN bind. LAN addresses are accepted as
+  origins for the same reason. So the remaining exposure is someone already on your wifi, which
+  is a very different threat from any website you happen to open.
+  **This does not by itself make a terminal safe.** A WebSocket upgrade is not covered by this
+  check, and the terminal card lists what it would additionally need.
+  **How to check:** `node tests/preview/preview-save-endpoint.test.mjs` and the four other
+  preview suites are green. From another machine on your wifi the board still loads.
+  Original report: it binds broadly and checks no Origin, flagged independently by two agents.
+  `scripts/preview-server.mjs` owns the write APIs: `/api/save-board`, `/api/save-markdown`,
+  `/api/save-asset`. It binds beyond loopback, so anything on your network can reach it, and it
+  does not check the `Origin` header, so **any website you have open in a tab can post to it
+  while it runs**. It is a development server, and that is the usual excuse, but it holds write
+  access to your real boards and it runs all day on this machine.
+  This becomes load-bearing the moment anything long-lived is added to it. The terminal work
+  stopped on exactly this: a PTY over a websocket on that server would be a shell for every site
+  you visit, not just your LAN, because **a WebSocket upgrade is not covered by CORS** and a
+  same-origin policy does not apply to it.
+  **The fix is small and stands on its own**, whether or not a terminal is ever built: bind to
+  127.0.0.1 only, and reject requests whose `Origin` is not a local preview address. Neither
+  changes anything about how you use it.
+  **How to check:** from another machine on your wifi, `curl http://<this machine>:4174/`. It
+  should refuse after the fix and answers today.
+
+- [A] **Ctrl+S saves the board now, and both suites can fail again.** You chose the !p1
+  first option on 2026-08-01. The chord is now:
+  `Ctrl+S` saves the board, matching the toolbar button and its tooltip.
+  `Ctrl+Shift+S` opens the Save-As picker, unchanged.
+  `Ctrl+Alt+S` writes straight back to the `.canvas` you opened with Ctrl+O. That path had no
+  reachable caller left otherwise, since the toolbar's own save button returns `saveBoard()`
+  before it can be hit, so this keeps a real workflow that would have disappeared silently.
+  **Both broken suites are repaired, and I proved the repair.** Reverting Ctrl+S to the old
+  behaviour now turns both red; before, both stayed green through the entire period the feature
+  was broken.
+  `board-save-export-runtime` had `[\s\S]*` between the Ctrl+S condition and `saveBoard()`, which
+  is greedy and unbounded and matched a call about 800 lines away. It is bounded to that one
+  statement now, and the other two arms of the chord are asserted too so a future edit cannot
+  quietly drop either.
+  `board-save-reload-e2e` never disabled autosave, so the 20 second timer fired inside
+  `waitForResponse`'s 30 second default and took the credit. Autosave is off and the wait is
+  bounded to 4 seconds, because Ctrl+S is a synchronous user action and anything slower than
+  that is a background timer doing the work.
+  **How to check:** open a board with the network tab open and press Ctrl+S. A POST to
+  `/api/save-board` goes out and no dialog appears.
+  Original report: Ctrl+S does not save the board, and the two suites guarding that cannot fail.
+  Found by the test audit, and verified independently before filing.
+  `braindump.js:5121` routes Ctrl+S to `saveLocalFile()`, which with no prior file handle falls
+  through to `saveLocalFileAs()`: on Chrome and Edge that opens a native Save-As dialog and saves
+  nothing, on Firefox and Safari it downloads a `.canvas` file. Zero POSTs to `/api/save-board`
+  either way. Meanwhile the toolbar button beside it reads `title="Save (Ctrl+S)"` and calls
+  `saveBoard()`. So the tooltip, the runtime and the tests disagree with each other.
+  **Why nothing caught it, which is the interesting half.**
+  `board-save-export-runtime` asserts a regex with `[\s\S]*` between the Ctrl+S condition and
+  `saveBoard()`. That is greedy and unbounded, so it matches a `saveBoard()` about 800 lines
+  further down the file and would pass no matter what Ctrl+S does.
+  `board-save-reload-e2e` presses Ctrl+S and waits for a save POST, but never disables autosave.
+  Measured with the whole Ctrl+S branch deleted: 0 POSTs within 1.5s, then 1 POST at 19.4s from
+  the 20 second autosave timer, comfortably inside `waitForResponse`'s 30s default. Its own
+  assertion message names this exact regression and it still cannot see it, because it runs
+  headless Chromium where the picker opens instead of downloading.
+  **The decision is yours, which is why this is a card and not a fix.** "Ctrl+S saves a local
+  file" is a defensible choice. What is not defensible is three things claiming different
+  behaviour. Either point Ctrl+S at `saveBoard()` and leave the tooltip alone, or keep the local
+  file save and change the tooltip. A one-line hunk for the first option is written and waiting
+  in `.tmp/scratch/opus5-25/patch.json`; I did not apply it, because it changes what Ctrl+S does
+  for every visitor.
+  Note if you take that option: `saveLocalFile()` then has no reachable caller, so the
+  "quietly save back to the `.canvas` I opened with Ctrl+O" workflow disappears unless it is
+  rebound somewhere.
+  **How to check:** open a board, press Ctrl+S with the network tab open. No request is made.
+
+- [A] Canvas create button says no endpoint on host so canvas file could not be created. also canvas creation should get a shotrtcut that shows when you hover it.
+  **My fault, and the documented trap.** The canvas routes were added to
+  `scripts/preview-server.mjs` after your server was already running, and pulling changes does
+  not reload a running Node process. `/api/list-canvas` was answering 404 while sitting right
+  there in the file. Restarted; it answers 200 now. Reload your board tab and the canvas tool
+  works.
+  Worth noting this is exactly what `agents.md` warns about, and I still did it: I restarted the
+  server early in the session and then patched it later.
+  **The shortcut half is not done.** There is no keyboard shortcut for the canvas tool at all,
+  which the shortcuts-panel work found independently. Left open below as its own card so it does
+  not get lost inside a bug fix.
+  **How to check:** reload the board, press the canvas tool. A canvas node appears and a
+  `.canvas` file lands beside the board.
+
+- [ ] The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
+  shortcut on hover. Split out of the canvas-endpoint bug so it is not lost. Every other tool
+  has a letter; the canvas tool is a drawer button only. Wants a key, and a hover hint on the
+  buttons showing the key, which would also make the shortcuts panel less necessary for the
+  common ones.
+
+- [A] Drawing color doesn't follow the accent color still. And also the drawing and kept drawing size is different. Drawing size is the default and as soon as you let you it grows. Also the color is wrong it should follow what the accent color is currently when drawing its correct but when you release and finish it goes back to old standard color
+  **Measured rather than assumed, and it does not reproduce on the current build.** I set the
+  accent to `#ff4fa3`, drew a real stroke with real mouse events, and sampled the live path
+  mid-stroke and the baked node after release:
+  live `stroke #ff4fa3, width 4`, baked `stroke #ff4fa3, width 4`, rendered
+  `rgb(255, 79, 163)`. Identical on both counts, and equal to the accent.
+  So what you hit was a **stale runtime in your tab**, the same root cause as the canvas endpoint
+  bug: your page was loaded before the rebuild, so it was running the old `braindump.js` where
+  the colour was the hard-coded teal. Hard reload the board tab.
+  **Two things did change since you filed this**, and they are probably what you were seeing the
+  edges of: the cursor ring and the brush-size bubble were still hard-coded teal even after the
+  stroke followed the accent, so the pen was lying about its own colour. A reviewer caught that
+  and both follow the accent now.
+  **If it still happens after a hard reload, reopen this**, and say what the accent was set to,
+  because then it is a real bug and my probe is missing the case.
+  **How to check:** hard reload, set an obvious accent, draw. The cursor ring, the size bubble,
+  the live stroke and the finished stroke are all that colour and the same thickness.
+
+- [A] The hidden toolbar currently is a bit too high brom the bottom edge. It should be very close to the bottom edge. Also the expand on hover had a very large targe (possible the full toolbar target) it should have a smaller target of the small hidden state pill shape.
+  Both real, and both mine from this morning's centring fix.
+  **Too high:** I had centred the tab vertically inside the shell, which put it about 50px off
+  the bottom edge. It now sits 8px off, tucked against the edge without touching it and still
+  clear of a phone's home indicator.
+  **The hover target was the whole toolbar,** exactly as you guessed. The reveal listener is on
+  the shell, and the shell keeps the hidden pill's full layout width so the collapsed toolbar
+  still spans several hundred invisible pixels. The shell no longer takes the pointer while
+  collapsed; only the tab does. Reveal still works, because an element with `pointer-events:
+  none` stays in the hover chain when a child of it is hit.
+  Two new test cases pin both: the tab must land within 16px of the bottom edge, and hovering the
+  shell away from the tab must NOT reopen the toolbar while hovering the tab must.
+  **How to check:** turn on auto-hide, let it collapse. The tab is at the very bottom. Sweep the
+  mouse along the bottom of the window well to the side of it: nothing opens until you reach the
+  tab itself.
+
 - [x] Zooming works over a markdown note again. You were right, and it was a regression. !p1
   The rule was already correct on paper: a note decides for itself whether a wheel scrolls its
   text or zooms the board, and an **unselected** note is supposed to zoom. What broke it was
@@ -612,7 +955,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** hover any long note without clicking it and wheel. The board zooms. Click
   into the note and wheel: the note scrolls instead, which is the deliberate half of the rule.
 
-- [.] Where a board opens is decided by whoever last panned it. **Decided 2026-07-31: leave it
+- [x] Where a board opens is decided by whoever last panned it. **Decided 2026-07-31: leave it
   alone.** No `defaultViewport` is being added to cosmoboard or braindump; those boards keep
   opening wherever the last session stood, and `cosmoboard-initial-layout` keeps passing or
   failing on where the camera happens to be. Parked rather than deleted so the mechanism below
@@ -636,7 +979,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   about what a first-time visitor should see, not a bug fix. The committed cosmoboard camera
   (`x 438, y -714, z 0.78`) predates 29 new nodes, so it may no longer frame the right thing.
 
-- [A] Alt-drag copy is one undo now, however many strokes the drawing has.
+- [x] Alt-drag copy is one undo now, however many strokes the drawing has.
   You had this exactly right. Every stroke of a drawing is its own node: `stopDrawing` calls
   `createNode` once per pointer-up, so a three-stroke sketch is three nodes. The drag's end
   handler pushed one move action, and then `finalizeAltCopy` pushed a separate create action per
@@ -948,9 +1291,190 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 
 ## Features and ideas
 
-- [ ] When nothing is selected the arrow keys should serve to browser around the board . The longer you hold it the faster it should go but there should be a speed cap
+- [ ] R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool.
 
-- [ ] I don't like how the pinning just snaps to my face currently. It should be able to be moved around on the pinned area. by dragging from its edges and corners afterwards like a window on a operating system
+- [ ] Add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner.
+
+- [ ] The base64 embed for the markdown is great. But maybe nice to add 15 empty lines before the reference base64 data. And if possible it shouldn't show in markdwon editors with full text it sohuld collapse (not sur eif possibl)
+
+- [ ] Current drawing draws in segments as you drag along. Performance is good but smoothness and feel leaves a lot to desire. Can we improve this without breaking other drawing features and retaining performance and how much space and memory the drawings take up. Maybe we can for now in developer mode have some options for the drawing for me to test with sliders and I can let you know what feels best.
+
+- [ ] There should be a setting option that enables you to re-arrange the items available on the toolbar. Bring them in from the extra 3 dot or put it back as well. Only static items are lock, more actions, settings. Also when adjusting and editing them around the auto hide shouldn't trigger. Also there should be the option to go back to the default settings there.
+
+- [A] ontop of VNC would it be possible to have the RDP protocol. Its safer + I think better UX. Add the option on the "computer window" tool to be switched between VNC, RDP and local. (local would be streaming a local app into it (future work)) !p3
+  **The verdict: you are half right, and I recommend not yet.**
+  Researched before any code. A browser has no raw TCP, so RDP in a tab always means a gateway
+  that terminates RDP and re-serves it. There is no pure-JS browser RDP client anywhere;
+  `mstsc.js`/`node-rdpjs` is a Node proxy, unmaintained, and predates modern NLA. The real
+  options are Apache Guacamole (guacd + Tomcat + a database), guacamole-lite (replaces only the
+  Java half, still needs guacd), or myrtille (wants Windows Server + IIS + .NET). **guacd has no
+  native Windows build**, so on this machine the smallest RDP setup is Docker Desktop plus two
+  containers.
+  **On "safer", the evidence cuts both ways.** RDP's transport genuinely is better: TLS and NLA
+  against classic VNC auth that truncates the password to 8 characters. And VNC takes 98% of
+  remote-desktop attack traffic against RDP's 1.6%. But RDP appears in 84% of Sophos's 2025
+  incident-response cases, and lateral movement over internal RDP shows up in roughly 70% of
+  ransomware incidents, so it is the higher-consequence surface.
+  **The decisive point is narrower than either statistic.** Once a gateway exists, the browser
+  leg is identical for both protocols. RDP's TLS and NLA only protect a hop that did not exist
+  before, and the gateway itself is a new listening service holding your RDP credential with
+  reach to port 3389. So adding RDP here is a net increase in surface, not a decrease.
+  **Your UX argument is the stronger one** and is the reason to build it if you ever do:
+  resolution negotiation, clipboard, drive and audio redirection, and per-user sessions.
+  **What was built:** the node is a "computer window" with a protocol switch, VNC unchanged and
+  still 7/7 on its suite. RDP, Terminal and Local show a requirements panel naming the real
+  command instead of credential fields, and deliberately have no Connect and no Settings button,
+  so there is no control that could dial a service that is not there. A board saved on RDP will
+  not try to auto-connect on load, which was the trap worth guarding.
+  **How to check:** open the VNC node's settings, switch the protocol. VNC behaves exactly as it
+  did; the others tell you what they would need. Its safer + I think better UX. Add the option on the "computer window" tool to be switched between VNC, RDP and local. (local would be streaming a local app into it (future work)) !p3
+
+- [A] Agents on the tracker board if they are not used for a while can be depreciated from showing at the top of the status feed (after 6 hrs or so) Its fine as if they are active again they will come back. Maybe nice to reserve the name tho.
+
+- [A] accept color from theme setting should also control the default pen color (they are the same) !p4
+  The pen reads the accent now, at every surface. The stroke it lays down, the cursor ring, and
+  the brush-size bubble all take the theme accent instead of the literal `#3fdaca` that merely
+  happened to equal the default.
+  The last two were a reviewer catch worth recording: the first patch changed the ink the pen
+  lays down but not the ink the pen *looks like*, so setting the accent to pink gave you pink
+  strokes from a teal cursor with a teal size bubble. Two of the three places a user actually
+  sees the pen colour still disagreed with the setting.
+  **A decision you may want to overrule:** changing the accent restyles only NEW strokes. A
+  stroke bakes its colour into its own node when you draw it, so repainting existing ink would
+  mean rewriting every affected node's stored data, and undo would have to model one huge batch
+  for what looks like a settings tweak. Say the word if you want existing drawings to follow.
+  **How to check:** change the accent to something obvious, then draw. The cursor ring, the size
+  bubble and the stroke are all that colour. Strokes drawn earlier keep theirs.
+
+- [A] For the theme settings add a way to "return to default color scheme" button small !p2
+  A small "Return to default colours" button at the bottom of the Theme group, resetting
+  background, dot colour, grid style and accent.
+  **It clears the stored theme rather than writing the defaults back**, which is a stronger
+  guarantee: a board with no theme stored resolves every colour through a custom property's
+  fallback, so clearing is provably identical to a board that never had a theme. Verified rather
+  than assumed, by comparing computed colours against a fresh board and confirming the settings
+  blob genuinely has no `theme` key afterwards.
+  One honest caveat recorded on the card: that guarantee holds at the moment of reset. Change
+  some other setting later and the ordinary save path writes the now-default theme back as an
+  explicit key. Same colours, just no longer absent.
+  **How to check:** set a garish accent and background, press the button, and the board looks
+  exactly like a board you never themed.
+
+- [A] Implement a way to test mobile and prompt user about it and share a guide with them. you were saying it might be possible to do if plugged in via usb. I'M not sure if it would work on ios tho user has ios devices and ipad. !p2
+
+- [A] create a performance testing benchmark so we can test how reponsive the ui is. It can be a board with many embedded videos images markdown files and text. And you cna be zooming in and out dragging elements as a test and logging fps frame loss frame delay spikes etc. Should be re-creatable. !p1
+  Built as `tests/perf/`: a seeded generator, the assets, a driver that runs scripted zoom, drag
+  and pan, a metrics module, and a comparer. `npm run perf:bench`.
+  **"Re-creatable" was treated as the actual requirement.** The board is generated from a seed, so
+  the same seed produces a byte-identical board and a run months from now measures the same thing.
+  It logs fps, frame loss, frame delay spikes and worst-frame per phase, plus pointer-move dispatch
+  cost, which is the measurement that catches the class of regression that once cost 71us an event.
+  Two runs can be diffed, because a benchmark you cannot compare is a number nobody acts on.
+  Headless Chromium rasters in software, so budgets are env-tunable and absolute numbers are not
+  comparable to your real browser. This complements the fast CI gate in `perf-budget.test.mjs`
+  rather than replacing it.
+  **One thing a reviewer caught and I fixed:** the driver would happily write its artifact to any
+  absolute path, including over a real board, while its sibling generator had a guard against
+  exactly that. It now refuses anything under `content/`, and refuses at argument-parse time
+  rather than after running the whole benchmark.
+  **How to check:** `npm run perf:bench` prints the phases and writes an artifact. Run it twice
+  with the same seed and compare; the board is identical.
+
+- [A] Add an eraser tool. Make sure it can erase in segments and not the whole line. I only needs to be able to delete drawings. The eraser brush size should also be adjustable the same way as the brush tool !p1
+
+- [A] rewamp the pen tool: alt scroll should resize the brush size. we should be able to have different size thicknesses. I can also be adjusted by long pressing the pen tool icon in the menu and then dragging up and down. (brush size circle should be visible while doing so !p2
+  Both drawing cards built together, since they share the same brush-size model.
+  Alt+scroll resizes the brush, long-pressing the pen icon and dragging up and down resizes it
+  too, and a size circle follows the pointer while you do it, drawn at the true size for the
+  current zoom.
+  **The eraser erases segments, not strokes,** which was the explicit ask and the part that
+  decided the design. Every stroke is its own node here, so erasing through the middle of one
+  splits it into two nodes with a real gap, and the whole gesture is a single undo entry however
+  many nodes it splits or removes. It only touches drawings, as specified.
+  **The collision worth knowing about:** Alt was already doing two jobs, as the drag-copy
+  modifier and as a key deliberately swallowed so Firefox's menu bar stays shut. Both still work;
+  `alt-key-menu-suppression` and `alt-drag-copy-undo` are green. Alt+scroll over the canvas
+  resizes the brush without zooming the board, and plain scroll still zooms, so the wheel-routing
+  rules survived too (`markdown-wheel-zoom` and `overlay-wheel-scroll` both green).
+  **How to check:** draw a long line, take the eraser through its middle: you get two pieces, not
+  an empty canvas. One Ctrl+Z puts the whole line back. Hold Alt and scroll while drawing to
+  resize, or press and hold the pen icon and drag up.
+
+- [A] The settings menu doesn't look clean. Refine it with UI UX design skills to make it nicer !p1
+  Diagnosed with measurements before anything was redrawn, because "made it nicer" with no
+  diagnosis is not reviewable. Nine specific defects, all measured at 1200x900:
+  **The type hierarchy was upside down.** A field label computed to 16px/600 and a group heading
+  to 15px/700, so "Developer mode" rendered larger than "Theme". Headings are now 11px tracked
+  eyebrows and labels 13px, which is the right way round.
+  **Row-end controls landed on five different x positions** (checkboxes at 881.5 from an unreset
+  browser margin, swatches at 884.5, the markdown select at 888.2, two rows left-aligned). Now
+  there is one label edge and one control edge.
+  **The markdown download select sat outside the panel**, by 3.7px at 1200 and 51.7px at 390.
+  **The GitHub token field was 88px wide** for a 93-character token, so the placeholder rendered
+  as "github_pa". It takes the row now; only the numeric sync interval stays narrow.
+  Plus: inconsistent gaps (12/12/0/0 in one group, 10/0/12/12/12 in another), two label weights,
+  six control heights, and the title scrolling away at 40px. The header is sticky now, and the
+  one unnamed group split into Saving and Workspace.
+  No colour value changed: every colour is still the theme custom property with its original
+  literal as fallback, so an unthemed board is untouched.
+  **What this does not fix, and you should know:** the panel is still 1746px of content in a
+  558px box, about 2.8 screens. A sticky header fixes orientation, not length. Shortening it
+  means cutting the explanatory copy or collapsing groups, which is a content call I left to you.
+  The Help group is a wall of shortcut text that probably belongs in the new shortcuts panel.
+  **One thing not to let a future agent "fix":** the group headings are deliberately smaller than
+  the field labels. That is the convention, not a slip.
+  **How to check:** open the gear panel. Every label starts on one line, every control ends on
+  one line, and the title stays put while you scroll.
+
+- [A] When nothing is selected the arrow keys should serve to browser around the board . The longer you hold it the faster it should go but there should be a speed cap !p3
+  Arrows pan the board when nothing is selected, ramping from 400 to 2200 screen px/sec over
+  900ms and capping there. Timed against real elapsed time rather than a per-frame step, so it
+  moves at the same speed on your 240Hz panel as on a 60Hz one.
+  The safety condition is enforced in two places: on keydown, and re-checked every frame, so
+  selecting something mid-hold stops the board without waiting for a keyup that may never come.
+  A selected YouTube node still takes the arrows as 5 second seeks, and typing in a note still
+  moves the caret.
+  **A reviewer proved the first version's test was blind twice over**, which is the exact disease
+  the audit card is about. It built a mutant with the speed cap removed entirely and the suite
+  still passed, because the plateau windows it compared were too close together to notice
+  unbounded acceleration. It then deleted the "nothing selected" gate outright and the suite
+  still passed, because both of its selection phases returned earlier in the handler and never
+  reached the pan branch at all. The card's headline condition was untested.
+  **And a real bug it found:** arrow panning never marked the board dirty, so the camera you
+  stopped at was never saved. Measured: live camera at x -780.8 against a stored -139.8, which is
+  an arbitrary mid-ramp snapshot from an unrelated pending save. Reloading dropped you neither
+  where you stopped nor where you started. Fixed, marked at the end of the gesture rather than
+  per frame so a long hold does not queue 60 saves a second.
+  **How to check:** click empty board, hold an arrow. It accelerates, then holds a steady top
+  speed. Reload and you are where you left off. Select a video and the arrows seek it instead.
+
+- [A] I don't like how the pinning just snaps to my face currently. It should be able to be moved around on the pinned area. by dragging from its edges and corners afterwards like a window on a operating system !p1
+  A pinned item now carries eight grab handles, four edge bands and four corners, and Windows
+  -style snap zones: left or right edge takes that half, top maximises, a corner takes that
+  quarter, corner beats edge, bottom edge dead as on Windows, with a cyan preview before you
+  release and restore-to-previous-size when you drag a snapped pin back off.
+  **Two judgement calls, and you should overrule either if I read you wrong.**
+  1. **The edges and corners MOVE the box, they do not resize it.** That is the opposite of an OS
+     window, and it is deliberate: your sentence says "moved around ... by dragging from its edges
+     and corners", and a live embed has no other grab point because the shield over the iframe
+     eats every mousedown. Resizing comes from the snap zones instead. If you meant edges should
+     resize, say so; it splits into two gestures and a live embed then needs a move handle
+     invented for it.
+  2. **"Snaps to my face" was read as "it lunges sideways", and that was a real bug.** Pinning
+     inflated the item to 1:1 anchored at its top left, so at zoom 0.6 a note jumped 128px right
+     and 72px down. It now grows around its on-screen centre. But it still *grows*: the pinned
+     size is unchanged, because that is what keeps it readable on a zoomed-out board. If you
+     meant "stop blowing it up", that half is not done.
+  Also: a "half" means half of the board you can see, not half of the window, because the site's
+  left nav is 232px of opaque chrome over the board. Collapsing the nav hands the width back.
+  **Two defects a reviewer caught and I fixed before this landed.** The handle ring was painting
+  *above* the toolbar rather than below it, laying an invisible 12px band over the buttons, so
+  dragging a pin's bottom edge onto the toolbar row made "Select" start a pin drag. And the
+  click-swallowing flag stuck whenever a drag ended outside the viewport, which the left snap
+  zone makes routine since it starts at the nav's edge, eating your next genuine board click.
+  **How to check:** Ctrl+click something to pin it, then drag it by an edge or a corner. Push it
+  to the left edge and it takes that half; drag it off and it returns to the size it was.
+  `pin-to-viewport` 12/12 and `pin-move-and-snap` 14/14.
 
 - [A] Light mode, and a theme group in settings: background, dot colour, grid style, accent. !p2
   All four of the things you asked for. Grid style covers the scale elements you named: dots,
@@ -978,7 +1502,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   patch. **How to check:** gear icon, Theme. Switch to Light, then try each grid style. Turn it
   back to Dark and confirm the board looks exactly as it always did.
 
-- [A] The toolbar can auto-hide, and the board can be locked. Two cards, built together !p2
+- [x] The toolbar can auto-hide, and the board can be locked. Two cards, built together !p2
   because the lock icon has to survive the collapsed state.
   **Auto-hide** is a setting. On, the toolbar collapses to a small rounded tab after about a
   second; bring the pointer to it, tap it, or tab to it and the toolbar comes back. On a
@@ -1286,6 +1810,38 @@ has been moved to open work above. Spot-check the others before marking them `[x
 - [x] GitHub recommendation and versioning flows.
 
 ## Later
+
+- [A] ideate on how to integrate the file system from the PC into this. Ideally it should be safe and convinient.
+
+- [A] brainstorm a solution for sites that refuse to be embdeded. Do we try to build out own firefox based browser? Or do we do a app? Or do we go for a linux distribution?
+  Answered against your three options specifically, in
+  [`research/embedding_options_firefox_app_distro_2026-08-01.md`](./research/embedding_options_firefox_app_distro_2026-08-01.md).
+  **It corrects a factual error in our own earlier note, and the correction flips the
+  recommendation.** The 2026-07-30 note says Tauri and Electron webviews are not subject to
+  X-Frame-Options. That is wrong. Both engines enforce it. The difference is that Electron can
+  strip the headers in `session.webRequest.onHeadersReceived`, which keeps embeds as real DOM
+  iframes that inherit the canvas transform, so they pan, zoom and clip with the board. Tauri has
+  no header interception at all; its only route is native child webviews positioned by
+  `setBounds`, which cannot pan, zoom or clip with a spatial canvas, and its multiwebview support
+  is still behind an unstable flag. So for this product the usual Tauri-over-Electron default is
+  backwards, and **the recommendation is Electron**. That contradicts what the roadmap currently
+  implies, so it wants an explicit yes or no from you before anyone scaffolds a shell.
+  **Firefox fork: no.** It solves nothing a 30-line extension does not, Firefox kept blocking
+  `webRequest` out of MV3, and the maintenance treadmill is a browser engine's security
+  liability, now on a two-week release cadence.
+  **A Linux distribution: no**, and the note says why without being dismissive about the
+  operating-environment ambition underneath the question.
+  **How to check:** read the note. The `.agents/research/vnc_and_iframe_embedding_2026-07-30.md`
+  line about XFO should be corrected or pointed at this one, since the old note is the one linked
+  from the roadmap. !p2
+
+- [.] The markdown editing image resizing etc. can be similar to how new obsidian handles it. ( I detail the bahavior and we work on it later !p4
+
+- [.] Add inertia to the browsing so you can fligh the browser around. This should be something you can turn on and off and adjust from the settings menu. !p3
+
+- [.] Could have a canvas system where canvasses can be presented or exported later !p3
+
+- [.] There should be export as PDF option for markdown. as well as for board. (idea for now we ideate on it later with a grilling session)
 
 - [A] Realtime collaboration: assessed, and now superseded by your GitHub-sync direction. The !p3
   assessment stands in

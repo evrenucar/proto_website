@@ -178,6 +178,12 @@
   }
   .owner i { width: 5px; height: 5px; border-radius: 50%; background: var(--agent); display: inline-block; }
 
+  /* ---- short, stable per-card id, top left ---- */
+  .card-num {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
+    color: var(--ink-faint); flex: none;
+  }
+
   /* ---- priority 1-5 per card ---- */
   .prio-row { display: inline-flex; gap: 3px; margin-left: auto; }
   .pb {
@@ -555,6 +561,42 @@
 
   function cardId(c) { return c.lane + "|" + c.text.slice(0, 60); }
 
+  // A short id a person can say out loud, e.g. "fix card 42". It has to survive
+  // todo.md shifting around under hand edits and agent writes, so it is a pure
+  // function of the same stable key used for feedback (lane + title prefix),
+  // never a line number or array index. No file persists a counter: every
+  // browser or agent parsing the same todo.md computes the same ids from
+  // scratch, the same way agentColor hashes a name into a colour with no
+  // registry required.
+  function hashStr(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h;
+  }
+
+  // Collisions (two different cards hashing to the same number) are rare but
+  // not impossible, so resolve them deterministically: process every card on
+  // the board in a fixed order (sorted by its own stable key, not file order),
+  // and a card that loses the number to an earlier one gets a letter suffix
+  // instead of a different number. That keeps the common case a clean number
+  // and keeps a collision from reshuffling unrelated cards' ids.
+  function assignShortIds(cards) {
+    var byKey = {}, used = {};
+    cards.slice().sort(function (a, b) {
+      var ka = cardId(a), kb = cardId(b);
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    }).forEach(function (c) {
+      var key = cardId(c);
+      var base = hashStr(key) % 1000;
+      var label = String(base);
+      var suffix = 0;
+      while (used[label]) { label = String(base) + String.fromCharCode(97 + suffix); suffix++; }
+      used[label] = true;
+      byKey[key] = label;
+    });
+    return byKey;
+  }
+
   // Feedback is keyed by lane and title rather than by line number, so a card
   // keeps what you said about it after the file shifts around it.
   function feedbackFor(id) { return feedbackIndex[id] || null; }
@@ -571,6 +613,17 @@
 
   function renderBoard(cards) {
     var host = document.getElementById("board");
+    // A full re-render replaces every card node, which resets scrollTop to 0.
+    // Clicking a priority chip, dragging a card, or the plain 4s poll all end
+    // up here, so without this a card you were looking at jumps out of view on
+    // almost every interaction. Snapshot each column's scroll position (and the
+    // page's) before rebuilding the DOM, restore it after.
+    var scrollByStatus = {};
+    Array.prototype.forEach.call(host.querySelectorAll(".col-body"), function (b) {
+      scrollByStatus[b.getAttribute("data-status")] = b.scrollTop;
+    });
+    var pageScrollX = window.scrollX, pageScrollY = window.scrollY;
+    var shortIds = assignShortIds(cards);
     var html = "";
     COLUMNS.forEach(function (col) {
       // Prioritised cards float to the top of their column, 1 first; the rest
@@ -611,7 +664,8 @@
           ' data-expect="' + esc(c.raw.replace(/^-\s+\[[ xA~.]\]\s+/, "").slice(0, 40)) + '"' +
           ' data-priority="' + (c.priority || 0) + '"' +
           ' data-id="' + esc(id) + '">';
-        html += '<div class="card-top"><span class="lane">' + esc(c.lane) + "</span>";
+        html += '<div class="card-top"><span class="card-num" title="Card id, stable across edits">#' +
+          esc(shortIds[id] || "") + '</span><span class="lane">' + esc(c.lane) + "</span>";
         if (own) {
           html += '<span class="owner" title="' + esc(own.id + (own.goal ? " · " + own.goal : "")) + '"><i></i>' +
             esc(own.label) + "</span>";
@@ -660,6 +714,11 @@
       html += "</div></div>";
     });
     host.innerHTML = html;
+    Array.prototype.forEach.call(host.querySelectorAll(".col-body"), function (b) {
+      var s = scrollByStatus[b.getAttribute("data-status")];
+      if (s) b.scrollTop = s;
+    });
+    if (pageScrollX || pageScrollY) window.scrollTo(pageScrollX, pageScrollY);
   }
 
   function renderFeed(rawFeed) {
@@ -685,6 +744,23 @@
     }).join("");
   }
 
+  // An agent with no feed line in six hours drops off the strip: still
+  // registered, still reserving its name and colour, it just stops cluttering
+  // a list of who is around right now. Posting again brings it straight back;
+  // nothing here is deleted or rewritten, this only changes what renders.
+  var AGENT_STALE_MS = 6 * 60 * 60 * 1000;
+
+  function lastSeenByAgent(feed) {
+    var seen = {};
+    feed.forEach(function (f) {
+      if (!f.agent) return;
+      var t = new Date(f.at).getTime();
+      if (isNaN(t)) return;
+      if (!seen[f.agent] || t > seen[f.agent]) seen[f.agent] = t;
+    });
+    return seen;
+  }
+
   function renderWho(cards, feed) {
     var busy = {};
     cards.forEach(function (c) { if (c.status === "~" && c.owner) busy[c.owner] = true; });
@@ -701,6 +777,15 @@
       .forEach(function (a) { add(a.id); });
     Object.keys(busy).forEach(add);
     feed.forEach(function (f) { add(f.agent); });
+
+    // A registered agent that has never posted at all is new, not stale, so it
+    // still shows; one whose last post is older than the window is hidden.
+    var lastSeen = lastSeenByAgent(feed);
+    var now = Date.now();
+    order = order.filter(function (n) {
+      var t = lastSeen[n];
+      return t === undefined || (now - t) <= AGENT_STALE_MS;
+    });
 
     document.getElementById("who").innerHTML = order.map(function (n) {
       var a = agentInfo(n);
@@ -1077,9 +1162,15 @@
       // Never re-render while typing in a card: a poll that swaps the DOM out
       // from under a draft or an open title editor throws the typing away. The
       // change stays unconsumed, so it renders on the first poll after focus
-      // leaves the card.
-      var typingInCard = document.activeElement && document.activeElement.closest &&
-        document.activeElement.closest("#board .card");
+      // leaves the card. This has to check for an actual text control, not just
+      // "focus is somewhere in a card": a button (priority chip, works/issue,
+      // the edit pencil) keeps browser focus after a click too, and treating
+      // that as "typing" froze every future re-render of that card until you
+      // clicked outside it, which is worse than the scroll loss this guard
+      // exists to avoid.
+      var activeEl = document.activeElement;
+      var typingInCard = activeEl && activeEl.closest && activeEl.closest("#board .card") &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
       // Colours and names are read out of the registry at render time, so apply
       // it first. Only a change to it needs to force the board to redraw.
       var agentsStr = JSON.stringify(roll.agents);

@@ -1,7 +1,7 @@
 {
   "canvasId": "3e6a1c88-2b47-4f09-b7d1-92a5c40de711",
   "createdAt": "2026-07-30T06:30:00.000Z",
-  "updatedAt": "2026-07-31T01:57:09.721Z",
+  "updatedAt": "2026-08-01T05:02:35.329Z",
   "nodes": [
     {
       "id": "dev-title",
@@ -183,7 +183,7 @@
       "x": 147.4344357795874,
       "y": 2124.5229999944504,
       "width": 340,
-      "height": 272,
+      "height": 260,
       "type": "board-preview",
       "boardSlug": "test-board",
       "boardSource": "/content/boards/test-board/current.canvas",

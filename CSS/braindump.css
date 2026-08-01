@@ -316,6 +316,171 @@ html:has(body.page-board) {
   z-index: 1;
 }
 
+/* The ring you grab a pinned item by. It sits in the viewport layer rather than
+   inside the node, for two reasons: nothing is added to the node, so an iframe
+   is never touched, and the handles land above .bd-embed-shield, which swallows
+   every mousedown over a live embed and leaves it no other handle.
+   The frame must sit over the board and UNDER the toolbar, which is where the
+   pinned item itself already sits. That means below .braindump-toolbar-shell's
+   z-index 10, not above it: at 30 the handles' pointer-events:auto laid an
+   invisible 12px band (24px at the corners) over the toolbar buttons, so
+   dragging a pin's bottom edge onto the toolbar row made "Select (V)" start a
+   pin drag instead. The frame is inert; only the handles take the pointer. */
+.bd-pin-frame {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Invisible until you approach it. All eight move the box, so all eight show
+   the move cursor: resizing comes from the snap zones, not from the handles. */
+.bd-pin-handle {
+  position: absolute;
+  pointer-events: auto;
+  cursor: move;
+  background-color: transparent;
+  border-radius: 3px;
+  transition: background-color 120ms ease;
+}
+
+.bd-pin-handle:hover,
+.bd-pin-handle:active {
+  background-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.35);
+}
+
+/* 12px bands straddling the border, 6px either side, so the grab area never
+   eats more than 6px of the item's own content. */
+.bd-pin-handle-n { left: -6px; right: -6px; top: -6px; height: 12px; }
+.bd-pin-handle-s { left: -6px; right: -6px; bottom: -6px; height: 12px; }
+.bd-pin-handle-w { top: -6px; bottom: -6px; left: -6px; width: 12px; }
+.bd-pin-handle-e { top: -6px; bottom: -6px; right: -6px; width: 12px; }
+.bd-pin-handle-nw { left: -6px; top: -6px; width: 24px; height: 24px; }
+.bd-pin-handle-ne { right: -6px; top: -6px; width: 24px; height: 24px; }
+.bd-pin-handle-sw { left: -6px; bottom: -6px; width: 24px; height: 24px; }
+.bd-pin-handle-se { right: -6px; bottom: -6px; width: 24px; height: 24px; }
+
+/* A finger is not a mouse pointer. 12px bands and 24px corners are the numbers
+   you pick when you can aim at a single pixel; every touch guideline in
+   circulation says 44. So the bands grow to 44 here, and they carry a faint
+   tint because there is no hover on a touchscreen to discover an invisible
+   ring with.
+   They grow INWARD, not outward. Weighted outward (32 out, 12 in) the ring
+   reached 32px past the pinned box on all four sides, and since a handle takes
+   the pointer and swallows the event, every pinned item would sit inside a
+   26px-wider interception ring: a tap on an ordinary node near a pinned one
+   starts a pin drag instead of selecting that node. The cost of growing inward
+   is paid by the pinned item's own content, which is already what the 12px
+   band does, and it is the item you are deliberately manipulating. 6px of
+   outward reach is kept so the ring is still grabbable when a pin is flush
+   against a screen edge. */
+@media (pointer: coarse) {
+  .bd-pin-handle {
+    background-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.14);
+  }
+  .bd-pin-handle-n { left: -6px; right: -6px; top: -6px; height: 44px; }
+  .bd-pin-handle-s { left: -6px; right: -6px; bottom: -6px; height: 44px; }
+  .bd-pin-handle-w { top: -6px; bottom: -6px; left: -6px; width: 44px; }
+  .bd-pin-handle-e { top: -6px; bottom: -6px; right: -6px; width: 44px; }
+  .bd-pin-handle-nw { left: -6px; top: -6px; width: 44px; height: 44px; }
+  .bd-pin-handle-ne { right: -6px; top: -6px; width: 44px; height: 44px; }
+  .bd-pin-handle-sw { left: -6px; bottom: -6px; width: 44px; height: 44px; }
+  .bd-pin-handle-se { right: -6px; bottom: -6px; width: 44px; height: 44px; }
+}
+
+/* Where the box lands if you let go now. Same 20% cyan as the ghost, so the two
+   cyan rectangles on screen read as one idea: where it came from, where it is
+   going. Sits just under the frame so a handle is never tinted by it. */
+.bd-pin-snap-preview {
+  position: absolute;
+  pointer-events: none;
+  z-index: 29;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.5);
+  border-radius: 8px;
+}
+
+/* The axis lock used to live entirely in your fingers: you held Shift and hoped.
+   This is the line it is snapping to, drawn through the drag's ORIGIN at the
+   angle the offset chose. It is not touch-only, because the desktop gesture had
+   no on-screen feedback either. 300vmax so it reaches both edges at any angle. */
+.bd-axis-lock-guide {
+  position: absolute;
+  display: none;
+  left: 0;
+  top: 0;
+  width: 300vmax;
+  height: 0;
+  border-top: 1px dashed rgba(var(--bd-accent-rgb, 63, 218, 202), 0.8);
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* The touch gesture bar. It only exists on a device that reports a touch point,
+   so a mouse-only board never renders it. Right edge, vertically centred: the
+   toolbar pill spans the whole width of a 393px phone along the bottom, the
+   board lock sits just above its right end, and the site's nav toggle owns the
+   top right corner. */
+.braindump-touch-gestures {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(26, 25, 25, 0.92);
+  border: 1px solid #2d2c2c;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  touch-action: manipulation;
+}
+
+/* 48, not 44. 44 is the floor, and this is a control pressed with a thumb while
+   the other hand is holding the phone. */
+.braindump-touch-gesture {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #bfbfbf;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.braindump-touch-gesture.is-on {
+  background: #2a2a2a;
+  border-color: #343434;
+  color: var(--bd-accent, #3fdaca);
+}
+
+.braindump-touch-gesture.is-idle {
+  opacity: 0.45;
+}
+
+[data-bd-theme="light"] .braindump-touch-gestures {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-touch-gesture {
+  color: var(--bd-light-muted);
+}
+
+[data-bd-theme="light"] .braindump-touch-gesture.is-on {
+  background: var(--bd-light-raised);
+  border-color: var(--bd-light-line);
+  color: var(--bd-accent);
+}
+
 .bd-item .resize-handle {
   position: absolute;
   right: 0;
@@ -1121,6 +1286,7 @@ html:has(body.page-board) {
 .bd-vnc-shell[data-vnc-state="connected"] .bd-vnc-dot { background: var(--bd-accent, #3fdaca); }
 .bd-vnc-shell[data-vnc-state="error"] .bd-vnc-dot { background: #f85149; }
 .bd-vnc-shell[data-vnc-state="needs-credentials"] .bd-vnc-dot { background: #d29922; }
+.bd-vnc-shell[data-vnc-state="needs-host"] .bd-vnc-dot { background: #6e7681; }
 .bd-vnc-shell[data-vnc-state="error"] .bd-vnc-status-text { color: #f85149; }
 
 .bd-vnc-actions {
@@ -1163,7 +1329,8 @@ html:has(body.page-board) {
   color: #8b949e;
 }
 
-.bd-vnc-field input {
+.bd-vnc-field input,
+.bd-vnc-field select {
   background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.06);
   border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.12);
   border-radius: 4px;
@@ -1172,9 +1339,52 @@ html:has(body.page-board) {
   padding: 6px 8px;
 }
 
-.bd-vnc-field input:focus {
+.bd-vnc-field input:focus,
+.bd-vnc-field select:focus {
   outline: none;
   border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.6);
+}
+
+/* The protocol switch is a native select, so its popup list is drawn by the
+   OS in the OS's colours. Only the closed control is ours to style. */
+.bd-vnc-field select option {
+  background: #14181d;
+  color: #e6edf3;
+}
+
+/* What a protocol needs, in place of the credential fields it has no use for. */
+.bd-vnc-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 2px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.18);
+  padding-left: 10px;
+}
+
+.bd-vnc-req-head {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bd-ink, #fff);
+}
+
+.bd-vnc-req-why {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: #8b949e;
+}
+
+.bd-vnc-req-steps {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #8b949e;
+}
+
+.bd-vnc-req-steps li {
+  margin-bottom: 4px;
 }
 
 .bd-vnc-check {
@@ -1574,8 +1784,59 @@ html:has(body.page-board) {
   pointer-events: none;
 }
 
+/* "Also it should be at the bottom of the window centerd" — the second half of
+   the user's card, and the half that was measurably not done. The rule above
+   keeps the hidden pill's layout box on purpose, so the dock, and this tab
+   inside it, ride to the right of the shell's centre: measured 275px off at
+   1440px, which is not "centered" by any reading.
+   Taking the tab out of flow and centring it against the shell fixes that
+   without touching the shell's own width, which is what the panel-fit rules
+   from the 1024px overflow fix depend on. The shell is centred in the window,
+   so the shell's centre IS the window's centre, in both the desktop rule and
+   the mobile left:12px/right:12px one.
+   position:absolute rather than fixed, deliberately: the shell carries
+   translateX(-50%), and a transformed ancestor becomes the containing block
+   for fixed descendants, so left:50% would resolve against the shell's own
+   width and land nowhere near the middle.
+   The tab is display:none once expanded, so the pill that replaces it arrives
+   centred under the same cursor that reached for the tab. */
 .braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-reveal {
   display: flex;
+  position: absolute;
+  left: 50%;
+  /* Sat vertically centred in the shell at first, which put it about 50px off
+     the window's bottom edge and read as floating. The shell's own bottom is
+     32px up, so -24px brings the tab's bottom to 8px from the edge: tucked
+     against it without touching, and still clear of a phone's home indicator. */
+  bottom: -24px;
+  transform: translateX(-50%);
+}
+
+/* While collapsed, only the tab takes the pointer. The pill keeps its layout
+   box (see above), so the shell still spans the full toolbar width even though
+   nothing in it is visible, and the reveal listener lives on the shell. That
+   made the whole invisible toolbar a hover target: the toolbar sprang back
+   when the cursor was nowhere near the tab. pointer-events:none on the shell
+   does not take it out of the hover chain, so entering the tab still fires the
+   shell's mouseenter and the reveal keeps working, now only from the tab. */
+.braindump-toolbar-shell.is-autohide.is-collapsed {
+  pointer-events: none;
+}
+
+.braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-reveal {
+  pointer-events: auto;
+}
+
+/* The user's explicit correction to the shipped design: the lock used to
+   live in its own always-visible slot specifically so it would survive
+   collapse; now it must fold away WITH the pill instead. Same treatment as
+   the pill above (visibility, not display: none, so the dock's own box
+   doesn't change size and shift the reveal tab sideways when this toggles);
+   JS mirrors this with `inert` on the lock button itself, same reasoning
+   as the pill's inert toggle. */
+.braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-lock {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Buttons inherit visibility from the pill, and their own transition: all
@@ -1739,6 +2000,191 @@ html:has(body.page-board) {
   font-family: "Courier New", monospace;
   font-size: 11px;
 }
+
+/* ==========================================================================
+   Settings panel: hierarchy, rhythm and control geometry
+   --------------------------------------------------------------------------
+   Measured on the panel as it stood before this block, at 1200x900 on
+   content/boards/test-board.html:
+
+     - A field label computed to 16px/600 while a section heading computed to
+       15px/700. "Developer mode" rendered larger than "Theme". The panel had
+       no readable hierarchy, which is the main reason it looked like a pile.
+     - The vertical gaps down the first group were 12, 12, 0, 0px. Two toggles
+       sat flush against the row above them, because .braindump-settings-field
+       carried a margin-top and .braindump-settings-toggle carried none.
+     - Six control heights (13, 30, 36, 40px plus a 36px button) and five
+       different right edges: 881.5 for checkboxes (a UA margin), 884.5 for the
+       colour swatches and the grid select, 888.2 for the markdown select, and
+       two rows left-aligned at 554.5.
+     - The repository, branch and token fields were all 88px wide, from a
+       single width rule. A fine-grained GitHub token is 93 characters and 88px
+       shows nine of them.
+     - The markdown-download select overhung the panel's content box by 3.7px.
+     - 1630px of content scrolled inside a 558px box while the panel title and
+       the Reset button scrolled out of reach after 40px.
+
+   Nothing here changes a colour value. Every colour is still the theme custom
+   property with its original literal as the fallback, so a board with no theme
+   stored renders as before.
+   ========================================================================== */
+
+.braindump-settings-panel {
+  /* Vertical padding moves onto the sticky header and the panel's own bottom,
+     so the header can reach the panel's edges when it sticks. */
+  padding: 0 16px 16px;
+  /* Tabbing to a field near the top of the view would otherwise scroll it to
+     exactly where the sticky header covers it. */
+  scroll-padding-top: 52px;
+}
+
+/* The header is the panel's, not the first group's. It stays put through a
+   1600px scroll so the title and Reset are always reachable.
+   `background: inherit` copies whatever the panel resolved to, which means
+   light mode needs no second rule here. */
+.braindump-settings-panel .braindump-settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 -16px;
+  padding: 14px 16px 12px;
+  background: inherit;
+  border-bottom: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
+}
+
+/* One gap for every row in a group, instead of each row carrying its own
+   margin-top and some carrying none. */
+.braindump-settings-panel .braindump-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.braindump-settings-panel .braindump-settings-section + .braindump-settings-section {
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.braindump-settings-panel .braindump-settings-field,
+.braindump-settings-panel .braindump-settings-swatch-row,
+.braindump-settings-panel .braindump-settings-modes,
+.braindump-settings-panel .braindump-help-copy,
+.braindump-settings-panel .braindump-help-list {
+  margin: 0;
+}
+
+/* A group heading should be the quietest thing in its group, not the loudest.
+   11px uppercase with tracking reads as a divider label, which leaves the
+   control labels below it unambiguously the content. */
+.braindump-settings-panel .braindump-help-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.7);
+}
+
+.braindump-settings-panel .braindump-settings-label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* The swatch rows set their labels to 400, so "Accent" and "Default" rendered
+   lighter than "Developer mode" two groups above them. One label weight. */
+.braindump-settings-panel .braindump-settings-swatch-row .braindump-settings-label {
+  font-weight: 600;
+}
+
+.braindump-settings-panel .braindump-settings-copy {
+  line-height: 1.45;
+}
+
+/* 36px here against 34px everywhere else. */
+.braindump-settings-panel .braindump-settings-mode {
+  min-height: 34px;
+}
+
+.braindump-settings-panel .braindump-settings-field {
+  gap: 6px;
+}
+
+.braindump-settings-panel .braindump-settings-input-row {
+  width: 100%;
+}
+
+/* Text fields take the row. Only the numeric sync interval keeps a fixed
+   width, because it holds three digits and a "seconds" suffix sits beside it. */
+.braindump-settings-panel .braindump-settings-input-row input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+.braindump-settings-panel .braindump-settings-input-row input[type="number"] {
+  flex: 0 0 88px;
+}
+
+/* 13px was the raw user-agent checkbox, and its 3px UA right margin is what
+   pulled the checkbox column 3px off every other right-aligned control. The
+   whole label is already the hit area; 18px keeps the box on the optical
+   centre of the label's first line. */
+.braindump-settings-panel .braindump-settings-toggle input[type="checkbox"] {
+  flex: none;
+  align-self: flex-start;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.braindump-settings-panel .braindump-settings-swatch-row input[type="color"] {
+  width: 52px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.braindump-settings-panel .braindump-settings-select {
+  min-height: 34px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* One option here reads "Single .md, assets embedded as base64", which gives
+   the select a 273px intrinsic width. Next to a label that pushed it past the
+   panel's content box, so this row stacks its label above the control. */
+.braindump-settings-panel .braindump-settings-swatch-row-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.braindump-settings-panel .braindump-settings-swatch-row-stacked .braindump-settings-label {
+  flex: none;
+}
+
+.braindump-settings-panel .braindump-settings-swatch-row-stacked .braindump-settings-select {
+  width: 100%;
+}
+
+.braindump-settings-panel .braindump-settings-reset {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Focus was whatever the user agent drew, which differed per control type. */
+.braindump-settings-panel input:focus-visible,
+.braindump-settings-panel select:focus-visible,
+.braindump-settings-panel button:focus-visible {
+  outline: 2px solid var(--bd-accent, #3fdaca);
+  outline-offset: 2px;
+}
+
 
 .braindump-toolbar-divider {
   width: 1px;
@@ -2632,7 +3078,7 @@ html:has(body.page-board) {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 44px;
+  height: 22px;
   pointer-events: none;
   background: linear-gradient(to bottom, transparent 0%, rgba(var(--bd-accent-rgb, 63, 218, 202), 0.35) 55%, rgba(var(--bd-accent-rgb, 63, 218, 202), 0.85) 100%);
   z-index: 2;
@@ -3664,4 +4110,25 @@ html:has(body.page-board) {
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+
+.braindump-settings-reset-btn {
+  display: block;
+  /* No margin-top: the settings groups are flex columns with a single 14px
+     gap now, so a margin here stacks on top of it and makes this one row sit
+     28px down while every other row sits 14px down. Zeroing ad-hoc margins in
+     favour of the group's own gap is the whole point of that rhythm rule. */
+  padding: 6px 12px;
+  border: 1px solid var(--bd-light-line, #3a3a3a);
+  border-radius: 8px;
+  background: none;
+  color: var(--bd-ink, #fafafa);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.braindump-settings-reset-btn:hover {
+  border-color: var(--bd-accent, #3fdaca);
+  color: var(--bd-accent, #3fdaca);
 }

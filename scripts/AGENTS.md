@@ -14,6 +14,11 @@ What each script does, how to invoke it, and which `npm run` alias maps to which
 
 ## Key files
 - `build-site.mjs` — reads `src/site-data.mjs` + `content/` and emits the static site
+- `cosmo.mjs` — CLI over board data: list boards, list and grep nodes, add a note, export a board
+- `lib/board-store.mjs` — the one implementation of board path resolution, the markdown
+  filename sanitizer, and the stale-base write guard. `preview-server.mjs` and `cosmo.mjs`
+  both import it. Do not copy these rules into a third place; the sanitizer has drifted once
+  already and renamed files on disk out from under the board.
 - `dev-server.mjs` — lightweight dev server (port 3000) with board-save write API
 - `extract-assets.mjs` — extracts base64 images embedded in `.canvas` files to the filesystem
 - `preview-server.mjs` — production-like server for the built output (port 4174 by default)

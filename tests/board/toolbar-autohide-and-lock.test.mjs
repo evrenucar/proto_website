@@ -138,14 +138,19 @@ try {
   await page.waitForTimeout(150);
   assert.equal(await page.locator('[data-board-ui="toolbar"]').isVisible(), true, "C: bringing the pointer to the reveal tab must show the toolbar again");
 
-  // --- D: lock button exists, and stays visible even once the toolbar
-  // collapses again ---
+  // --- D: lock button exists, and folds away together with the toolbar
+  // once it collapses again. Reversed 2026-08-01: this asserted the
+  // opposite (lock stays visible through a collapse) when the lock first
+  // shipped in its own always-visible dock; direct user feedback the same
+  // day ("it should hide together with the lock icon") asked for exactly
+  // that survival to be undone, so the lock now gets the same visibility +
+  // inert treatment as the pill itself. ---
   const lockButton = page.locator('[data-board-ui="toolbar-lock"]');
   await lockButton.waitFor({ state: "visible", timeout: 3000 });
   await page.mouse.move(700, 200);
   await page.waitForTimeout(1300);
   assert.equal(await page.locator('[data-board-ui="toolbar"]').isVisible(), false, "D: sanity check — toolbar should be collapsed again");
-  assert.equal(await lockButton.isVisible(), true, "D: the lock button must stay visible while the toolbar is collapsed");
+  assert.equal(await lockButton.isVisible(), false, "D: the lock button must collapse together with the toolbar");
 
   // --- E: keyboard reachability — the reveal tab is focusable while
   // collapsed, and focusing it reveals the toolbar. Tested before the lock

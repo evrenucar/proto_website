@@ -41,3 +41,14 @@ jobs:
           PERF_DRAG_P95_MS: "250"
           PERF_PAN_P95_MS: "250"
           PERF_DISPATCH_US: "60"
+
+      - name: Perf benchmark instrument
+        run: node --test tests/board/perf-benchmark-suite.test.mjs
+        env:
+          # This suite gates the benchmark tooling, not the runtime's speed:
+          # determinism of the generated board, presence of every metric, and
+          # that a run (including a killed one) leaves content/ untouched. The
+          # only frame assertion is a catastrophe floor, loosened here because
+          # CI runners raster in software on slower CPUs.
+          PERF_BENCH_MIN_FPS: "2"
+          PERF_BENCH_DISPATCH_US: "60"

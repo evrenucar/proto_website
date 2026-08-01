@@ -1,16 +1,73 @@
 import http from "node:http";
 import https from "node:https";
 import { createReadStream, createWriteStream, existsSync, statSync } from "node:fs";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Board path resolution, the markdown filename sanitizer and the stale-base
+// guard live in one module, shared with scripts/cosmo.mjs. The sanitizer had
+// already drifted once between the browser and this file; a third copy in the
+// CLI would drift again.
+import {
+  resolveBoardSavePath,
+  resolveMarkdownSavePath,
+  staleBaseConflict
+} from "./lib/board-store.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 // 4174, not 4173: the aide-board project owns 4173 on this machine.
 const port = Number(process.env.PORT || 4174);
+
+// Same character set as sanitizeCanvasFilename in JavaScript/braindump.js. The
+// markdown pair drifted once, when underscores were flattened here and only
+// here, which turned a note the board called `note-..._19-27-04` into
+// `note-...-19-27-04.md` on disk. These two must stay identical.
+function sanitizeCanvasFilename(value) {
+  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "canvas";
+  const safeBase = raw
+    .replace(/\.canvas$/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "") || "canvas";
+
+  return `${safeBase}.canvas`;
+}
+
+// A sub-canvas is a sidecar .canvas file beside a board's own current.canvas,
+// the same arrangement markdown notes already use. Resolves the write target
+// for one, or null when the request is not addressing a legitimate sidecar.
+// The board's own file is deliberately not reachable this way: /api/save-board
+// with neither parameter is the only route to it.
+function resolveCanvasSidecarTarget(boardTarget, pathValue, filenameValue) {
+  const boardDir = path.normalize(path.dirname(boardTarget.filePath));
+  const requestedPath = String(pathValue || "").trim();
+  let filePath = "";
+
+  if (requestedPath) {
+    const normalized = requestedPath
+      .split(/[?#]/, 1)[0]
+      .replaceAll("\\", "/")
+      .replace(/^\/+/, "");
+    if (normalized) filePath = path.normalize(path.join(rootDir, normalized));
+  } else if (filenameValue) {
+    filePath = path.normalize(path.join(boardDir, sanitizeCanvasFilename(filenameValue)));
+  }
+
+  if (!filePath) return null;
+  if (!filePath.startsWith(boardDir + path.sep)) return null;
+  if (path.extname(filePath).toLowerCase() !== ".canvas") return null;
+  if (filePath === path.normalize(boardTarget.filePath)) return null;
+
+  return {
+    slug: boardTarget.slug,
+    relativePath: path.relative(rootDir, filePath).replaceAll("\\", "/"),
+    filePath
+  };
+}
 
 const mimeTypes = {
   ".canvas": "application/json; charset=utf-8",
@@ -45,32 +102,6 @@ function sendJson(response, status, data) {
   response.end(JSON.stringify(data));
 }
 
-async function resolveBoardSavePath(slugValue) {
-  const slug = String(slugValue || "braindump").replace(/[^a-z0-9-]/gi, "").toLowerCase() || "braindump";
-  try {
-    const registry = JSON.parse(await readFile(path.join(rootDir, "src", "registry.json"), "utf8"));
-    const board = Array.isArray(registry.boards)
-      ? registry.boards.find((entry) => entry.slug === slug)
-      : null;
-    if (board?.sourcePath) {
-      return {
-        slug,
-        relativePath: board.sourcePath.replaceAll("\\", "/"),
-        filePath: path.join(rootDir, board.sourcePath)
-      };
-    }
-  } catch (error) {
-    // Fall back to the historical board path when the registry cannot load.
-  }
-
-  const relativePath = `content/boards/${slug}/current.canvas`;
-  return {
-    slug,
-    relativePath,
-    filePath: path.join(rootDir, relativePath)
-  };
-}
-
 async function handleSaveBoard(request, response, parsedUrl) {
   let body = "";
   request.setEncoding("utf8");
@@ -85,7 +116,23 @@ async function handleSaveBoard(request, response, parsedUrl) {
         return;
       }
 
-      const target = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+      const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+      // ?path= (an existing sidecar) or ?filename= (a new one) retargets the
+      // write at a sub-canvas beside the board file instead of the board file
+      // itself. Routed through this handler on purpose: a nested canvas then
+      // inherits every guard below â€” the empty-save refusal, the stale-tab
+      // refusal, canvasId and createdAt preservation â€” instead of getting a
+      // second, weaker write path that would have to grow all three again.
+      const canvasPathParam = parsedUrl.searchParams.get("path") || "";
+      const canvasFileParam = parsedUrl.searchParams.get("filename") || "";
+      let target = boardTarget;
+      if (canvasPathParam || canvasFileParam) {
+        target = resolveCanvasSidecarTarget(boardTarget, canvasPathParam, canvasFileParam);
+        if (!target) {
+          sendJson(response, 403, { success: false, error: "Forbidden canvas sidecar path." });
+          return;
+        }
+      }
       const safePath = path.normalize(target.filePath);
       if (!safePath.startsWith(rootDir)) {
         sendJson(response, 403, { success: false, error: "Forbidden save path." });
@@ -126,17 +173,12 @@ async function handleSaveBoard(request, response, parsedUrl) {
       // it, the save is refused and the client tells the user to reload.
       // Clients that send no base (old runtimes, scripts) keep old behavior.
       const baseParam = parsedUrl.searchParams.get("base");
-      if (
-        baseParam &&
-        existingMeta &&
-        typeof existingMeta.updatedAt === "string" &&
-        existingMeta.updatedAt !== baseParam &&
-        new Date(existingMeta.updatedAt).getTime() > new Date(baseParam).getTime()
-      ) {
+      const staleConflict = staleBaseConflict(existingMeta?.updatedAt, baseParam);
+      if (staleConflict) {
         sendJson(response, 409, {
           success: false,
           stale: true,
-          error: `Board changed on disk (${existingMeta.updatedAt}) after this tab loaded it (${baseParam}). Reload the page to pick up the newer state.`
+          error: `${staleConflict} Reload the page to pick up the newer state.`
         });
         return;
       }
@@ -191,63 +233,13 @@ async function handleSaveBoard(request, response, parsedUrl) {
         success: true,
         slug: target.slug,
         path: target.relativePath,
+        url: `/${target.relativePath}`,
         sidecarsWritten
       });
     } catch (error) {
       sendJson(response, 500, { success: false, error: error.message || "Save failed." });
     }
   });
-}
-
-function sanitizeMarkdownFilename(value) {
-  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "note";
-  const withoutExtension = raw.replace(/\.md$/i, "");
-  // Same character set as the client-side sanitizer in braindump.js, so the
-  // filename on disk matches the node title on the board. Underscores used to
-  // be flattened here (and only here), which made `note-..._19-27-04` on the
-  // board turn into `note-...-19-27-04.md` on disk.
-  const safeBase = withoutExtension
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "") || "note";
-
-  return `${safeBase}.md`;
-}
-
-async function resolveMarkdownSavePath(slugValue, pathValue, filenameValue) {
-  const boardTarget = await resolveBoardSavePath(slugValue);
-  const boardDir = path.normalize(path.dirname(boardTarget.filePath));
-  const requestedPath = String(pathValue || "").trim();
-
-  if (requestedPath) {
-    const normalizedRequestPath = requestedPath
-      .split(/[?#]/, 1)[0]
-      .replaceAll("\\", "/")
-      .replace(/^\/+/, "");
-
-    if (normalizedRequestPath) {
-      const requestedFilePath = path.normalize(path.join(rootDir, normalizedRequestPath));
-      if (
-        requestedFilePath.startsWith(boardDir) &&
-        path.extname(requestedFilePath).toLowerCase() === ".md"
-      ) {
-        const relativePath = path.relative(rootDir, requestedFilePath).replaceAll("\\", "/");
-        return {
-          slug: boardTarget.slug,
-          relativePath,
-          filePath: requestedFilePath
-        };
-      }
-    }
-  }
-
-  const safeFilename = sanitizeMarkdownFilename(filenameValue);
-  const filePath = path.join(boardDir, safeFilename);
-  return {
-    slug: boardTarget.slug,
-    relativePath: path.relative(rootDir, filePath).replaceAll("\\", "/"),
-    filePath
-  };
 }
 
 // Sections of .agents/todo.md the tracker is allowed to file a new card into.
@@ -708,6 +700,59 @@ async function handleListMarkdown(request, response, parsedUrl) {
   }
 }
 
+// Lists the sub-canvas sidecars in a board's directory with their canvasId.
+// That id is the point: a node stores a path, and when the file behind the
+// path is renamed or moved the board asks here which file carries the id now,
+// then repairs itself. Without this, "renaming shouldn't break links" is a
+// promise the runtime has no way to keep.
+async function handleListCanvas(request, response, parsedUrl) {
+  try {
+    const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+    const boardDir = path.normalize(path.dirname(boardTarget.filePath));
+    const boardFile = path.normalize(boardTarget.filePath);
+
+    if (!existsSync(boardDir)) {
+      sendJson(response, 200, { success: true, files: [] });
+      return;
+    }
+
+    const items = await readdir(boardDir);
+    const files = [];
+
+    for (const item of items) {
+      if (!item.toLowerCase().endsWith(".canvas")) continue;
+      const filePath = path.join(boardDir, item);
+      if (path.normalize(filePath) === boardFile) continue;
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(await readFile(filePath, "utf8"));
+      } catch {
+        // Unreadable or not JSON: still listed, just without an identity.
+      }
+
+      const relative = path.relative(rootDir, filePath).replaceAll("\\", "/");
+      files.push({
+        filename: item,
+        title:
+          typeof parsed?.title === "string" && parsed.title
+            ? parsed.title
+            : item.replace(/\.canvas$/i, ""),
+        canvasId: typeof parsed?.canvasId === "string" ? parsed.canvasId : "",
+        nodeCount: Array.isArray(parsed?.nodes) ? parsed.nodes.length : 0,
+        path: relative,
+        url: `/${relative}`,
+        mtime: statSync(filePath).mtime
+      });
+    }
+
+    files.sort((a, b) => b.mtime - a.mtime);
+    sendJson(response, 200, { success: true, files });
+  } catch (error) {
+    sendJson(response, 500, { success: false, error: error.message || "Could not list canvas files." });
+  }
+}
+
 function handleGetVideoMeta(request, response, parsedUrl) {
   const videoUrl = parsedUrl.searchParams.get("url");
   if (!videoUrl) return sendText(response, 400, "Missing url parameter");
@@ -857,8 +902,53 @@ function getNetworkAccessUrls() {
     .map((entry) => `http://${entry.address}:${port}`);
 }
 
+// Every host this server can legitimately be reached on: loopback, plus this
+// machine's own LAN addresses, because testing a board on a real phone means
+// loading it over wifi and that page's Origin is the LAN address.
+function isLocalHostname(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "0.0.0.0") return true;
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.address && entry.address.toLowerCase() === host) return true;
+    }
+  }
+  return false;
+}
+
+// A write request from a page this server did not serve is a cross-site request,
+// and the browser will have labelled it with that site's Origin. Refusing those
+// is the whole defence: without it, any website open in a tab could POST to this
+// server while it runs and rewrite the user's boards, because a form or fetch
+// POST is not blocked by the same-origin policy, only its response is.
+//
+// A MISSING Origin is allowed on purpose. Browsers always send it on POST, so a
+// real attack cannot hide by omitting it, while curl, the test suites and any
+// non-browser tool send nothing and would otherwise be locked out of their own
+// development server for no security gain.
+function isAllowedWriteOrigin(request) {
+  const origin = request.headers.origin;
+  if (!origin) return true;
+  let parsed;
+  try {
+    parsed = new URL(origin);
+  } catch (error) {
+    return false; // An unparseable Origin is not one we put there.
+  }
+  return isLocalHostname(parsed.hostname);
+}
+
 const server = http.createServer((request, response) => {
   const parsedUrl = new URL(request.url || "/", `http://127.0.0.1:${port}`);
+
+  const isWrite = request.method === "POST" || request.method === "PUT" || request.method === "DELETE";
+  if (isWrite && !isAllowedWriteOrigin(request)) {
+    sendJson(response, 403, {
+      success: false,
+      error: "Cross-site write refused. This server only accepts writes from pages it served."
+    });
+    return;
+  }
 
   if (request.method === "POST" && parsedUrl.pathname === "/api/save-board") {
     handleSaveBoard(request, response, parsedUrl);
@@ -887,6 +977,11 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "GET" && parsedUrl.pathname === "/api/list-markdown") {
     handleListMarkdown(request, response, parsedUrl);
+    return;
+  }
+
+  if (request.method === "GET" && parsedUrl.pathname === "/api/list-canvas") {
+    handleListCanvas(request, response, parsedUrl);
     return;
   }
 

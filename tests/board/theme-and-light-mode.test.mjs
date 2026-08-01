@@ -283,7 +283,7 @@ try {
   {
     const { context, page } = await openBoard(null);
     await openSettings(page);
-    const select = page.locator("#braindump-settings-panel select");
+    const select = page.locator('#braindump-settings-panel select[id^="braindump-theme-grid-style"]');
     const camera = () => page.evaluate(() => document.querySelector(".braindump-canvas").style.transform);
     const cameraBefore = await camera();
 
