@@ -75,8 +75,30 @@ Jot anything here mid-session. Anything that outlives the session moves to
 
 ### End Of Session, 2026-08-01
 
-- **17 cards built across three waves, 26 agents, whole suite green: 64 of 64.** Site rebuilt,
-  landing page in sync. Nothing committed, nothing pushed.
+**Full map: [`handoff_2026-08-01_four_wave_sprint.md`](./.agents/handoffs/handoff_2026-08-01_four_wave_sprint.md).**
+Read that, not this, if you are picking the work up.
+
+- **Committed and pushed.** `41df9af`, 75 files, +14,148 lines, on
+  `origin/fix-markdown-sidecar-405-error`. In sync with its remote, 5 ahead of `origin/main`.
+- **Wave 4 was still running when the session ended.** `opus5-27` drawing smoothness with dev
+  sliders, `opus5-28` re-arrangeable toolbar, `opus5-29` canvas shortcut and hover hints,
+  `opus5-30` mechanical Review-queue verification. Cards are claimed `[~]`; patches land in
+  `.tmp/scratch/<id>/patch.json` and are **not applied**. Check those before assuming the cards
+  are unstarted.
+- Board at close: 5 To do, 4 in progress, 70 Review, 17 Backlog.
+- **The user's three decisions this session:** Ctrl+S saves the board (Ctrl+Alt+S keeps the
+  write-back-to-opened-file path), push the branch without a PR, and leave the PDF git history
+  alone.
+- **CI still has not run.** `board-tests.yml` triggers on `pull_request` and `workflow_dispatch`,
+  and dispatch is refused because the file is not on the default branch. Pushing alone runs
+  nothing. Opening a PR is the fix, and the user was offered that and chose the plain push.
+- Six live bug reports from the user against work that had just shipped were fixed: the canvas
+  endpoint (a stale server process, mine), the toolbar tab sitting too high and its hover target
+  being the whole invisible toolbar (both mine, from the centring fix), and the eraser brush drag
+  running out of screen (now takes a pointer lock). The drawing-colour report did not reproduce
+  and was measured rather than argued: it was a stale runtime in the user's tab.
+
+- **Before this: 17 cards across three waves, 26 agents, whole suite green 64 of 64.**
 - Waves 1 and 3 landed about 2,400 lines into `JavaScript/braindump.js` through 84 + 44 anchored
   hunks. `braindump.js` and `braindump.css` were never edited by an agent: they hand back hunks
   and `opus5-0` applies them. That discipline held across 26 concurrent agents with nothing lost.

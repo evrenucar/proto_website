@@ -1,0 +1,2 @@
+﻿{"at":"2026-08-01T11:46:47Z","text":"Starting review-queue verification: parsing todo.md for every [A] card and its How to check line."}
+{"at":"2026-08-01T11:54:45Z","text":"Batch 1: 20 suites, all green. First real finding: tests/features/youtube-live-embed.test.mjs writes the LIVE content/boards/cosmoboard/current.canvas (no autosave off, no save-board block, no restore). Proved twice by updatedAt bump."}

@@ -190,6 +190,34 @@
       "model": "opus 5",
       "goal": "computer window: terminal and RDP",
       "color": "#9c6644"
+    },
+    {
+      "id": "opus5-27",
+      "n": 27,
+      "model": "opus 5",
+      "goal": "drawing smoothness, with dev-mode sliders",
+      "color": "#f28f3b"
+    },
+    {
+      "id": "opus5-28",
+      "n": 28,
+      "model": "opus 5",
+      "goal": "re-arrangeable toolbar",
+      "color": "#5aa9e6"
+    },
+    {
+      "id": "opus5-29",
+      "n": 29,
+      "model": "sonnet 5",
+      "goal": "canvas shortcut and toolbar hover hints",
+      "color": "#7fb800"
+    },
+    {
+      "id": "opus5-30",
+      "n": 30,
+      "model": "opus 5",
+      "goal": "mechanically re-verify the Review queue",
+      "color": "#b5179e"
     }
   ]
 }

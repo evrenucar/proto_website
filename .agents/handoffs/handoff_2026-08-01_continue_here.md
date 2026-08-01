@@ -1,5 +1,15 @@
 # Handoff 2026-08-01: continue here
 
+> **SUPERSEDED, later the same day. Go to
+> [`handoff_2026-08-01_four_wave_sprint.md`](./handoff_2026-08-01_four_wave_sprint.md).**
+>
+> Everything the "Start here" section below tells you to pick up was built in the sprint that
+> followed: the pin snapping follow-up, the tracker scroll and card ids, arrow-key panning, and
+> base64 assets in markdown. Acting on this file now means redoing finished work.
+>
+> Kept because its **Traps** and **Decisions already taken** sections are still accurate and still
+> worth reading. Its "Where things stand" and "Start here" sections are not.
+
 Written for whoever picks this up next. The previous handoff,
 [`handoff_2026-07-31_todo_lane_cleared.md`](./handoff_2026-07-31_todo_lane_cleared.md), covers how
 the last sprint was run and is still worth reading for its gotchas. This file is about **what to do

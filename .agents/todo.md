@@ -148,7 +148,19 @@ card there within seconds.
 
 - [x] Lets have a option to embed the images and other assets that are small enough into markdow via embedding them in BASE 64. Maybe for now can ask after you click the download icon. ANd also would be nice to have a setting for it in settings. Currently the default behavior should be asking the user. In settings alternatives can be: base64 embded markdown, download makrdown with content as zip, download markdown with assests without assets. Also when embedding base-64 it would be ideal if in markdown its formatted as a reference: Where the image is: ![Growth Chart][chart-1] (at the bototm of the file: [chart-1]: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAA. !p1
 
-- [ ] Nothing built in the last two sessions is pushed. Five commits exist on this machine !p1
+- [x] **Pushed.** You chose push-the-branch on 2026-08-01. `ac8e69e..41df9af` is on !p1
+  `origin/fix-markdown-sidecar-405-error`, 0 ahead and 0 behind. The backup half of this card is
+  done: the work is no longer only on one laptop.
+  **The CI half is not, and cannot be without a PR.** `board-tests.yml` triggers on
+  `pull_request` and `workflow_dispatch`, and `workflow_dispatch` refuses because GitHub only
+  offers manual dispatch for workflows present on the **default branch**. That file was created
+  on this branch and has never been merged to `main`, so `gh workflow run` answers 404 and
+  pushing alone runs nothing. Confirmed, not assumed.
+  So the suites are still a local claim from one machine and one Chromium build. Two ways out,
+  both yours: open a PR against `main`, which triggers it immediately, or merge the workflow file
+  to `main` once and dispatch becomes available forever after. I did not open a PR because you
+  were offered that option explicitly and chose the plain push.
+  Original: nothing built in the last two sessions is pushed, five commits on this machine.
   and nowhere else: the sprint that cleared the To do lane, the merge of main, the landing and
   PDF answers, and the handoff. `origin/main` has none of it, and neither does this branch's own
   remote. Two separate consequences, worth not conflating.
@@ -163,7 +175,13 @@ card there within seconds.
   **How to check:** `git log --oneline origin/main..HEAD` lists five commits. After a push it
   lists none, and the Actions tab shows a run.
 
-- [ ] The four PDFs are off the boards but still in git history, and that decision is still !p1
+- [x] **Decided 2026-08-01: leave history alone.** You chose not to scrub. The files stay !p1
+  recoverable from `origin/main`'s history by anyone who clones, nothing on the live site links
+  to them, and recovering them takes deliberate effort. Recorded rather than deleted so nobody
+  re-raises it as an oversight: it is a decision, not a gap.
+  If that ever changes, the method is `git filter-repo` plus a force-push of `main`, and every
+  commit hash from the first touch onward changes, so any other clone needs re-cloning.
+  Original: the four PDFs are off the boards but still in git history.
   open. Deleting a file in a later commit removes it from the working tree, never from history:
   `de79c7c` and `ff18a7f` are reachable from `origin/main` and still carry the bytes, so anyone
   who clones this repo can recover `participant-information.pdf` and the Maker Faire exhibitor
@@ -177,7 +195,7 @@ card there within seconds.
   have been before the first push.
   Tell me which and I will do it. I am not rewriting published history on my own initiative.
 
-- [ ] The Review queue is the bottleneck, not the building: 47 cards sit in `[A]` waiting on !p2
+- [~] @opus5-30 The Review queue is the bottleneck, not the building: 47 cards sit in `[A]` waiting on !p2
   you, against 20 open in To do. And the queue has been wrong before, in the way that matters:
   one proof block asserted the cosmoboard canvas contained an `entity` node, which it never did
   in any commit. So `[A]` currently means "an agent said so".
@@ -796,7 +814,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 - [ ] still as you draw thin line shows. But when you let go i tgoes to the set thickness. Needs to draw as the set thickness.
 
-- [A] **The preview server binds broadly and checks no Origin.** Origin check built; the !p1
+- [x] **The preview server binds broadly and checks no Origin.** Origin check built; the !p1
   bind is deliberately left alone and that is the one judgement here.
   **What was fixed.** Every POST, PUT and DELETE is now refused unless its `Origin` is one of
   this machine's own addresses. That closes the actual attack: a website open in another tab
@@ -893,7 +911,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** reload the board, press the canvas tool. A canvas node appears and a
   `.canvas` file lands beside the board.
 
-- [ ] The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
+- [~] @opus5-29 The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
   shortcut on hover. Split out of the canvas-endpoint bug so it is not lost. Every other tool
   has a letter; the canvas tool is a drawer button only. Wants a key, and a hover hint on the
   buttons showing the key, which would also make the shortcuts panel less necessary for the
@@ -1297,9 +1315,9 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 
 - [ ] The base64 embed for the markdown is great. But maybe nice to add 15 empty lines before the reference base64 data. And if possible it shouldn't show in markdwon editors with full text it sohuld collapse (not sur eif possibl)
 
-- [ ] Current drawing draws in segments as you drag along. Performance is good but smoothness and feel leaves a lot to desire. Can we improve this without breaking other drawing features and retaining performance and how much space and memory the drawings take up. Maybe we can for now in developer mode have some options for the drawing for me to test with sliders and I can let you know what feels best.
+- [~] @opus5-27 Current drawing draws in segments as you drag along. Performance is good but smoothness and feel leaves a lot to desire. Can we improve this without breaking other drawing features and retaining performance and how much space and memory the drawings take up. Maybe we can for now in developer mode have some options for the drawing for me to test with sliders and I can let you know what feels best.
 
-- [ ] There should be a setting option that enables you to re-arrange the items available on the toolbar. Bring them in from the extra 3 dot or put it back as well. Only static items are lock, more actions, settings. Also when adjusting and editing them around the auto hide shouldn't trigger. Also there should be the option to go back to the default settings there.
+- [~] @opus5-28 There should be a setting option that enables you to re-arrange the items available on the toolbar. Bring them in from the extra 3 dot or put it back as well. Only static items are lock, more actions, settings. Also when adjusting and editing them around the auto hide shouldn't trigger. Also there should be the option to go back to the default settings there.
 
 - [A] ontop of VNC would it be possible to have the RDP protocol. Its safer + I think better UX. Add the option on the "computer window" tool to be switched between VNC, RDP and local. (local would be streaming a local app into it (future work)) !p3
   **The verdict: you are half right, and I recommend not yet.**
