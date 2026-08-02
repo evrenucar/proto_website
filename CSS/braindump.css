@@ -1020,10 +1020,19 @@ html:has(body.page-board) {
   text-align: center;
   font-size: 11px;
   color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.4);
+  pointer-events: none;
+  /* Anchors the hover tooltip below. Ellipsis truncation moved onto the inner
+     .bd-embed-domain-text span so this element can be overflow: visible and
+     not clip the tooltip it hosts (a pseudo-element is clipped by its own
+     parent's overflow, not just by outer ancestors). */
+  position: relative;
+}
+
+.bd-embed-domain-text {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  pointer-events: none;
 }
 
 /* Only a real address is interactive. A local file has nothing worth copying,
@@ -1037,6 +1046,39 @@ html:has(body.page-board) {
 
 .bd-embed-domain[data-embed-url]:hover {
   color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.7);
+}
+
+/* Hover hint, gated to real pointer+hover devices so it can never appear on
+   touch (there is no hover there, and a tap would leave it stuck). Opens
+   downward, not upward: .bd-link-shell.bd-link-live clips overflow, and the
+   header sits at its very top, so a tooltip opening upward would be cut off
+   at the node's edge. Downward stays inside the node's own box instead. */
+@media (hover: hover) and (pointer: fine) {
+  .bd-embed-domain[data-embed-url]::after {
+    content: "Double-click to copy";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translate(-50%, 4px);
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+    z-index: 5;
+  }
+
+  .bd-embed-domain[data-embed-url]:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 .bd-embed-iframe {
@@ -4091,6 +4133,14 @@ html:has(body.page-board) {
 
 [data-bd-theme="light"] .bd-embed-domain[data-embed-url]:hover {
   color: var(--bd-ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-bd-theme="light"] .bd-embed-domain[data-embed-url]::after {
+    background: var(--bd-light-panel);
+    border-color: var(--bd-light-line);
+    color: var(--bd-ink);
+  }
 }
 
 /* The fullscreen control is an accent glyph on the header. At 0.6 the darker

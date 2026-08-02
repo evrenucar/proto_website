@@ -66,6 +66,13 @@ failure this section exists to prevent.
   edit shows up within seconds. No build step, nothing to publish.
 - Before starting a task, claim its card: change `[ ]` to `[~]` and add `@your-id` to the line.
   The board colours the card border per agent, so it is visible who holds what.
+- **A card's lane and its existence are editable from the board.** The lane badge at the top of a
+  card is a button: click it, pick another `##` section, and the card's whole block (its notes
+  included) moves under that heading in `todo.md`. The `×` beside the edit pencil deletes the
+  card, behind a confirm, with 25 seconds of Undo; every deleted block is also appended to
+  `.tracker/deleted-cards.jsonl`, so a delete is recoverable long after the tab is closed. Both go
+  through `/api/todo-update` and both keep its stale-text guard, so a tab holding an old view of
+  the file cannot delete the wrong card.
 - **Take an identity from [`.tracker/agents.json`](../.tracker/agents.json), or add one.** Each
   entry carries an id, a number, the model behind it, the goal it is on, and a colour, so the
   board says "opus 5 · 2, alt-drag copy undo" rather than a bare "claude". An agent missing from

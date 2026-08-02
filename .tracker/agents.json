@@ -246,6 +246,55 @@
       "model": "opus 5",
       "goal": "mobile: the board must not scroll the page",
       "color": "#845ec2"
+    },
+    {
+      "id": "opus5-35",
+      "n": 35,
+      "model": "opus 5",
+      "goal": "tracker: delete cards and change their type",
+      "color": "#ff6b6b"
+    },
+    {
+      "id": "opus5-36",
+      "n": 36,
+      "model": "sonnet 5",
+      "goal": "embed address: selection and hover hint",
+      "color": "#4ecdc4"
+    },
+    {
+      "id": "opus5-37",
+      "n": 37,
+      "model": "opus 5",
+      "goal": "canvas files must not outlive their node",
+      "color": "#c77dff"
+    },
+    {
+      "id": "opus5-38",
+      "n": 38,
+      "model": "opus 5",
+      "goal": "R rotation tool",
+      "color": "#ffd166"
+    },
+    {
+      "id": "opus5-39",
+      "n": 39,
+      "model": "opus 5",
+      "goal": "shape tool: rectangles and ellipses",
+      "color": "#06aed5"
+    },
+    {
+      "id": "opus5-40",
+      "n": 40,
+      "model": "opus 5",
+      "goal": "command palette and experimental features",
+      "color": "#f77f00"
+    },
+    {
+      "id": "opus5-41",
+      "n": 41,
+      "model": "opus 5",
+      "goal": "perf: incremental saves and staged mount",
+      "color": "#8ac926"
     }
   ]
 }

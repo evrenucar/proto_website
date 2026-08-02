@@ -3071,6 +3071,27 @@ function removeNodeById(nodeId) {
     removed.__blobObjectUrlSource = null;
   }
   nodes = nodes.filter(n => n.id !== nodeId);
+  // A sub-canvas file exists to serve a node, so the moment the last node
+  // pointing at it leaves the board the file is litter. That is how the
+  // cosmoboard collected 13 empty, unreferenced .canvas files in three minutes:
+  // Ctrl+Z took the node off the board and left the file on disk.
+  //
+  // Checked after the filter above, so alt-drag copy and paste, which clone a
+  // canvas node's canvasPath, can be undone without touching the file the
+  // original still points at. The server refuses to delete a canvas that has
+  // any nodes in it, so this can never remove work: undoing the creation of a
+  // canvas somebody has since filled in leaves the file exactly where it is.
+  // ...but NOT during a cut. cutSelected copies the node to the clipboard and
+  // then calls deleteSelected, so the node is meant to come back on paste. The
+  // paste rebuilds it with the same canvasPath, and without this guard that
+  // path pointed at a file the cut had just removed. The server refuses to
+  // delete a canvas with nodes in it, so this was a broken reference rather
+  // than lost work, but a cut-and-paste that quietly breaks the thing it moved
+  // is its own bug.
+  if (removed && removed.type === "board-preview" && removed.canvasPath && !cuttingToClipboard) {
+    const stillReferenced = nodes.some((n) => n.canvasPath === removed.canvasPath);
+    if (!stillReferenced) void tryDeleteCanvasSidecar(removed.canvasPath);
+  }
 }
 
 function restoreNode(nodeData) {
@@ -3081,6 +3102,18 @@ function restoreNode(nodeData) {
   isLoadingState = true;
   createNode(type, d.x, d.y, d);
   isLoadingState = false;
+  // Bringing a canvas node back has to bring its file back with it, or redo
+  // leaves a node pointing at a path with nothing on it, which is the orphan
+  // bug the other way round. Fired unconditionally on purpose: /api/save-board
+  // already refuses to overwrite a canvas that has nodes in it, so if the file
+  // survived with work in it this write is rejected and nothing is lost.
+  if (d.type === "board-preview" && d.canvasPath && d.canvasRef) {
+    const restoredAt = new Date().toISOString();
+    void trySaveCanvasSidecar({
+      path: d.canvasPath,
+      state: { canvasId: d.canvasRef, createdAt: restoredAt, updatedAt: restoredAt, nodes: [], edges: [] }
+    });
+  }
 }
 
 function applyReverse(action) {
@@ -3280,6 +3313,9 @@ function deleteSelected() {
   else if (actions.length > 1) pushAction({ type: 'batch', actions });
 }
 
+// True only for the duration of a cut. See removeNodeById.
+let cuttingToClipboard = false;
+
 function cutSelected() {
   if (isBoardLocked()) return;
   const selected = canvas.querySelectorAll('.bd-item.selected');
@@ -3291,7 +3327,16 @@ function cutSelected() {
     if (node) cutData.push(JSON.parse(JSON.stringify(node)));
   });
   navigator.clipboard.writeText(JSON.stringify(cutData)).catch(() => {});
-  deleteSelected();
+  // Set across the delete so removeNodeById leaves any sub-canvas file alone:
+  // the node is on the clipboard and is expected back. Cleared in a finally so
+  // a throw inside deleteSelected cannot leave sidecar deletion switched off
+  // for the rest of the session.
+  cuttingToClipboard = true;
+  try {
+    deleteSelected();
+  } finally {
+    cuttingToClipboard = false;
+  }
 }
 
 function copySelected() {
@@ -7859,7 +7904,7 @@ function renderLinkNode(nodeObj, el) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           Preview
         </button>
-        <div class="bd-embed-domain"${blobUrlForData ? "" : ` data-embed-url="${escapeHtml(headerAddress)}" title="Double-click to copy"`}>${escapeHtml(headerAddress)}</div>
+        <div class="bd-embed-domain"${blobUrlForData ? "" : ` data-embed-url="${escapeHtml(headerAddress)}" aria-label="Double-click to copy link"`}><span class="bd-embed-domain-text">${escapeHtml(headerAddress)}</span></div>
         <a class="bd-embed-open-btn" href="${escapeHtml(runtimeUrl)}" target="_blank" rel="noreferrer" draggable="false" aria-label="Open in new tab" title="Open in new tab">
           Open
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
@@ -7932,6 +7977,19 @@ function renderLinkNode(nodeObj, el) {
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
+
+      // The highlight exists only to show what got copied, so it should not
+      // outlive that purpose. Cleared on a short timer decoupled from the 3.2s
+      // toast (showToolbarToast's own duration), so it reads as a quick flash
+      // rather than something you have to click away to dismiss. Guarded so it
+      // never wipes out a different selection made elsewhere in that window
+      // (e.g. a second double-click on another embed's address).
+      window.setTimeout(() => {
+        const current = window.getSelection();
+        if (current && current.rangeCount > 0 && current.anchorNode && addressEl.contains(current.anchorNode)) {
+          current.removeAllRanges();
+        }
+      }, 600);
 
       if (!address || !navigator.clipboard) {
         showToolbarToast("Could not copy the link", "error");
@@ -10718,6 +10776,29 @@ async function trySaveCanvasSidecar({ filename = "", path = "", state }) {
     return result;
   } catch (error) {
     return null;
+  }
+}
+
+// The other half of trySaveCanvasSidecar. Deleting a file needs a route of
+// its own, and /api/delete-canvas resolves the target through exactly the
+// function /api/save-board writes through, so nothing outside the board's own
+// directory and nothing that is not a .canvas can be addressed. It then refuses
+// unless the file parses as a canvas with zero nodes, which is what makes this
+// safe to fire automatically: the worst it can ever remove is an empty file.
+async function tryDeleteCanvasSidecar(pathValue) {
+  if (repositoryServerDetected === false) return false;
+  const relativePath = String(pathValue || "").trim();
+  if (!relativePath) return false;
+  try {
+    const url = new URL("/api/delete-canvas", window.location.origin);
+    if (boardConfig.slug) url.searchParams.set("slug", boardConfig.slug);
+    url.searchParams.set("path", relativePath);
+    const response = await fetch(url.toString(), { method: "POST" });
+    if (!response.ok) return false;
+    const result = await response.json().catch(() => null);
+    return !!result?.deleted;
+  } catch (error) {
+    return false;
   }
 }
 

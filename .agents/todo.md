@@ -382,7 +382,15 @@ work area. Parked without timelines; pull cards out as direction firms up.
   only if offline merge becomes a requirement.
 - [.] [apps] Phase 7, app surface: sandboxed app embeds with a manifest and session state.
 - [.] [export] Phase 8, ecosystem portability: richer Obsidian round-trip, plugin or local API.
-- [.] [perf] Incremental saves: dirty-node tracking so serialization is O(change), shared
+- [.] **Built and NOT applied**, parked at `.tmp/scratch/opus5-41/patch.json`. It turns a
+  green suite red: `board-save-export-runtime` asserts the source matches
+  `/nodes:\s*nodes\.map\(\(node\) => JSON\.parse\(JSON\.stringify\(stripTransientNodeFields\(node\)\)\)\)/`,
+  and the patch moves that expression out of the object literal, so the regex stops matching.
+  That is another source-scraping assertion of the kind the 2026-08-01 audit is about, so the
+  right move is to fix the assertion rather than shape the code around it. Held only because
+  serialization is the path the stale-tab clobber guard defends and it deserves its own careful
+  pass, not a rushed one at the end of a wave.
+  [perf] Incremental saves: dirty-node tracking so serialization is O(change), shared
   design with operation-level writes.
 - [.] [perf] Staged mount: viewport-first node rendering, the rest in idle callbacks.
 - [x] [runtime] A `vnc` node type with the noVNC client vendored, per the VNC research v2. Built
@@ -837,11 +845,45 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 - [ ] There should be a enable experimental features checkbox in settings. It will enable CLI use for now !p3
 
-- [ ] cant delete or chnge type of items in the tracker. !p1
+- [A] cant delete or chnge type of items in the tracker. !p1
+  **Delete** is an x beside the pencil, behind an inline confirm whose focus lands on "Keep", with
+  25 seconds of Undo that restores the card whole, marker, `@owner`, `!p` token and every note
+  line. There is also an append-only trash log at `.tracker/deleted-cards.jsonl` for after the
+  toast is gone. **Decide whether that file should be committed or gitignored.**
+  **"Change type" was read as the LANE**, the `##` section a card lives under. That is an
+  interpretation and it is disclosed: of a card's four attributes, status is already draggable and
+  priority already clickable, so the lane was the only one with no control at all. The lane badge
+  is a button now. If you meant the status marker, there is still no click path for it, only drag.
+  The lane control is purely additive, so a wrong guess here cost nothing.
+  **A reviewer caught a real hole in the delete path and I fixed it before this landed.** The
+  destructive branch treated the stale-file guard as optional: a request that simply omitted
+  `expect` deleted whatever card happened to sit at that line index, which with a stale tab or a
+  hand-edit to `todo.md` means deleting the wrong card and taking its whole note block with it.
+  A delete without `expect` is now refused outright. The board always sends it, so nothing a real
+  client does is affected.
+  **How to check:** delete a card, then press Undo in the toast. It comes back with its notes.
+  Change a card's lane and confirm its block moved under the new heading in `todo.md`.
 
 - [ ] Add a CLI functionality? maybe implemented like this: How to Set Up a Local Browser Terminal (Using Wetty)If you want to access your own computer's terminal via a browser tab, you can host a local web-terminal server using Node.js:Install Wetty: Open your computer's regular terminal and run npm install -g wetty.Launch the Server: Run wetty --port 3000.Open Browser: Navigate to http://localhost:3000 to type your terminal commands directly into the browser.. !p3
 
-- [ ] **Creating a canvas leaves its file behind when the node does not stick.** Found by !p2
+- [A] **Fixed, and a worse bug turned up underneath it.** Creating a canvas leaves its file behind when the node does not stick. !p2
+  A sub-canvas file is deleted when the last node pointing at it leaves the board, so undo of a
+  create no longer orphans anything. The server refuses to delete a canvas that has nodes in it,
+  so this can never remove work: undoing the creation of a canvas somebody has since filled in
+  leaves the file exactly where it is.
+  **The worse bug: the uniquifier had a race.** It picked a free name with `existsSync` and then
+  awaited twice before writing, so four creates in one tick, which is exactly what holding the C
+  key or clicking the tool fast does, all saw the same free name, all took it, and all four nodes
+  ended up pointing at one file. Measured: 4 concurrent requests, 4 identical urls, 1 file, 3
+  canvasIds gone. It now claims the name with an `wx` open, the only check-and-create the
+  filesystem does as a single operation, so four creates get four names.
+  **One defect a reviewer caught and I fixed:** Ctrl+X on a canvas node deleted its file, and the
+  paste rebuilt the node pointing at something no longer there. Sidecar deletion is suppressed for
+  the duration of a cut, since the node is on the clipboard and expected back.
+  **How to check:** create a canvas, Ctrl+Z. No file is left behind. Create one, put something in
+  it, then delete the node: the file stays, because it has work in it. Cut and paste a canvas node
+  and confirm it still opens.
+  Original: creating a canvas leaves its file behind when the node does not stick.
   cleaning up after your own testing: the cosmoboard had picked up **13 empty, unreferenced
   `.canvas` files and a 1-byte orphan note** in about three minutes. Deleted, and one real
   canvas with 8 nodes was kept.
@@ -1445,15 +1487,49 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 
 ## Features and ideas
 
-- [ ] after I double click copy link from youtube top or embed the text shouldn't stay highlighted. Also when I hover above it it sohuld instruct to double clik to copy url. !p1
+- [A] after I double click copy link from youtube top or embed the text shouldn't stay highlighted. Also when I hover above it it sohuld instruct to double clik to copy url. !p1
 
 - [A] The lock icon should be small but visible and yellow when the page is locked and the bar is auto hidden. (can be in small circle next to the pill)
 
-- [ ] There should be a command shortcut that opens a command palette where you can type any command. C might be nice but then lets re-assign canvas. All commands and actions should be accesible in this command interface without going through the menu. Maybe even settings can be configured through here !p3
+- [ ] **Built, reviewed, and NOT applied**, parked at `.tmp/scratch/opus5-40/patch.json`.
+  It reaches 29 commands, derived from the shortcuts groups, the toolbar DOM and the settings
+  checkboxes. Your card says **"all commands and actions"**, and a reviewer proved the gap by
+  mutating the sources out and reading what was left: every non-boolean action is still menu-only.
+  A palette that covers the easy half is the kind of thing that gets shipped and then quietly not
+  used, so it is worth one more pass rather than a claim of done.
+  Still open and yours: **which key**. You wrote "C might be nice but then lets re-assign canvas",
+  and C shipped as the canvas tool yesterday, so that is a live reassignment. Ctrl+K is the
+  convention and collides with nothing here, which would let C stay on canvas and cost nobody a
+  relearn. Say the word and it ships on Ctrl+K.
+  Original: there should be a command shortcut that opens a command palette. where you can type any command. C might be nice but then lets re-assign canvas. All commands and actions should be accesible in this command interface without going through the menu. Maybe even settings can be configured through here !p3
 
-- [ ] R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool. !p2
+- [ ] **Built, reviewed, and NOT applied. It needs one decision from you and one real fix.**
+  The patch is parked at `.tmp/scratch/opus5-38/patch.json` with its test at
+  `held-rotation-tool.test.mjs`, so nothing is lost.
+  **Why it is held.** Rotating a drawing and then erasing on it destroys the rotation and moves
+  the ink: the eraser gates on the unrotated model rect and clips against untransformed points, so
+  what it removes is not what is under your pointer. That is silent corruption of your drawings,
+  which is worse than not having rotation.
+  Also, every regression result the agent reported was run against the **unpatched** runtime. Its
+  mirror used a directory junction, and Node resolves module realpaths, so the server it started
+  was serving the real repo rather than the mirror. So its greens prove nothing and everything
+  needs re-running.
+  **And R collides.** The shape tool card below binds R to rectangle while this binds R to
+  rotation. You asked for R to be rotation, so rotation keeps R and the shape tool needs another
+  letter. That is the decision I want from you, or say "pick one" and I will.
+  Original: R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool. !p2
 
-- [ ] Add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner. !p3
+- [ ] **Built, reviewed, and NOT applied**, parked at `.tmp/scratch/opus5-39/patch.json`.
+  Three reasons, in order. It binds **R to rectangle**, and you asked for R to be the rotation
+  tool; rotation wins, so this needs a different letter. It turns a currently-green suite red
+  (`F: every drawing control must take the pointer that lands on it`, because a toolbar element
+  now covers the dev tuning sliders). And it shares three identical anchors with the rotation
+  patch, so applying them naively would have one silently eat the other's changes; my own
+  cross-patch overlap check flagged the same three independently of the reviewer.
+  Worth deciding along with the letter: the eraser clips drawings by scraping coordinates out of a
+  path's `d` attribute, and a `<rect>` or `<ellipse>` has none, so shapes are not eraseable unless
+  that is designed for.
+  Original: add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner. !p3
 
 - [A] **15 blank lines: done. Collapsing: answered, and the answer is that it was already
   solved.** You flagged your own uncertainty on the second half, and you were right to.

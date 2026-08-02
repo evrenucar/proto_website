@@ -1,7 +1,7 @@
 import http from "node:http";
 import https from "node:https";
-import { createReadStream, createWriteStream, existsSync, statSync } from "node:fs";
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { closeSync, createReadStream, createWriteStream, existsSync, mkdirSync, openSync, statSync } from "node:fs";
+import { appendFile, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,13 +60,28 @@ function resolveCanvasSidecarTarget(boardTarget, pathValue, filenameValue) {
     // overwrote the first, leaving the first node pointing at a canvasId that was
     // no longer in the file. ?path= above is the opposite case, addressing a
     // sidecar that already exists, and must not be uniquified.
+    //
+    // The name is claimed with "wx", not chosen with existsSync. This handler
+    // awaits twice between picking a name and writing it, so four creates in
+    // one tick — which is what holding the C key or clicking the tool fast
+    // does — all looked at the same free name, all got it, and all four nodes
+    // ended up pointing at one file. Measured: 4 concurrent requests, 4
+    // identical urls, 1 file, 3 canvasIds gone. "wx" is the only
+    // check-and-create the filesystem performs as a single operation, so the
+    // loop below hands out four different names instead.
     const safeName = sanitizeCanvasFilename(filenameValue);
     const base = safeName.replace(/\.canvas$/i, "");
-    let candidate = path.normalize(path.join(boardDir, safeName));
-    for (let n = 2; existsSync(candidate) && n < 1000; n++) {
-      candidate = path.normalize(path.join(boardDir, `${base}-${n}.canvas`));
+    for (let n = 1; n < 1000 && !filePath; n++) {
+      const candidate = path.normalize(path.join(boardDir, n === 1 ? safeName : `${base}-${n}.canvas`));
+      if (!candidate.startsWith(boardDir + path.sep)) return null;
+      try {
+        mkdirSync(boardDir, { recursive: true });
+        closeSync(openSync(candidate, "wx"));
+        filePath = candidate;
+      } catch (error) {
+        if (error.code !== "EEXIST") return null;
+      }
     }
-    filePath = candidate;
   }
 
   if (!filePath) return null;
@@ -309,6 +324,67 @@ async function handleAddTodo(request, response) {
 const REVIEW_VERDICTS = ["works", "issue", "partly"];
 const TODO_STATUSES = [".", " ", "~", "A", "x"];
 
+// Every `## heading` the tracker renders as a lane. A card's lane is its kind of
+// work, and moving it between lanes is a different gesture from moving it between
+// kanban columns: the column is the marker, the lane is which section of todo.md
+// the card physically lives under. This list is wider than TODO_SECTIONS because
+// filing a *new* card into "Dead code" or "Waiting on your review" makes no
+// sense, while moving an existing one there does.
+const TODO_LANES = [
+  "Now",
+  "Bugs",
+  "Test failures",
+  "Dead code",
+  "Features and ideas",
+  "Waiting on your review",
+  "Later"
+];
+
+// A card is its `- [ ] …` line plus every indented continuation line under it.
+// Returns [start, end] inclusive, in the same line array the caller holds.
+function cardBlockEnd(lines, start) {
+  let end = start;
+  while (end + 1 < lines.length && /^\s+\S/.test(lines[end + 1])) end++;
+  return end;
+}
+
+// Cuts a card out of the line array, taking the blank separator that follows it
+// so removing a card never leaves a double blank behind. Returns the block's own
+// lines, without that separator, ready to be written back somewhere else.
+function cutCardBlock(lines, start) {
+  const end = cardBlockEnd(lines, start);
+  const block = lines.slice(start, end + 1);
+  let count = end + 1 - start;
+  if (lines[end + 1] === "") count++;
+  lines.splice(start, count);
+  return block;
+}
+
+// Puts a card block directly under a `## <lane>` heading, which is where
+// handleAddTodo puts new cards and where the board's priority sort expects the
+// newest arrival. Returns false when the heading is not in the file.
+function insertCardBlock(lines, lane, block) {
+  const heading = lines.findIndex((l) => l.replace(/\s+$/, "") === `## ${lane}`);
+  if (heading === -1) return false;
+  const insert = ["", ...block];
+  // Keep exactly one blank line between this card and whatever follows it.
+  if (lines[heading + 1] !== "") insert.push("");
+  lines.splice(heading + 1, 0, ...insert);
+  return true;
+}
+
+// Deleting a card is the only gesture here that destroys work, and the file it
+// destroys it from is one the user hand-edits all day. Every removed block is
+// appended verbatim to .tracker/deleted-cards.jsonl first, so a card deleted at
+// 2am is recoverable by hand long after the tab that deleted it is gone. The
+// board's own Undo reads the block straight out of the response instead; this
+// file is the backstop for when that tab is closed.
+async function recordDeletedCard(entry) {
+  const trashPath = path.join(rootDir, ".tracker", "deleted-cards.jsonl");
+  await mkdir(path.dirname(trashPath), { recursive: true });
+  await appendFile(trashPath, `${JSON.stringify(entry)}\n`, "utf8");
+}
+
 // Card timestamps live beside the tracker, keyed by the card title (first 60
 // chars, like the feedback log), so they survive the todo file shifting. Only
 // writes that flow through these endpoints stamp; direct file edits do not.
@@ -364,22 +440,70 @@ function readJsonBody(request) {
   });
 }
 
-// Moves a card between columns and records the user's verdict on it.
+// Moves a card between columns, moves it between lanes, deletes it, and records
+// the user's verdict on it.
 //
 // The board addresses a card by its line number in todo.md, which is only valid
 // for as long as the file has not shifted underneath it. `expect` is the start of
 // the line the board believed it was acting on; if that no longer matches, the
-// write is refused rather than applied to whatever moved into that slot.
+// write is refused rather than applied to whatever moved into that slot. Delete
+// and lane-move go through that same guard: deleting the wrong card because the
+// file shifted is not recoverable from the board.
+//
+// `remove: true` and `toLane: "<heading>"` are whole-card gestures and each own
+// the request; they are not combined with a status, text or priority edit.
+// `restore: "<block>"` puts a deleted card back, and is the only call with no
+// line to guard, so it refuses instead when the card is already in the file.
 async function handleTodoUpdate(request, response) {
   try {
     const parsed = await readJsonBody(request);
     const line = Number(parsed?.line);
     const expect = String(parsed?.expect || "");
+    const remove = parsed?.remove === true;
+    const restore = parsed?.restore == null ? null : String(parsed.restore);
+    const toLane = parsed?.toLane == null ? null : String(parsed.toLane).trim();
     const status = parsed?.status == null ? null : String(parsed.status);
     const verdict = parsed?.verdict == null ? null : String(parsed.verdict);
     const note = String(parsed?.note || "").trim();
     const priority = parsed?.priority == null ? null : Number(parsed.priority);
     const text = parsed?.text == null ? null : String(parsed.text).replace(/\s+/g, " ").trim();
+
+    if (toLane !== null && !TODO_LANES.includes(toLane)) {
+      sendJson(response, 400, { success: false, error: `Unknown lane "${toLane}".` });
+      return;
+    }
+
+    // --- undo of a delete ---
+    if (restore !== null) {
+      const blockLines = restore.replace(/\r\n?/g, "\n").split("\n");
+      while (blockLines.length && blockLines[blockLines.length - 1].trim() === "") blockLines.pop();
+      if (!blockLines.length || !/^-\s+\[[ xA~.]\]\s+\S/.test(blockLines[0])) {
+        sendJson(response, 400, { success: false, error: "Nothing card-shaped to restore." });
+        return;
+      }
+      if (toLane === null) {
+        sendJson(response, 400, { success: false, error: "Restoring a card needs the lane to put it back in." });
+        return;
+      }
+
+      const todoPath = path.join(rootDir, ".agents", "todo.md");
+      const original = await readFile(todoPath, "utf8");
+      const eol = original.includes("\r\n") ? "\r\n" : "\n";
+      const lines = original.split(/\r?\n/);
+      // Clicking Undo twice, or on a card someone already typed back in by hand,
+      // must not produce two copies of it.
+      if (lines.some((l) => l.trim() === blockLines[0].trim())) {
+        sendJson(response, 409, { success: false, error: "That card is already in todo.md." });
+        return;
+      }
+      if (!insertCardBlock(lines, toLane, blockLines)) {
+        sendJson(response, 404, { success: false, error: `Lane "${toLane}" is not in todo.md.` });
+        return;
+      }
+      await writeFile(todoPath, lines.join(eol), "utf8");
+      sendJson(response, 200, { success: true, restored: true, lane: toLane });
+      return;
+    }
 
     if (!Number.isInteger(line) || line < 0) {
       sendJson(response, 400, { success: false, error: "Missing line number." });
@@ -401,7 +525,8 @@ async function handleTodoUpdate(request, response) {
       sendJson(response, 400, { success: false, error: `Priority must be 0 to 5, got "${parsed.priority}".` });
       return;
     }
-    if (status === null && verdict === null && priority === null && text === null && !note) {
+    if (status === null && verdict === null && priority === null && text === null && !note &&
+        !remove && toLane === null) {
       sendJson(response, 400, { success: false, error: "Nothing to record." });
       return;
     }
@@ -426,8 +551,65 @@ async function handleTodoUpdate(request, response) {
     // rewritten, so including it here would make the guard fire on the board's
     // own successful writes.
     const currentText = current.replace(/^-\s+\[[ xA~.]\]\s+/, "");
+    // A DESTRUCTIVE request must carry `expect`. For the rewriting operations an
+    // absent `expect` is merely unguarded, and old callers relied on that. For
+    // remove it means "delete whatever card happens to sit at this line index",
+    // which with a stale tab, a concurrent edit, or a hand-edit to todo.md
+    // deletes the wrong card and takes its whole note block with it. The board
+    // always sends `expect`, so this refuses nothing a real client does.
+    if (remove && !expect) {
+      sendJson(response, 400, {
+        success: false,
+        error: "Refusing to delete without the expected card text."
+      });
+      return;
+    }
     if (expect && !currentText.startsWith(expect)) {
       sendJson(response, 409, { success: false, error: "todo.md changed, reload the board." });
+      return;
+    }
+
+    // The card's own title, without the marker, the @owner tag or the priority
+    // token: how the board, the feedback log and card-meta.json all key a card.
+    const stripLine = (value) => value
+      .replace(/^-\s+\[[ xA~.]\]\s+/, "")
+      .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
+      .replace(/\s*!p[1-5]\b/i, "")
+      .trim();
+
+    // --- delete the card ---
+    if (remove) {
+      const block = cutCardBlock(lines, line);
+      await writeFile(todoPath, lines.join(eol), "utf8");
+      await recordDeletedCard({
+        at: new Date().toISOString(),
+        lane: String(parsed?.lane || ""),
+        by: String(parsed?.by || "board"),
+        title: stripLine(current).slice(0, 200),
+        block: block.join("\n")
+      });
+      // The block goes back in the response so the board can offer an Undo that
+      // restores the card whole: its marker, owner, priority and every indented
+      // note line, not just the title it was showing.
+      sendJson(response, 200, {
+        success: true,
+        removed: block.join("\n"),
+        lines: block.length,
+        lane: String(parsed?.lane || "")
+      });
+      return;
+    }
+
+    // --- move the card to another lane ---
+    if (toLane !== null) {
+      const block = cutCardBlock(lines, line);
+      if (!insertCardBlock(lines, toLane, block)) {
+        sendJson(response, 404, { success: false, error: `Lane "${toLane}" is not in todo.md.` });
+        return;
+      }
+      await writeFile(todoPath, lines.join(eol), "utf8");
+      await updateCardMeta({ title: stripLine(current), by: String(parsed?.by || "board") });
+      sendJson(response, 200, { success: true, lane: toLane, laneFrom: String(parsed?.lane || "") });
       return;
     }
 
@@ -463,13 +645,7 @@ async function handleTodoUpdate(request, response) {
       lines[line] = updatedLine;
       await writeFile(todoPath, lines.join(eol), "utf8");
 
-      // Stamp the card's timestamps. Title keys exclude the owner tag and
-      // priority token, matching how the board and the feedback log key cards.
-      const stripLine = (value) => value
-        .replace(/^-\s+\[[ xA~.]\]\s+/, "")
-        .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
-        .replace(/\s*!p[1-5]\b/i, "")
-        .trim();
+      // Stamp the card's timestamps, keyed by the same stripped title.
       await updateCardMeta({
         title: stripLine(current),
         newTitle: text !== null ? stripLine(updatedLine) : null,
@@ -765,6 +941,65 @@ async function handleListCanvas(request, response, parsedUrl) {
   }
 }
 
+// Removes one sub-canvas sidecar, and only one that has nothing in it.
+//
+// A sidecar exists to serve a node. The moment the last node pointing at it
+// leaves the board the file is litter: the cosmoboard collected 13 empty,
+// unreferenced .canvas files in about three minutes of use, because undo took
+// the node off the board and left the file behind. The board asks here when a
+// canvas node is removed and nothing else references its file.
+//
+// Two guards, deliberately of different kinds. resolveCanvasSidecarTarget is
+// the same function /api/save-board writes through, so nothing outside the
+// board's own directory, nothing that is not a .canvas, and never the board's
+// own current.canvas can be addressed at all. On top of that, this route reads
+// the file first and refuses unless it parses as a canvas with zero nodes. So
+// the worst a wrong or malicious caller can achieve is deleting an empty file,
+// and there is no ?force= to switch that off. Missing file answers 200 with
+// deleted:false, because undo/redo/undo must not turn into an error.
+async function handleDeleteCanvas(request, response, parsedUrl) {
+  // No body is expected; drain whatever arrived so the socket is not held open.
+  request.resume();
+  try {
+    const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+    const target = resolveCanvasSidecarTarget(boardTarget, parsedUrl.searchParams.get("path") || "", "");
+    if (!target) {
+      sendJson(response, 403, { success: false, deleted: false, error: "Forbidden canvas sidecar path." });
+      return;
+    }
+    const safePath = path.normalize(target.filePath);
+    if (!safePath.startsWith(rootDir)) {
+      sendJson(response, 403, { success: false, deleted: false, error: "Forbidden canvas sidecar path." });
+      return;
+    }
+    if (!existsSync(safePath)) {
+      sendJson(response, 200, { success: true, deleted: false, path: target.relativePath });
+      return;
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(await readFile(safePath, "utf8"));
+    } catch {
+      parsed = null;
+    }
+    const nodeCount = Array.isArray(parsed?.nodes) ? parsed.nodes.length : null;
+    if (nodeCount === null || nodeCount > 0) {
+      sendJson(response, 409, {
+        success: false,
+        deleted: false,
+        error: `Refused to delete ${target.relativePath}: it is not an empty canvas.`
+      });
+      return;
+    }
+
+    await unlink(safePath);
+    sendJson(response, 200, { success: true, deleted: true, path: target.relativePath });
+  } catch (error) {
+    sendJson(response, 500, { success: false, deleted: false, error: error.message || "Could not delete canvas file." });
+  }
+}
+
 function handleGetVideoMeta(request, response, parsedUrl) {
   const videoUrl = parsedUrl.searchParams.get("url");
   if (!videoUrl) return sendText(response, 400, "Missing url parameter");
@@ -989,6 +1224,11 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "GET" && parsedUrl.pathname === "/api/list-markdown") {
     handleListMarkdown(request, response, parsedUrl);
+    return;
+  }
+
+  if (request.method === "POST" && parsedUrl.pathname === "/api/delete-canvas") {
+    handleDeleteCanvas(request, response, parsedUrl);
     return;
   }
 

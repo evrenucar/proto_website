@@ -167,10 +167,70 @@
   .card.done .card-title { color: var(--ink-dim); }
 
   .card-top { display: flex; gap: 7px; align-items: baseline; flex-wrap: wrap; }
+  /* The lane badge is the control for the lane: what section of todo.md this
+     card lives under, i.e. what kind of work it is. Clicking it opens the list. */
   .lane {
     font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--lane, var(--ink-faint)); border: 1px solid currentColor; border-radius: 3px; padding: 0 5px;
+    color: var(--lane, var(--ink-faint)); border: 1px solid currentColor; border-radius: 3px;
+    padding: 1px 5px; background: none; cursor: pointer; line-height: 1.35;
   }
+  .lane:hover { background: color-mix(in srgb, var(--lane, #888) 18%, transparent); }
+  .lane:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .lane::after { content: " \25BE"; opacity: 0.6; }
+
+  .lane-menu { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 0 1px; }
+  .lane-menu button {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px;
+    color: var(--ink-dim); cursor: pointer;
+  }
+  .lane-menu button:hover { border-color: var(--accent); color: var(--accent); }
+  .lane-menu button[aria-current="true"] { color: var(--ink-faint); border-style: dashed; cursor: default; }
+  .lane-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Delete sits next to the edit pencil at the end of the title, not up in the
+     card-top row: that row already wraps at column width, and a lone x on a line
+     of its own reads like part of the card. It does nothing on its own click,
+     it opens the confirm row below. */
+  .db {
+    background: none; border: none; padding: 0 2px; cursor: pointer;
+    color: var(--ink-faint); font-size: 13px; line-height: 1;
+  }
+  .db:hover { color: var(--fail); }
+  .db:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+
+  .confirm {
+    display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-top: 3px;
+    padding: 6px 8px; border: 1px solid var(--fail); border-radius: 6px;
+    background: color-mix(in srgb, var(--fail) 10%, transparent);
+    font-family: var(--mono); font-size: 11px; color: var(--ink);
+  }
+  .confirm button {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+    border-radius: 4px; padding: 3px 8px; cursor: pointer; border: 1px solid var(--line);
+    background: none; color: var(--ink-dim);
+  }
+  .confirm button.yes { border-color: var(--fail); background: var(--fail); color: #161515; font-weight: 700; }
+  .confirm button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Undo lives on screen, not in a dialog: a delete is one click away from being
+     put back for 25 seconds, and .tracker/deleted-cards.jsonl keeps the block
+     after that. */
+  .undo {
+    position: fixed; left: 18px; bottom: 18px; z-index: 40;
+    display: flex; gap: 11px; align-items: center;
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px;
+    padding: 9px 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    font-family: var(--mono); font-size: 12px; color: var(--ink);
+  }
+  .undo[hidden] { display: none; }
+  .undo button {
+    font: inherit; text-transform: uppercase; letter-spacing: 0.08em;
+    background: var(--accent); border: 1px solid var(--accent); color: #161515;
+    border-radius: 5px; padding: 3px 10px; cursor: pointer; font-weight: 700;
+  }
+  .undo button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .undo .undo-err { color: var(--fail); }
   .owner {
     font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.07em;
     color: var(--agent); border: 1px solid currentColor; border-radius: 3px; padding: 0 5px;
@@ -393,6 +453,11 @@
     </div>
     <form id="qform"></form>
   </section>
+
+  <div class="undo" id="undo" hidden role="status">
+    <span id="undo-text">Card deleted.</span>
+    <button type="button" id="undo-btn">Undo</button>
+  </div>
 
   <footer class="foot">
     Live from <code>.agents/todo.md</code> · <a href="/cosmoboard.html">cosmoboard</a> · <a href="/onboarding.html">onboarding</a> · <a href="/braindump.html">braindump</a> · <a href="/content/boards/dev.html">dev board</a> · <a href="/content/boards/test-board.html">test board</a>
@@ -665,7 +730,8 @@
           ' data-priority="' + (c.priority || 0) + '"' +
           ' data-id="' + esc(id) + '">';
         html += '<div class="card-top"><span class="card-num" title="Card id, stable across edits">#' +
-          esc(shortIds[id] || "") + '</span><span class="lane">' + esc(c.lane) + "</span>";
+          esc(shortIds[id] || "") + '</span><button type="button" class="lane" title="Change lane" ' +
+          'aria-label="Change lane, currently ' + esc(c.lane) + '">' + esc(c.lane) + "</button>";
         if (own) {
           html += '<span class="owner" title="' + esc(own.id + (own.goal ? " · " + own.goal : "")) + '"><i></i>' +
             esc(own.label) + "</span>";
@@ -681,7 +747,8 @@
         }
         html += "</span></div>";
         html += '<div class="card-title" data-text="' + esc(c.text) + '">' + inline(c.text) +
-          ' <button type="button" class="eb" title="Edit card text" aria-label="Edit card text">&#9998;</button></div>';
+          ' <button type="button" class="eb" title="Edit card text" aria-label="Edit card text">&#9998;</button>' +
+          '<button type="button" class="db" title="Delete card" aria-label="Delete card">&#215;</button></div>';
         if (note) {
           html += '<div class="card-note' + (long && !open ? " clamped" : "") + '">' + inline(note) + "</div>";
           if (long) html += '<button type="button" class="more" data-id="' + esc(id) + '">' + (open ? "less" : "more") + "</button>";
@@ -959,6 +1026,9 @@
         delete noteDrafts[card.getAttribute("data-id")];
         lastTodo = null; lastReview = null; // force a redraw
         poll();
+        // Callers that need what the server did (a delete hands back the removed
+        // block so Undo can put it back) read it off this.
+        return res.body;
       })
       .catch(function (err) {
         card.classList.remove("busy");
@@ -975,7 +1045,9 @@
     // Selecting text in the feedback field, clicking a priority chip, or
     // editing the title must not drag the card out from under it.
     if (e.target.closest(".review") || e.target.closest(".prio-row") ||
-        e.target.closest(".title-edit") || e.target.closest(".eb")) { e.preventDefault(); return; }
+        e.target.closest(".title-edit") || e.target.closest(".eb") ||
+        e.target.closest(".lane") || e.target.closest(".lane-menu") ||
+        e.target.closest(".db") || e.target.closest(".confirm")) { e.preventDefault(); return; }
     dragging = card;
     card.classList.add("dragging");
     // Firefox will not start a drag without payload on the transfer.
@@ -1101,6 +1173,142 @@
     else if (!payload.note) { return; }
 
     sendUpdate(card, payload);
+  });
+
+  // ---- change a card's lane, and delete a card ----
+  //
+  // The status marker is the kanban column and is already changed by dragging.
+  // A card's LANE is the `## section` of todo.md it physically lives under, which
+  // is what kind of work it is, and it had no control at all until now. The lane
+  // badge is that control: click it, pick a lane, the card's whole block moves
+  // under that heading. Deleting is the other missing one, and it is destructive,
+  // so it takes a confirm and hands back an Undo.
+
+  function closeLaneMenus() {
+    Array.prototype.forEach.call(document.querySelectorAll(".lane-menu"), function (m) { m.remove(); });
+  }
+
+  function closeConfirms() {
+    Array.prototype.forEach.call(document.querySelectorAll(".confirm"), function (c) { c.remove(); });
+  }
+
+  var undoTimer = null, undoBlock = null, undoLane = "";
+
+  function hideUndo() {
+    if (undoTimer) { clearTimeout(undoTimer); undoTimer = null; }
+    undoBlock = null;
+    document.getElementById("undo").hidden = true;
+  }
+
+  function showUndo(block, lane, title) {
+    undoBlock = block;
+    undoLane = lane;
+    document.getElementById("undo-text").textContent = "Deleted: " + String(title || "card").slice(0, 52);
+    document.getElementById("undo").hidden = false;
+    if (undoTimer) clearTimeout(undoTimer);
+    // Long enough to notice and act, short enough that it is not still sitting
+    // there next time you look. After it goes, the block is still on disk in
+    // .tracker/deleted-cards.jsonl.
+    undoTimer = setTimeout(hideUndo, 25000);
+  }
+
+  document.getElementById("undo-btn").addEventListener("click", function () {
+    if (!undoBlock) return;
+    var btn = this;
+    btn.disabled = true;
+    fetch("/api/todo-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restore: undoBlock, toLane: undoLane, by: "you" })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body.success) throw new Error(res.body.error || "Could not restore.");
+        hideUndo();
+        lastTodo = null;
+        poll();
+      })
+      .catch(function (err) {
+        document.getElementById("undo-text").textContent = String(err.message || err);
+        document.getElementById("undo-text").className = "undo-err";
+      })
+      .then(function () { btn.disabled = false; });
+  });
+
+  document.getElementById("board").addEventListener("click", function (e) {
+    var laneBtn = e.target.closest(".lane");
+    if (laneBtn) {
+      var card = laneBtn.closest(".card");
+      var alreadyOpen = card.querySelector(".lane-menu");
+      closeLaneMenus();
+      closeConfirms();
+      if (alreadyOpen) return; // clicking the badge again closes it
+      var current = card.getAttribute("data-lane");
+      var menu = document.createElement("div");
+      menu.className = "lane-menu";
+      Object.keys(LANES).forEach(function (name) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("data-lane-to", name);
+        b.textContent = name;
+        if (name === current) b.setAttribute("aria-current", "true");
+        menu.appendChild(b);
+      });
+      card.querySelector(".card-top").insertAdjacentElement("afterend", menu);
+      return;
+    }
+
+    var pick = e.target.closest(".lane-menu button");
+    if (pick) {
+      var laneCard = pick.closest(".card");
+      var to = pick.getAttribute("data-lane-to");
+      closeLaneMenus();
+      if (!to || to === laneCard.getAttribute("data-lane")) return;
+      sendUpdate(laneCard, { toLane: to });
+      return;
+    }
+
+    var del = e.target.closest(".db");
+    if (del) {
+      var delCard = del.closest(".card");
+      var open = delCard.querySelector(".confirm");
+      closeConfirms();
+      closeLaneMenus();
+      if (open) return;
+      var row = document.createElement("div");
+      row.className = "confirm";
+      row.innerHTML = "<span>Delete this card?</span>" +
+        '<button type="button" class="yes">Delete</button>' +
+        '<button type="button" class="no">Keep</button>';
+      delCard.appendChild(row);
+      // Focus lands on Keep, not Delete, so a stray Enter cancels.
+      row.querySelector(".no").focus();
+      return;
+    }
+
+    if (e.target.closest(".confirm .no")) { closeConfirms(); return; }
+
+    var yes = e.target.closest(".confirm .yes");
+    if (yes) {
+      var doomed = yes.closest(".card");
+      var lane = doomed.getAttribute("data-lane");
+      var titleEl = doomed.querySelector(".card-title");
+      var title = titleEl ? titleEl.getAttribute("data-text") : "";
+      closeConfirms();
+      sendUpdate(doomed, { remove: true }).then(function (body) {
+        if (body && body.removed) showUndo(body.removed, lane, title);
+      });
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".lane") && !e.target.closest(".lane-menu")) closeLaneMenus();
+    if (!e.target.closest(".db") && !e.target.closest(".confirm")) closeConfirms();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    closeLaneMenus();
+    closeConfirms();
   });
 
   function setLive(kind, text) {
