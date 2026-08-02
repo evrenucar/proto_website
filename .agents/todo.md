@@ -841,6 +841,28 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 - [ ] Add a CLI functionality? maybe implemented like this: How to Set Up a Local Browser Terminal (Using Wetty)If you want to access your own computer's terminal via a browser tab, you can host a local web-terminal server using Node.js:Install Wetty: Open your computer's regular terminal and run npm install -g wetty.Launch the Server: Run wetty --port 3000.Open Browser: Navigate to http://localhost:3000 to type your terminal commands directly into the browser.. !p3
 
+- [ ] **Creating a canvas leaves its file behind when the node does not stick.** Found by !p2
+  cleaning up after your own testing: the cosmoboard had picked up **13 empty, unreferenced
+  `.canvas` files and a 1-byte orphan note** in about three minutes. Deleted, and one real
+  canvas with 8 nodes was kept.
+  The uniquifier added yesterday did its job: the `-2`, `-3`, `-4` suffixes in those names are it
+  refusing to let a second canvas overwrite a first, so **no data was lost**. But it converts an
+  overwrite into litter, and litter is what is left.
+  Two ways in, and both need closing:
+  1. **Undo does not remove the file.** Ctrl+Z takes the node off the board and the `.canvas`
+     stays on disk, orphaned immediately.
+  2. **The file is written before the node exists.** Any path where creation is repeated fast, or
+     abandoned, leaves a file per attempt. The `e.repeat` guard stops key auto-repeat, but rapid
+     clicking on the tool does the same thing, and a tab running an older runtime has no guard at
+     all, which is exactly what produced these.
+  This is the same family as the orphan-markdown-node bug that is already in Done: a sidecar
+  outliving the node that referenced it.
+  **Worth considering:** write the file only once the node is committed, and have undo of a canvas
+  creation delete the file it made. Or sweep empty unreferenced sidecars on load, which is
+  cheaper but silently deletes things, so probably not.
+  **How to check:** `ls content/boards/cosmoboard/canvas-*.canvas` should only ever list canvases
+  the board actually references.
+
 - [A] **Two independent faults multiplying, and "randomly" was neither.** On mobile the board can randomly become scrollable up and down.
   **Fault 1: the board page has ALWAYS been scrollable.** `CSS/site.css` sets
   `html { overflow-x: clip }` site-wide. The CSS rule that propagates a body's overflow to the
