@@ -1,300 +1,328 @@
 {
-  "comment": "Declared identity for every agent working this board. The tracker reads this for card border colours, the who-strip, and the feed. An agent not listed here still works: the tracker falls back to a hashed colour from its name. The id is what goes in todo.md as @id.",
-  "updated": "2026-08-01",
-  "agents": [
-    {
-      "id": "opus5-0",
-      "n": 0,
-      "model": "opus 5",
-      "goal": "orchestrator, reading in on the new cards",
-      "color": "#e0b054"
-    },
-    {
-      "id": "opus5-1",
-      "n": 1,
-      "model": "opus 5",
-      "goal": "tracker multi-agent view",
-      "color": "#4c8dff"
-    },
-    {
-      "id": "opus5-2",
-      "n": 2,
-      "model": "opus 5",
-      "goal": "alt-drag copy undo on drawings",
-      "color": "#c98bf0"
-    },
-    {
-      "id": "opus5-3",
-      "n": 3,
-      "model": "opus 5",
-      "goal": "embed resize and overflow",
-      "color": "#f0a05a"
-    },
-    {
-      "id": "opus5-4",
-      "n": 4,
-      "model": "opus 5",
-      "goal": "mobile fast-zoom crash",
-      "color": "#5ad1a0"
-    },
-    {
-      "id": "opus5-5",
-      "n": 5,
-      "model": "sonnet 5",
-      "goal": "shift-constrained drag",
-      "color": "#7fd4e8"
-    },
-    {
-      "id": "opus5-6",
-      "n": 6,
-      "model": "sonnet 5",
-      "goal": "toolbar auto-hide and page lock",
-      "color": "#e88ba8"
-    },
-    {
-      "id": "opus5-7",
-      "n": 7,
-      "model": "opus 5",
-      "goal": "light mode and custom theme",
-      "color": "#b8e05a"
-    },
-    {
-      "id": "opus5-8",
-      "n": 8,
-      "model": "opus 5",
-      "goal": "pin items to viewport",
-      "color": "#9a8cff"
-    },
-    {
-      "id": "opus5-9",
-      "n": 9,
-      "model": "opus 5",
-      "goal": "pin: drag by edges and corners, OS-window snapping",
-      "color": "#ff7a5c"
-    },
-    {
-      "id": "opus5-10",
-      "n": 10,
-      "model": "sonnet 5",
-      "goal": "toolbar folds with the lock, bottom centre",
-      "color": "#46b8b0"
-    },
-    {
-      "id": "opus5-11",
-      "n": 11,
-      "model": "opus 5",
-      "goal": "eraser tool and pen tool revamp",
-      "color": "#c2547a"
-    },
-    {
-      "id": "opus5-12",
-      "n": 12,
-      "model": "opus 5",
-      "goal": "base64 assets in markdown, three download modes",
-      "color": "#5f6fd8"
-    },
-    {
-      "id": "opus5-13",
-      "n": 13,
-      "model": "opus 5",
-      "goal": "canvas tool: nested canvases, safe rename",
-      "color": "#ff5fa2"
-    },
-    {
-      "id": "opus5-14",
-      "n": 14,
-      "model": "sonnet 5",
-      "goal": "tracker: scroll position, card ids, agent ageing",
-      "color": "#8fb4d9"
-    },
-    {
-      "id": "opus5-15",
-      "n": 15,
-      "model": "opus 5",
-      "goal": "recreatable performance benchmark board",
-      "color": "#d4b25a"
-    },
-    {
-      "id": "opus5-16",
-      "n": 16,
-      "model": "opus 5",
-      "goal": "a CLI over the same board data",
-      "color": "#3fa7d6"
-    },
-    {
-      "id": "opus5-17",
-      "n": 17,
-      "model": "opus 5",
-      "goal": "audit: tests that assert mechanisms, not outcomes",
-      "color": "#a67c52"
-    },
-    {
-      "id": "opus5-18",
-      "n": 18,
-      "model": "opus 5",
-      "goal": "real-device mobile testing path and guide",
-      "color": "#e05263"
-    },
-    {
-      "id": "opus5-19",
-      "n": 19,
-      "model": "opus 5",
-      "goal": "filesystem integration and embed-refusal research",
-      "color": "#4f9d8c"
-    },
-    {
-      "id": "opus5-20",
-      "n": 20,
-      "model": "opus 5",
-      "goal": "settings menu redesign",
-      "color": "#8ecae6"
-    },
-    {
-      "id": "opus5-21",
-      "n": 21,
-      "model": "sonnet 5",
-      "goal": "theme reset button, accent drives pen colour",
-      "color": "#cdb4db"
-    },
-    {
-      "id": "opus5-22",
-      "n": 22,
-      "model": "opus 5",
-      "goal": "shortcuts reference panel",
-      "color": "#ffb703"
-    },
-    {
-      "id": "opus5-23",
-      "n": 23,
-      "model": "sonnet 5",
-      "goal": "arrow keys pan the board",
-      "color": "#06d6a0"
-    },
-    {
-      "id": "opus5-24",
-      "n": 24,
-      "model": "opus 5",
-      "goal": "touch parity for the new gestures",
-      "color": "#ef476f"
-    },
-    {
-      "id": "opus5-25",
-      "n": 25,
-      "model": "opus 5",
-      "goal": "audit: tests that assert mechanisms",
-      "color": "#118ab2"
-    },
-    {
-      "id": "opus5-26",
-      "n": 26,
-      "model": "opus 5",
-      "goal": "computer window: terminal and RDP",
-      "color": "#9c6644"
-    },
-    {
-      "id": "opus5-27",
-      "n": 27,
-      "model": "opus 5",
-      "goal": "drawing smoothness, with dev-mode sliders",
-      "color": "#f28f3b"
-    },
-    {
-      "id": "opus5-28",
-      "n": 28,
-      "model": "opus 5",
-      "goal": "re-arrangeable toolbar",
-      "color": "#5aa9e6"
-    },
-    {
-      "id": "opus5-29",
-      "n": 29,
-      "model": "sonnet 5",
-      "goal": "canvas shortcut and toolbar hover hints",
-      "color": "#7fb800"
-    },
-    {
-      "id": "opus5-30",
-      "n": 30,
-      "model": "opus 5",
-      "goal": "mechanically re-verify the Review queue",
-      "color": "#b5179e"
-    },
-    {
-      "id": "opus5-31",
-      "n": 31,
-      "model": "opus 5",
-      "goal": "stroke thickness while drawing, press-and-hold resize",
-      "color": "#ef6351"
-    },
-    {
-      "id": "opus5-32",
-      "n": 32,
-      "model": "sonnet 5",
-      "goal": "base64 markdown: spacing and collapsing",
-      "color": "#59c3c3"
-    },
-    {
-      "id": "opus5-33",
-      "n": 33,
-      "model": "sonnet 5",
-      "goal": "import/export icons, lock indicator when hidden",
-      "color": "#f4d35e"
-    },
-    {
-      "id": "opus5-34",
-      "n": 34,
-      "model": "opus 5",
-      "goal": "mobile: the board must not scroll the page",
-      "color": "#845ec2"
-    },
-    {
-      "id": "opus5-35",
-      "n": 35,
-      "model": "opus 5",
-      "goal": "tracker: delete cards and change their type",
-      "color": "#ff6b6b"
-    },
-    {
-      "id": "opus5-36",
-      "n": 36,
-      "model": "sonnet 5",
-      "goal": "embed address: selection and hover hint",
-      "color": "#4ecdc4"
-    },
-    {
-      "id": "opus5-37",
-      "n": 37,
-      "model": "opus 5",
-      "goal": "canvas files must not outlive their node",
-      "color": "#c77dff"
-    },
-    {
-      "id": "opus5-38",
-      "n": 38,
-      "model": "opus 5",
-      "goal": "R rotation tool",
-      "color": "#ffd166"
-    },
-    {
-      "id": "opus5-39",
-      "n": 39,
-      "model": "opus 5",
-      "goal": "shape tool: rectangles and ellipses",
-      "color": "#06aed5"
-    },
-    {
-      "id": "opus5-40",
-      "n": 40,
-      "model": "opus 5",
-      "goal": "command palette and experimental features",
-      "color": "#f77f00"
-    },
-    {
-      "id": "opus5-41",
-      "n": 41,
-      "model": "opus 5",
-      "goal": "perf: incremental saves and staged mount",
-      "color": "#8ac926"
-    }
-  ]
+    "comment":  "Declared identity for every agent working this board. The tracker reads this for card border colours, the who-strip, and the feed. An agent not listed here still works: the tracker falls back to a hashed colour from its name. The id is what goes in todo.md as @id.",
+    "updated":  "2026-08-01",
+    "agents":  [
+                   {
+                       "id":  "opus5-0",
+                       "n":  0,
+                       "model":  "opus 5",
+                       "goal":  "orchestrator, reading in on the new cards",
+                       "color":  "#e0b054"
+                   },
+                   {
+                       "id":  "opus5-1",
+                       "n":  1,
+                       "model":  "opus 5",
+                       "goal":  "tracker multi-agent view",
+                       "color":  "#4c8dff"
+                   },
+                   {
+                       "id":  "opus5-2",
+                       "n":  2,
+                       "model":  "opus 5",
+                       "goal":  "alt-drag copy undo on drawings",
+                       "color":  "#c98bf0"
+                   },
+                   {
+                       "id":  "opus5-3",
+                       "n":  3,
+                       "model":  "opus 5",
+                       "goal":  "embed resize and overflow",
+                       "color":  "#f0a05a"
+                   },
+                   {
+                       "id":  "opus5-4",
+                       "n":  4,
+                       "model":  "opus 5",
+                       "goal":  "mobile fast-zoom crash",
+                       "color":  "#5ad1a0"
+                   },
+                   {
+                       "id":  "opus5-5",
+                       "n":  5,
+                       "model":  "sonnet 5",
+                       "goal":  "shift-constrained drag",
+                       "color":  "#7fd4e8"
+                   },
+                   {
+                       "id":  "opus5-6",
+                       "n":  6,
+                       "model":  "sonnet 5",
+                       "goal":  "toolbar auto-hide and page lock",
+                       "color":  "#e88ba8"
+                   },
+                   {
+                       "id":  "opus5-7",
+                       "n":  7,
+                       "model":  "opus 5",
+                       "goal":  "light mode and custom theme",
+                       "color":  "#b8e05a"
+                   },
+                   {
+                       "id":  "opus5-8",
+                       "n":  8,
+                       "model":  "opus 5",
+                       "goal":  "pin items to viewport",
+                       "color":  "#9a8cff"
+                   },
+                   {
+                       "id":  "opus5-9",
+                       "n":  9,
+                       "model":  "opus 5",
+                       "goal":  "pin: drag by edges and corners, OS-window snapping",
+                       "color":  "#ff7a5c"
+                   },
+                   {
+                       "id":  "opus5-10",
+                       "n":  10,
+                       "model":  "sonnet 5",
+                       "goal":  "toolbar folds with the lock, bottom centre",
+                       "color":  "#46b8b0"
+                   },
+                   {
+                       "id":  "opus5-11",
+                       "n":  11,
+                       "model":  "opus 5",
+                       "goal":  "eraser tool and pen tool revamp",
+                       "color":  "#c2547a"
+                   },
+                   {
+                       "id":  "opus5-12",
+                       "n":  12,
+                       "model":  "opus 5",
+                       "goal":  "base64 assets in markdown, three download modes",
+                       "color":  "#5f6fd8"
+                   },
+                   {
+                       "id":  "opus5-13",
+                       "n":  13,
+                       "model":  "opus 5",
+                       "goal":  "canvas tool: nested canvases, safe rename",
+                       "color":  "#ff5fa2"
+                   },
+                   {
+                       "id":  "opus5-14",
+                       "n":  14,
+                       "model":  "sonnet 5",
+                       "goal":  "tracker: scroll position, card ids, agent ageing",
+                       "color":  "#8fb4d9"
+                   },
+                   {
+                       "id":  "opus5-15",
+                       "n":  15,
+                       "model":  "opus 5",
+                       "goal":  "recreatable performance benchmark board",
+                       "color":  "#d4b25a"
+                   },
+                   {
+                       "id":  "opus5-16",
+                       "n":  16,
+                       "model":  "opus 5",
+                       "goal":  "a CLI over the same board data",
+                       "color":  "#3fa7d6"
+                   },
+                   {
+                       "id":  "opus5-17",
+                       "n":  17,
+                       "model":  "opus 5",
+                       "goal":  "audit: tests that assert mechanisms, not outcomes",
+                       "color":  "#a67c52"
+                   },
+                   {
+                       "id":  "opus5-18",
+                       "n":  18,
+                       "model":  "opus 5",
+                       "goal":  "real-device mobile testing path and guide",
+                       "color":  "#e05263"
+                   },
+                   {
+                       "id":  "opus5-19",
+                       "n":  19,
+                       "model":  "opus 5",
+                       "goal":  "filesystem integration and embed-refusal research",
+                       "color":  "#4f9d8c"
+                   },
+                   {
+                       "id":  "opus5-20",
+                       "n":  20,
+                       "model":  "opus 5",
+                       "goal":  "settings menu redesign",
+                       "color":  "#8ecae6"
+                   },
+                   {
+                       "id":  "opus5-21",
+                       "n":  21,
+                       "model":  "sonnet 5",
+                       "goal":  "theme reset button, accent drives pen colour",
+                       "color":  "#cdb4db"
+                   },
+                   {
+                       "id":  "opus5-22",
+                       "n":  22,
+                       "model":  "opus 5",
+                       "goal":  "shortcuts reference panel",
+                       "color":  "#ffb703"
+                   },
+                   {
+                       "id":  "opus5-23",
+                       "n":  23,
+                       "model":  "sonnet 5",
+                       "goal":  "arrow keys pan the board",
+                       "color":  "#06d6a0"
+                   },
+                   {
+                       "id":  "opus5-24",
+                       "n":  24,
+                       "model":  "opus 5",
+                       "goal":  "touch parity for the new gestures",
+                       "color":  "#ef476f"
+                   },
+                   {
+                       "id":  "opus5-25",
+                       "n":  25,
+                       "model":  "opus 5",
+                       "goal":  "audit: tests that assert mechanisms",
+                       "color":  "#118ab2"
+                   },
+                   {
+                       "id":  "opus5-26",
+                       "n":  26,
+                       "model":  "opus 5",
+                       "goal":  "computer window: terminal and RDP",
+                       "color":  "#9c6644"
+                   },
+                   {
+                       "id":  "opus5-27",
+                       "n":  27,
+                       "model":  "opus 5",
+                       "goal":  "drawing smoothness, with dev-mode sliders",
+                       "color":  "#f28f3b"
+                   },
+                   {
+                       "id":  "opus5-28",
+                       "n":  28,
+                       "model":  "opus 5",
+                       "goal":  "re-arrangeable toolbar",
+                       "color":  "#5aa9e6"
+                   },
+                   {
+                       "id":  "opus5-29",
+                       "n":  29,
+                       "model":  "sonnet 5",
+                       "goal":  "canvas shortcut and toolbar hover hints",
+                       "color":  "#7fb800"
+                   },
+                   {
+                       "id":  "opus5-30",
+                       "n":  30,
+                       "model":  "opus 5",
+                       "goal":  "mechanically re-verify the Review queue",
+                       "color":  "#b5179e"
+                   },
+                   {
+                       "id":  "opus5-31",
+                       "n":  31,
+                       "model":  "opus 5",
+                       "goal":  "stroke thickness while drawing, press-and-hold resize",
+                       "color":  "#ef6351"
+                   },
+                   {
+                       "id":  "opus5-32",
+                       "n":  32,
+                       "model":  "sonnet 5",
+                       "goal":  "base64 markdown: spacing and collapsing",
+                       "color":  "#59c3c3"
+                   },
+                   {
+                       "id":  "opus5-33",
+                       "n":  33,
+                       "model":  "sonnet 5",
+                       "goal":  "import/export icons, lock indicator when hidden",
+                       "color":  "#f4d35e"
+                   },
+                   {
+                       "id":  "opus5-34",
+                       "n":  34,
+                       "model":  "opus 5",
+                       "goal":  "mobile: the board must not scroll the page",
+                       "color":  "#845ec2"
+                   },
+                   {
+                       "id":  "opus5-35",
+                       "n":  35,
+                       "model":  "opus 5",
+                       "goal":  "tracker: delete cards and change their type",
+                       "color":  "#ff6b6b"
+                   },
+                   {
+                       "id":  "opus5-36",
+                       "n":  36,
+                       "model":  "sonnet 5",
+                       "goal":  "embed address: selection and hover hint",
+                       "color":  "#4ecdc4"
+                   },
+                   {
+                       "id":  "opus5-37",
+                       "n":  37,
+                       "model":  "opus 5",
+                       "goal":  "canvas files must not outlive their node",
+                       "color":  "#c77dff"
+                   },
+                   {
+                       "id":  "opus5-38",
+                       "n":  38,
+                       "model":  "opus 5",
+                       "goal":  "R rotation tool",
+                       "color":  "#ffd166"
+                   },
+                   {
+                       "id":  "opus5-39",
+                       "n":  39,
+                       "model":  "opus 5",
+                       "goal":  "shape tool: rectangles and ellipses",
+                       "color":  "#06aed5"
+                   },
+                   {
+                       "id":  "opus5-40",
+                       "n":  40,
+                       "model":  "opus 5",
+                       "goal":  "command palette and experimental features",
+                       "color":  "#f77f00"
+                   },
+                   {
+                       "id":  "opus5-41",
+                       "n":  41,
+                       "model":  "opus 5",
+                       "goal":  "perf: incremental saves and staged mount",
+                       "color":  "#8ac926"
+                   },
+                   {
+                       "color":  "#3d5a80",
+                       "model":  "opus 5",
+                       "id":  "opus5-42",
+                       "goal":  "inertia and flick browsing",
+                       "n":  42
+                   },
+                   {
+                       "color":  "#ee6c4d",
+                       "model":  "opus 5",
+                       "id":  "opus5-43",
+                       "goal":  "canvas presentation mode",
+                       "n":  43
+                   },
+                   {
+                       "color":  "#98c1d9",
+                       "model":  "opus 5",
+                       "id":  "opus5-44",
+                       "goal":  "PDF export for markdown and boards",
+                       "n":  44
+                   },
+                   {
+                       "color":  "#e0fbfc",
+                       "model":  "sonnet 5",
+                       "id":  "opus5-45",
+                       "goal":  "browser terminal: the Wetty question",
+                       "n":  45
+                   }
+               ]
 }

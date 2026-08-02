@@ -407,7 +407,11 @@ work area. Parked without timelines; pull cards out as direction firms up.
   **How to check:** `node tests/board/incremental-save-and-staged-mount.test.mjs` prints the draft
   timings. `npm run perf:bench` for the fuller picture.
   design with operation-level writes.
-- [.] [perf] Staged mount: viewport-first node rendering, the rest in idle callbacks.
+- [A] [perf] Staged mount: viewport-first node rendering, the rest in idle callbacks.
+  Shipped alongside incremental saves; see that card. Measured: a board is usable in 195ms at 12
+  nodes and 284ms at 881 nodes with 16 on screen, so first paint scales 1.46x against a 73x node
+  count. Nodes outside the viewport mount in idle callbacks and are drawn by the time you pan to
+  them, which the suite asserts by panning towards a node that was genuinely offscreen at load.
 - [x] [runtime] A `vnc` node type with the noVNC client vendored, per the VNC research v2. Built
   2026-07-30; see the card in Now.
 - [.] [shell] Desktop shell (Tauri or Electron), migration stage 3: embeds anything, terminals,
@@ -858,7 +862,15 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 ## Bugs
 
-- [ ] There should be a enable experimental features checkbox in settings. It will enable CLI use for now !p3
+- [A] There should be a enable experimental features checkbox in settings. It will enable CLI use for now !p3
+  Built, in the settings panel, and it names what it turns on rather than saying "experimental"
+  and leaving you to guess.
+  **One thing it deliberately does not do.** "Enable CLI use" cannot mean putting a terminal in
+  the browser, because that was refused on a security ground that has not changed: a PTY served
+  from the preview server is a shell for every website you have open, since a WebSocket upgrade is
+  not covered by CORS. The checkbox gates presentation, not the safety requirements. See the
+  terminal card for the four things that would have to be true first.
+  **How to check:** gear icon, the toggle is in settings and says what it enables.
 
 - [A] cant delete or chnge type of items in the tracker. !p1
   **Delete** is an x beside the pencil, behind an inline confirm whose focus lands on "Keep", with
@@ -879,7 +891,27 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** delete a card, then press Undo in the toast. It comes back with its notes.
   Change a card's lane and confirm its block moved under the new heading in `todo.md`.
 
-- [ ] Add a CLI functionality? maybe implemented like this: How to Set Up a Local Browser Terminal (Using Wetty)If you want to access your own computer's terminal via a browser tab, you can host a local web-terminal server using Node.js:Install Wetty: Open your computer's regular terminal and run npm install -g wetty.Launch the Server: Run wetty --port 3000.Open Browser: Navigate to http://localhost:3000 to type your terminal commands directly into the browser.. !p3
+- [A] **Answered, and the answer is that most of it already exists.** Research note:
+  [`research/browser_terminal_2026-08-02.md`](./research/browser_terminal_2026-08-02.md).
+  **A CLI already ships.** `npm run cosmo` does boards, nodes, grep, add-note and export, with
+  `--json` on every read and the same stale-base guard the browser obeys. If board operations from
+  a shell is what you wanted, it is done and the real gap is that you did not know it was there.
+  **Wetty does not dissolve the security problem, it relocates it.** Verified against Wetty's own
+  source, not a blog post: its default bind is `0.0.0.0`, not loopback, and it has no Origin
+  allowlist on its socket endpoint and no per-run token. Run exactly as your card proposes
+  (`wetty --port 3000`) it is the same exposure the terminal card refused, in a second process.
+  **The genuine difference is authentication.** Wetty fronts a real SSH login, unlike an anonymous
+  raw PTY over a WebSocket. That is a meaningful reduction, but only with `--host 127.0.0.1` and
+  default auth left on, neither of which the three commands in your card specify.
+  **A reviewer caught the one thing that was going to be built, and it was wrong.** The proposed
+  copy told you to open Wetty in a Live embed. Wetty sends `X-Frame-Options: SAMEORIGIN`, and this
+  repo's own frame probe already refuses exactly that header, so you would have installed a global
+  npm package, run it, pasted the URL and got the "cannot be embedded" card. Every time. The
+  panel now says the true thing: run it yourself and open it in a real tab.
+  **One stale line of mine fixed while there:** the caveat claimed the preview server does not
+  check Origin. It does now, on writes. It still does not extend to a socket upgrade, which is the
+  actual reason a hosted PTY stays off.
+  Original: Add a CLI functionality? maybe implemented like this: Wetty. How to Set Up a Local Browser Terminal (Using Wetty)If you want to access your own computer's terminal via a browser tab, you can host a local web-terminal server using Node.js:Install Wetty: Open your computer's regular terminal and run npm install -g wetty.Launch the Server: Run wetty --port 3000.Open Browser: Navigate to http://localhost:3000 to type your terminal commands directly into the browser.. !p3
 
 - [A] **Fixed, and a worse bug turned up underneath it.** Creating a canvas leaves its file behind when the node does not stick. !p2
   A sub-canvas file is deleted when the last node pointing at it leaves the board, so undo of a
@@ -2017,7 +2049,12 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   at a readable size while its old spot shows the cyan "pinned" marker. Ctrl+click it again and
   it goes home, same place, same size.
 
-- [.] Pin follow-up: Windows-style snapping to edges, halves and quarters. !p3
+- [A] Pin follow-up: Windows-style snapping to edges, halves and quarters. Delivered. !p3
+  Shipped with the pin drag work: 12px edge bands take a half, the top edge maximises, 48x48px
+  corners take a quarter, corner beats edge, the bottom edge is dead as on Windows, there is a 20
+  percent cyan preview before release, last drop wins, and dragging a snapped pin off restores the
+  size it had before it snapped. Covered by `tests/board/pin-move-and-snap.test.mjs`, 14 cases.
+  Closed here because this card was written as the scope for that work and the work is done.
   Deliberately not shipped with the pin core rather than shipped half-built. Scoped: make the
   pin box draggable (moving the box, never the model), zones measured against the viewport
   (within 12px of the left or right edge takes that half, the top edge maximises, a 48x48px

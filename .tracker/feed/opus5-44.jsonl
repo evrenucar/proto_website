@@ -1,0 +1,2 @@
+﻿{"at":"2026-08-02T00:00:00Z","text":"opus5-44 start: PDF export card (!p3). Reading context, then driving Playwright to actually print a note to PDF before writing anything."}
+{"at":"2026-08-02T00:35:00Z","text":"Measured, not described. Printing a fullscreen note today: 1 A4 page, 827 chars of text, note truncated at the overlay height, 20 images, 230 KB. With a 90-line print stylesheet: 3 pages, 3590 chars, last line present, 2 images, 61 KB. Text is selectable both times (embedded fonts + ToUnicode). Also found: Ctrl+P silently switches the board to the pen tool."}

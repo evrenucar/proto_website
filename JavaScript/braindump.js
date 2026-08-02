@@ -8828,11 +8828,11 @@ const COMPUTER_PROTOCOLS = {
     placeholder: "ws://127.0.0.1:4174/pty",
     why: "A terminal is a PTY, and a PTY is a local process. Nothing in a browser can start one, so this needs a program on your machine serving it over a WebSocket.",
     steps: [
-      "Not shipped. The preview server is the natural host and does not do this yet.",
-      "Four things first: bind 127.0.0.1 only, check the Origin header, require a per-run token, and stay off unless a flag turns it on.",
-      "Missing any one of them, anything on your network, or any page you happen to visit, gets a shell.",
+      "Not shipped as a protocol this switch can dial, and a Live embed will not show one either: Wetty and friends send X-Frame-Options SAMEORIGIN, so a link node set to Live gets the refusal card rather than a terminal.",
+      "To use one today, run it yourself and open it in a real tab: npm install -g wetty, then wetty --host 127.0.0.1 --port 3000. The --host matters, because its own default is 0.0.0.0.",
+      "For the board to host a PTY itself, four things first: bind 127.0.0.1 only, check the Origin header on the socket upgrade, require a per-run token, and stay off unless a flag turns it on.",
     ],
-    caveat: "A WebSocket is not covered by CORS, so a site you open can connect to a port on your own machine unless the server checks Origin. The preview server does not check it today. That is why this is off.",
+    caveat: "A WebSocket upgrade is not covered by CORS, so a site you have open can connect to a port on your own machine even when ordinary requests are refused. The preview server checks Origin on writes now, but that check does not extend to a socket upgrade, which is why this stays off.",
   },
   local: {
     option: "Local app (future work)",
