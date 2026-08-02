@@ -2233,11 +2233,36 @@ has been moved to open work above. Spot-check the others before marking them `[x
 
 - [.] The markdown editing image resizing etc. can be similar to how new obsidian handles it. ( I detail the bahavior and we work on it later !p4
 
-- [.] Add inertia to the browsing so you can fligh the browser around. This should be something you can turn on and off and adjust from the settings menu. !p3
+- [.] **BUILT AND PARKED, not unstarted.** The patch is `.tmp/scratch/opus5-42/patch.json`,
+  11 hunks over `braindump.js` and `braindump.css`, with its suite at
+  `.tmp/scratch/opus5-42/held-inertia-browsing.test.mjs`. The agent recorded it red on an
+  unpatched mirror and green on a patched one: a 528px glide, and 30Hz against 60Hz within 1.04x,
+  which is the frame-rate independence the card needs.
+  **It was never reviewed.** The agent finished the build and the API session limit killed the run
+  before the adversarial review, so this is unverified by anyone but its author. Every other patch
+  this sprint went through a reviewer and most came back with real defects, so do not treat this
+  as ready. Verify anchors first with `.tmp/scratch/opus5-0/verify-anchors.mjs`, then review, then
+  apply with `apply-patch.mjs`.
+  Original: Add inertia to the browsing so you can fligh the browser around. This should be something you can turn on and off and adjust from the settings menu. !p3
 
-- [.] Could have a canvas system where canvasses can be presented or exported later !p3
+- [.] **BUILT AND PARKED, not unstarted.** `.tmp/scratch/opus5-43/patch.json`, 10 hunks, with
+  its suite at `.tmp/scratch/opus5-43/held-presentation-mode.test.mjs`. Same story as inertia: the
+  build finished, the session limit killed the run before review, so it is unverified by anyone
+  but its author. Verify anchors, review, then apply.
+  Original: Could have a canvas system where canvasses can be presented or exported later !p3
 
-- [.] There should be export as PDF option for markdown. as well as for board. (idea for now we ideate on it later with a grilling session) !p3
+- [.] **RESEARCHED, with real measurements, and parked.** No patch, but
+  `.tmp/scratch/opus5-44/` holds a drafted `print.css` and the probes behind these numbers:
+  a note prints as **1 A4 page and 827 characters today**, against **3 pages and 3590 characters**
+  with the stylesheet, at 61KB versus 230KB. So the browser's own print path is very likely the
+  cheap, right answer for markdown, with no dependency at all, which matters given the
+  dependency-free runtime is a stated architectural advantage.
+  **It also found a live bug on the way:** `Ctrl+P` silently switches the board to the pen tool.
+  That is worth its own card whatever happens to PDF export.
+  The board-to-PDF half still needs your grilling session, as your card says: a board is an
+  unbounded zoomable plane with live iframes, and "what is a page" is a product question, not a
+  technical one.
+  Original: There should be export as PDF option for markdown. as well as for board. as well as for board. (idea for now we ideate on it later with a grilling session) !p3
 
 - [A] Realtime collaboration: assessed, and now superseded by your GitHub-sync direction. The !p3
   assessment stands in

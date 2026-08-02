@@ -128,6 +128,18 @@ Read that, not this, if you are picking the work up.
 - Next: the Review queue is the bottleneck. The mechanical re-verification pass proposed on its
   card is the highest-value next move.
 
+### End Of Session, 2026-08-02
+
+**Full map: [`handoff_2026-08-02_seven_wave_sprint.md`](./.agents/handoffs/handoff_2026-08-02_seven_wave_sprint.md).**
+Waves 4 to 7. Read that one first; the 2026-08-01 handoff above it is still correct for waves 1
+to 3 and is not repeated there.
+
+- Verified today: **77 of 79 suites pass**, run one at a time. Build clean, stage gate 9/9 after
+  it. The two reds are `inertia-browsing` and `presentation-mode`, both untracked suites for
+  patches still held unapplied in `.tmp/scratch/opus5-42` and `opus5-43`, so they are red by
+  construction rather than by regression. Decide what happens to those two patches first.
+- Branch at `e0de4d5`, in sync with its remote, 12 ahead of `origin/main`. Wave 7 is uncommitted.
+
 ### Start Of Session
 
 - Date: 2026-07-31
