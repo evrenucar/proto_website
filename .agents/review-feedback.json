@@ -1,5 +1,23 @@
 [
   {
+    "at": "2026-08-01T22:53:14.122Z",
+    "lane": "Test failures",
+    "title": "\"Some websites refuse to be embedded. How do we get around this? Our own browser? An app?",
+    "verdict": null,
+    "note": "how will the A browser extension that strips headers help?",
+    "statusFrom": "A",
+    "statusTo": "A"
+  },
+  {
+    "at": "2026-08-01T22:17:36.772Z",
+    "lane": "Features and ideas",
+    "title": "Implement a way to test mobile and prompt user about it and share a guide with them. you were saying it might be possible to do if plugged in via usb. I'M not sure if it would work on ios tho user has",
+    "verdict": null,
+    "note": "what did you do about this its not clear",
+    "statusFrom": "A",
+    "statusTo": "A"
+  },
+  {
     "at": "2026-07-30T14:48:30.062Z",
     "lane": "Features and ideas",
     "title": "top bar of firefox opens and closes as i click alt. Its a bit annoying maybe there is a way to avoid it",

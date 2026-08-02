@@ -848,6 +848,11 @@ function updateBoardLockUI() {
   if (!toolbarLockButton) return;
   const locked = isBoardLocked();
   toolbarLockButton.classList.toggle("is-locked", locked);
+  // Mirrors onto the shell too, so CSS can react to lock state even while the
+  // toolbar itself is collapsed — the small yellow indicator on the reveal
+  // tab (collapsed + locked) reads this class, not the button's, since the
+  // button is itself invisible in that state.
+  toolbarShell?.classList.toggle("is-locked", locked);
   toolbarLockButton.setAttribute("aria-pressed", String(locked));
   toolbarLockButton.setAttribute("aria-label", locked ? "Unlock board editing" : "Lock board editing");
   toolbarLockButton.title = locked
@@ -5567,7 +5572,7 @@ function buildToolbarLockDock() {
   toolbarRevealButton.setAttribute("data-board-ui", "toolbar-reveal");
   toolbarRevealButton.setAttribute("aria-label", "Show toolbar");
   toolbarRevealButton.setAttribute("aria-expanded", "false");
-  toolbarRevealButton.innerHTML = '<span class="braindump-toolbar-reveal-grip" aria-hidden="true"></span>';
+  toolbarRevealButton.innerHTML = '<span class="braindump-toolbar-reveal-grip" aria-hidden="true"></span><span class="braindump-toolbar-lock-indicator" data-board-ui="toolbar-lock-indicator" aria-hidden="true"></span>';
   toolbarRevealButton.addEventListener("mousedown", (e) => e.stopPropagation());
   toolbarRevealButton.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
   toolbarRevealButton.addEventListener("click", (e) => {
@@ -6957,12 +6962,24 @@ function ensureBrushBubble() {
   return brushBubbleElement;
 }
 
+// While a long press is running, the bubble is about the tool under the finger,
+// which is not necessarily the active tool. getBrushSize() with no argument
+// answers for the active tool, so long-pressing the eraser while the pen was
+// selected showed the PEN's size, frozen, for the whole drag: the eraser really
+// was being resized and nothing on screen said so. Measured: pen active, eraser
+// dragged from 24 to 44, bubble sitting at 4px start to finish. That is the
+// "have to click the tool first" half of the second card.
+function brushGestureTool() {
+  return brushLongPress?.tool || activeTool;
+}
+
 function updateBrushSizeBubble() {
   if (!brushBubbleElement || brushBubbleElement.style.display === "none") return;
-  const diameter = Math.max(2, getBrushSize() * camera.z);
+  const size = getBrushSize(brushGestureTool());
+  const diameter = Math.max(2, size * camera.z);
   brushBubbleElement.style.width = `${diameter}px`;
   brushBubbleElement.style.height = `${diameter}px`;
-  brushBubbleElement.dataset.brushSize = String(getBrushSize());
+  brushBubbleElement.dataset.brushSize = String(size);
 }
 
 function showBrushSizeBubble(clientX, clientY, options = {}) {
@@ -6977,7 +6994,7 @@ function showBrushSizeBubble(clientX, clientY, options = {}) {
   // document.body, outside the element the theme's custom properties are set
   // on, so a var() would not resolve. The erase brush stays neutral: it is not
   // laying down ink.
-  bubble.style.background = activeTool === "erase"
+  bubble.style.background = brushGestureTool() === "erase"
     ? "rgba(242, 245, 244, 0.25)"
     : `rgba(${hexToRgbTriple(getPenStrokeColor())}, 0.25)`;
   bubble.style.display = "block";
@@ -7106,7 +7123,20 @@ function endBrushSizeLongPress() {
   } catch (error) {
     // Capture may already be gone; nothing to undo.
   }
-  if (state.engaged) window.setTimeout(() => hideBrushSizeBubble(), 400);
+  if (state.engaged) {
+    // Taking the pointer lock swallows the click that would otherwise have
+    // selected the tool. Measured: a 500ms press on the pen fires no click at
+    // all and leaves the previous tool active, and with the lock stubbed out
+    // the same press fires click and selects the pen. So the gesture sized the
+    // brush and then left you holding some other tool, which is the "needs to
+    // work on first click and hold" half of the card. Selecting it here is what
+    // pressing a tool button means anyway, and it is a no-op when the click
+    // does arrive (touch, or a browser that refused the lock).
+    setActiveTool(state.tool);
+    // setActiveTool hides the bubble, so bring it back non-sticky: the size you
+    // just set stays readable for a moment after you let go.
+    showBrushSizeBubble(state.x, state.y);
+  }
 }
 
 // Drawing logic
@@ -10051,8 +10081,27 @@ async function buildBase64Markdown(serialized) {
     definitions.push(`[${ref.label}]: data:${asset.mime};base64,${markdownBytesToBase64(asset.bytes)}`);
   }
 
+  // 15 blank lines push the reference block below the fold when the file is
+  // opened in a plain text or source editor, which is what the request was
+  // actually about.
+  //
+  // Deliberately NOT wrapped in <details>. That was tried and measured, and it
+  // makes things worse rather than better: link reference definitions render no
+  // visible output of their own, so in any rendered preview the base64 is
+  // ALREADY completely invisible, and there is nothing for a disclosure widget
+  // to hide. Adding one produces a "click to expand" control that expands to
+  // show nothing, and in a renderer with raw HTML disabled it prints the literal
+  // tags as text where previously there was nothing at all. It also has to be
+  // left unclosed to keep the definitions on the file's last line, and an
+  // unclosed <details> swallows everything after it when a note is transcluded
+  // into another one.
+  //
+  // So: rendered views already hide it entirely, and the blank lines are the
+  // honest fix for source panes. Whether a source pane folds the block further
+  // is per-editor and not something the file can dictate.
+  const REFERENCE_BLOCK_BLANK_LINES = 15;
   const markdown = definitions.length
-    ? `${body.replace(/\n+$/, "")}\n\n${definitions.join("\n")}\n`
+    ? `${body.replace(/\n+$/, "")}\n${"\n".repeat(REFERENCE_BLOCK_BLANK_LINES)}${definitions.join("\n")}\n`
     : serialized;
   return { markdown, embedded: definitions.length, oversize, unreadable };
 }

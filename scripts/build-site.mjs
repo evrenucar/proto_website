@@ -1399,7 +1399,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
               <span class="braindump-toolbar-action-label">Recommend</span>
             </button>
             <button type="button" class="braindump-toolbar-action" data-tool="export" aria-label="Export project bundle" title="Export project bundle">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span class="braindump-toolbar-action-label">Export</span>
             </button>
             <label class="braindump-file-label braindump-toolbar-action" aria-label="Open Canvas (.canvas / .canvas.json / .zip / .canvas.diff)" title="Open Canvas (.canvas / .canvas.json / .zip / .canvas.diff) — Ctrl+O">
@@ -1409,7 +1409,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
             </label>
             <label class="braindump-file-label braindump-toolbar-action" aria-label="Import files into the current board (image / PDF / markdown / text)" title="Import files into board — Ctrl+I">
               <input type="file" id="braindump-import" data-board-ui="import-input" accept="image/*,.pdf,.md,.txt,.csv,.docx,.json" multiple hidden>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span class="braindump-toolbar-action-label">Import</span>
             </label>
             <button type="button" class="braindump-toolbar-action" data-tool="settings" aria-label="Board settings" title="Settings">

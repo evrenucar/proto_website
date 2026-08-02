@@ -10,10 +10,24 @@
   display: none !important;
 }
 
+/* The board is a fixed viewport, so the page under it must never scroll. The
+   `overflow: hidden` on `.page-board` above cannot do that on its own: it sits
+   on `body`, and body's overflow only reaches the viewport when the ROOT
+   element's overflow is `visible` in both axes. `CSS/site.css` sets
+   `html { overflow-x: clip }` site-wide, so it never is, and that declaration
+   has been inert since it was written.
+   It matters on a phone and nowhere else. `100vh` there is the large viewport,
+   the height you get once the URL bar has gone, so a board page is about 56px
+   taller than the screen for as long as the bar is showing. Flick past the end
+   of a note or of the settings panel and the gesture chains out of them and
+   into that 56px, which is the "randomly becomes scrollable" in the report.
+   Scoped to board pages on purpose: the rest of the site scrolls normally and
+   a global rule here would break it. */
 .page-board html,
 html.page-board,
 html:has(body.page-board) {
   scrollbar-gutter: auto !important;
+  overflow: hidden;
 }
 
 .page-board .main-shell {
@@ -250,10 +264,28 @@ html:has(body.page-board) {
   z-index: 500;
 }
 
+/* No stroke-width in this rule. startDrawing sets the live stroke's width as a
+   presentation attribute from the brush size, and a stylesheet declaration
+   silently beats a presentation attribute, so `stroke-width: 4px` here pinned
+   the preview to 4 canvas units at every brush size: the line under the cursor
+   was thin and jumped to the real width the moment you let go. Measured with a
+   brush of 24, in screen pixels: live 4.00 vs finished 24.00 at zoom 1, and
+   2.00 vs 12.00 at zoom 0.5. The ratio is brush/4 at any zoom. */
+/* No `stroke` and no `stroke-width` here, deliberately. A stylesheet
+   declaration outranks an SVG presentation attribute, so both of those silently
+   beat what startDrawing writes onto the live path.
+   `stroke-width: 4px` did exactly that and was the whole of the "as you draw a
+   thin line shows, but when you let go it goes to the set thickness" bug: the
+   live preview was pinned at 4 units at every brush size while the finished node
+   rendered at its own attribute. Measured at brush 24: live 4.00px against a
+   finished 23.999px on screen, and the ratio held at every zoom. It hid for
+   months because the default brush is 4, the same number.
+   `stroke` was the same bug waiting for a trigger. It is invisible only because
+   getPenStrokeColor() returns the accent, so the two values agree today; the
+   moment the pen gets a colour of its own it would have overridden it in
+   exactly the same way. Removed while the reason is written down. */
 #braindump-svg-layer path {
   fill: none;
-  stroke: var(--bd-accent, #3fdaca);
-  stroke-width: 4px;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: auto;
@@ -1837,6 +1869,45 @@ html:has(body.page-board) {
 .braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-lock {
   visibility: hidden;
   pointer-events: none;
+}
+
+/* "The lock icon should be small but visible and yellow when the page is
+   locked and the bar is auto hidden." The real lock button folds away with
+   the pill (rule above), so a locked board reads as identical to an unlocked
+   one once collapsed — a trap. This is a small dot badged onto the reveal
+   tab itself instead: it lives inside .braindump-toolbar-reveal, which is
+   already position:absolute only in the one state (collapsed) it needs, so
+   it rides along with the tab for free and needs no centering math of its
+   own. Inset fully WITHIN the tab's own box (not overflowing any edge), so
+   its entire area already belongs to the tab's existing hover/hit region —
+   it cannot add hover area the tab did not already have, so it is not a
+   second target, large or otherwise: hovering it is hovering the tab.
+   pointer-events:none besides, purely so the badge itself is never the
+   element a hit-test resolves to. Hidden by default; shown only when the
+   shell carries BOTH .is-collapsed (this section) and .is-locked (mirrored
+   from the lock button's own state in updateBoardLockUI, since the button
+   that normally carries .is-locked is itself invisible here). Unlocked +
+   collapsed stays exactly as before: only the tab. */
+.braindump-toolbar-lock-indicator {
+  display: none;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  /* The tab this sits on is a hard-coded #1a1919 in both themes (nothing in
+     this file re-skins .braindump-toolbar-reveal for light mode), so one
+     yellow reads correctly against it either way. Still a custom property
+     with a literal fallback, matching every other themed colour in this
+     file, in case that ever changes. */
+  background: var(--bd-lock-indicator, #f2b705);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.braindump-toolbar-shell.is-autohide.is-collapsed.is-locked .braindump-toolbar-lock-indicator {
+  display: block;
 }
 
 /* Buttons inherit visibility from the pill, and their own transition: all

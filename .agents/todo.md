@@ -133,7 +133,7 @@ card there within seconds.
   bottom of the window, and the lock is gone with the toolbar. Move back: both return together,
   and the pill arrives centred under the cursor that reached for the tab.
 
-- [A] In the task management tracker board when I click items move things drag items the scroll position of items disappear and it becomes hard to find them fix this. Also maybe best to add ID numbers to thm that are visible and easy to manage.top left # () !p2
+- [x] In the task management tracker board when I click items move things drag items the scroll position of items disappear and it becomes hard to find them fix this. Also maybe best to add ID numbers to thm that are visible and easy to manage.top left # () !p2
   Both done. Every re-render now snapshots each column's `scrollTop` plus the page scroll and
   restores them, so clicking a chip, sending feedback, dragging a card, or a background poll all
   leave you where you were.
@@ -320,7 +320,7 @@ card there within seconds.
   when they would overlap). Stage gate passes.
   **How to check:** create several notes in a row without moving the view; they tile instead of
   stacking.
-- [A] [dev-board] The dev board is findable and full. The tracker footer links it (and the test !p2
+- [x] [dev-board] The dev board is findable and full. The tracker footer links it (and the test !p2
   board). Eleven showcase nodes added: text, link preview, live YouTube (lazy), image, a
   drawing, a VNC demo slot (run KasmVNC anywhere, paste its URL, flip to live), a board preview
   of the test board, plus base, app and entity nodes copied from proven cosmoboard shapes.
@@ -835,7 +835,83 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 ## Bugs
 
-- [ ] still as you draw thin line shows. But when you let go i tgoes to the set thickness. Needs to draw as the set thickness.
+- [ ] There should be a enable experimental features checkbox in settings. It will enable CLI use for now !p3
+
+- [ ] cant delete or chnge type of items in the tracker. !p1
+
+- [ ] Add a CLI functionality? maybe implemented like this: How to Set Up a Local Browser Terminal (Using Wetty)If you want to access your own computer's terminal via a browser tab, you can host a local web-terminal server using Node.js:Install Wetty: Open your computer's regular terminal and run npm install -g wetty.Launch the Server: Run wetty --port 3000.Open Browser: Navigate to http://localhost:3000 to type your terminal commands directly into the browser.. !p3
+
+- [A] **Two independent faults multiplying, and "randomly" was neither.** On mobile the board can randomly become scrollable up and down.
+  **Fault 1: the board page has ALWAYS been scrollable.** `CSS/site.css` sets
+  `html { overflow-x: clip }` site-wide. The CSS rule that propagates a body's overflow to the
+  viewport only fires when the root element's overflow is `visible` in both axes, so
+  `.page-board { overflow: hidden !important }` on body has never had any effect on the viewport
+  at all. It looked like it was working because nothing usually overflowed.
+  **Fault 2: `100vh` is not the visible height on a phone.** `.main-shell` and `.page-content`
+  are `height: 100vh`, which is the *large* viewport, so while Chrome Android shows its URL bar
+  the document is exactly 56px taller than what you can see. That is the "random": it appears and
+  disappears as the URL bar does.
+  Then anything that chains a touch gesture into the document scrolls that 56px. Measured on
+  Pixel 5 with real touch: flicking past the end of a markdown note gave `scrollY` 56, three runs
+  out of three; past the end of the settings panel, 56 again; the shortcuts panel gave 0, because
+  it already sets `overscroll-behavior: contain`. Panning the board itself gave 0, so the
+  viewport was never the culprit.
+  After the fix: 0 in both failing cases, while the note still scrolls its own text 125px, the
+  panel 135px, the board still pans and a pinch still goes 1.0 to 2.8. Frozen scrolling would
+  have been an easy false fix, so the suite asserts those still work.
+  **Ruled out by measurement, not assumption:** every new overlay was checked for added document
+  height across six device profiles, base plus eleven states. Delta 0 everywhere. They are all
+  `position: fixed`.
+  **How to check:** on a phone, open a long note, flick past the end of its text. The page does
+  not shift, the note scrolls.
+  Original: On mobile the board can randomly become scrollable up and down. which should be scroll shouldn't show up if I'm browsing around a canvas
+
+- [A] import export buttons icons need to be switched.
+  Swapped, in all seven copies of the toolbar markup. Checked against the handler each button
+  calls rather than against the icon, so they could not both end up wrong: `data-tool="export"`
+  calls `openExportModal()` and now carries the up arrow, and the Import label calls
+  `importContentFiles()` and carries the down arrow.
+  **How to check:** open the 3-dot drawer. Export points out, Import points in.
+
+- [A] The press and hold eraser or pen and move up and down is a bit broken currently. Doesn't work well. Also needs to work on first click and hold shouldn't ened to click tool first then clikc hold drag.
+  Two separate defects, both reproduced with numbers before anything was changed.
+  **The size circle was showing the wrong tool's size.** It read the *active* tool rather than the
+  tool under your finger, so in two of the four combinations it sat frozen at the wrong number
+  while the right tool was silently being resized: pen active with the eraser pressed moved erase
+  24 to 44 with the bubble stuck at 4 throughout. It follows the pressed tool now.
+  **And the gesture never selected the tool it was performed on**, which is your "shouldn't need
+  to click the tool first". Exiting a pointer lock on pointerup suppresses the click event, so
+  once the long press engaged the tool switch never ran. Measured: a 500ms press on the pen fired
+  0 click events with the lock, and 1 with the lock stubbed out.
+  **One behaviour change to confirm.** Long-pressing the eraser to size it now also selects the
+  eraser, because that is what pressing a tool button does and the gesture is otherwise unusable
+  on its own. The cost is the mirror image: sizing the eraser while staying on the pen now takes
+  one extra click. Say if you would rather keep your current tool.
+  **Not fixed, same family, different bugs:** a single click still draws no dot until you release,
+  because a path with only a moveto paints no caps. And at very large brush sizes the size circle
+  is anchored on the tool icon, so its lower half runs off the bottom of the window.
+  **How to check:** with the pen active, press and hold the eraser icon and drag up. The circle
+  shows the eraser's size and grows, and you end up holding the eraser.
+
+- [A] still as you draw thin line shows. But when you let go i tgoes to the set thickness. Needs to draw as the set thickness. !p1
+  **One CSS declaration, and a good one to know about.** `#braindump-svg-layer path` carried
+  `stroke-width: 4px`, and a stylesheet declaration outranks an SVG presentation attribute, so it
+  silently beat the width `startDrawing` writes from your brush size. The live preview was pinned
+  at 4 units at every brush size while the finished node rendered at its own attribute.
+  Measured at brush 24, in screen pixels: live 4.00 against a finished 23.999 at zoom 1, 2.00
+  against 12.00 at zoom 0.5, 8.00 against 47.998 at zoom 2. The ratio is brush/4 at every zoom.
+  **It hid because the default brush is 4**, the same number as the CSS. Nobody could see it until
+  the brush-size sliders shipped yesterday and let the two values diverge.
+  The tuning pipeline was the obvious suspect and was ruled out by measurement: the stored path is
+  the live path's own `d` string plus the two vertices flushed at pointer-up, 59 points to 61,
+  with the baked string literally starting with the live one.
+  **I removed the twin of this bug while I was in there.** The same rule also carried
+  `stroke: var(--bd-accent)`, which overrides the stroke colour attribute in exactly the same way.
+  It is invisible today only because the pen colour IS the accent, so the two agree; the moment
+  the pen gets a colour of its own it would have come back as a colour bug. Deleted, with the
+  reason written above the rule.
+  **How to check:** set a big brush, draw. The line is that thick while you draw it, not only
+  after you let go.
 
 - [x] **The preview server binds broadly and checks no Origin.** Origin check built; the !p1
   bind is deliberately left alone and that is the one judgement here.
@@ -934,7 +1010,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** reload the board, press the canvas tool. A canvas node appears and a
   `.canvas` file lands beside the board.
 
-- [A] The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
+- [x] The canvas tool has no keyboard shortcut, and the toolbar buttons do not show their
   shortcut on hover. Split out of the canvas-endpoint bug so it is not lost. Every other tool
   has a letter; the canvas tool is a drawer button only. Wants a key, and a hover hint on the
   buttons showing the key, which would also make the shortcuts panel less necessary for the
@@ -955,7 +1031,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** press `C` on an empty board; a canvas node appears. Select a note and press
   `C`; you get a canvas node, and the note is untouched. Hold `C` down; you get one canvas.
 
-- [A] Drawing color doesn't follow the accent color still. And also the drawing and kept drawing size is different. Drawing size is the default and as soon as you let you it grows. Also the color is wrong it should follow what the accent color is currently when drawing its correct but when you release and finish it goes back to old standard color
+- [x] Drawing color doesn't follow the accent color still. And also the drawing and kept drawing size is different. Drawing size is the default and as soon as you let you it grows. Also the color is wrong it should follow what the accent color is currently when drawing its correct but when you release and finish it goes back to old standard color
   **Measured rather than assumed, and it does not reproduce on the current build.** I set the
   accent to `#ff4fa3`, drew a real stroke with real mouse events, and sampled the live path
   mid-stroke and the baked node after release:
@@ -973,7 +1049,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** hard reload, set an obvious accent, draw. The cursor ring, the size bubble,
   the live stroke and the finished stroke are all that colour and the same thickness.
 
-- [A] The hidden toolbar currently is a bit too high brom the bottom edge. It should be very close to the bottom edge. Also the expand on hover had a very large targe (possible the full toolbar target) it should have a smaller target of the small hidden state pill shape.
+- [x] The hidden toolbar currently is a bit too high brom the bottom edge. It should be very close to the bottom edge. Also the expand on hover had a very large targe (possible the full toolbar target) it should have a smaller target of the small hidden state pill shape.
   Both real, and both mine from this morning's centring fix.
   **Too high:** I had centred the tab vertically inside the shell, which put it about 50px off
   the bottom edge. It now sits 8px off, tucked against the edge without touching it and still
@@ -1052,7 +1128,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** draw something with several strokes, select it, alt-drag it, press Ctrl+Z
   once. The copy goes and the drawing is back where it started, in that one press.
 
-- [A] Settings scrolls instead of zooming the board. The toolbar and its panels live inside the
+- [x] Settings scrolls instead of zooming the board. The toolbar and its panels live inside the
   viewport, and the viewport's wheel handler called preventDefault on every wheel that reached it,
   so the panel could never scroll even though it is taller than its own max-height and had
   `overflow: auto` all along. The rule now: walking up from whatever the wheel landed on, the
@@ -1066,7 +1142,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   **How to check:** open the gear panel on any board and scroll inside it. It scrolls, the board
   stays put. Scroll just outside it and the board zooms as before.
 
-- [A] Previews resize both ways, and stop painting outside their box. Two separate faults under
+- [x] Previews resize both ways, and stop painting outside their box. Two separate faults under
   one report.
   **"Only resizes up and down":** `.bd-auto-size-content` clamped preview cards to a 250 to 400px
   band. A sideways drag changed the stored width and never the drawn box, so the first 150px of
@@ -1138,7 +1214,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   untracked by git, and the heap/DOM measurements quoted above were never committed as a script,
   so none of that evidence is reproducible today.
 
-- [A] Pinch zoom no longer dies when a finger lands on a note. Found while chasing the crash
+- [x] Pinch zoom no longer dies when a finger lands on a note. Found while chasing the crash
   above, and real on its own. Node bodies call `stopPropagation` on touchstart so a tap inside
   them does not drag the board, and that swallow was unconditional. The touchstart that carries
   the second finger is the one the viewport needs in order to begin a pinch, so if that finger
@@ -1170,7 +1246,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
   user on 2026-07-29, no longer an issue. Measured across phone, tablet and desktop widths first:
   at every touch width the panels go to a single 312px column and nothing escapes, so the reported
   symptom did not reproduce. One unrelated thing did show up and is filed separately below.
-- [A] The recommendation panel no longer escapes the viewport at desktop widths near 1024px. It
+- [x] The recommendation panel no longer escapes the viewport at desktop widths near 1024px. It
   overflowed **both** edges, not just the right: the toolbar shell is centred with `left: 50%` plus
   `translateX(-50%)`, so once toolbar + open panel came to 1061px it hung 18.7px off each side at
   1024px. The mobile column layout only starts below 1000px, or at 1200px with a coarse pointer, so
@@ -1214,7 +1290,7 @@ Merged to `main` and live. First deploy since 2026-06-22.
 
 ## Test failures
 
-- [A] "Section 'Test failures' is not in todo.md" when adding a card, and the preview server.
+- [x] "Section 'Test failures' is not in todo.md" when adding a card, and the preview server.
   Both mine, both fixed. The board finds a lane by matching a newline before its heading, and my
   bulk edits to this file had been going through a script that rewrites every line ending to
   Windows style, so nothing matched even though the heading was sitting right there. Converted
@@ -1288,7 +1364,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   site's board pages now creates a live board-preview instead of a plain bookmark. The runtime never
   read `data-board-index`, which the build has been emitting all along, so the feature was specced
   and plumbed but never written.
-- [A] Suites no longer flake in parallel. Cause was concurrent site builds racing each other and
+- [x] Suites no longer flake in parallel. Cause was concurrent site builds racing each other and
   the tests reading generated pages. Every build-invoking test now takes a cross-process build
   lock (tests/helpers/build-lock.mjs, a mkdir mutex held for the test process lifetime, with a
   stale-lock breaker), so build-dependent tests serialize while everything else stays parallel.
@@ -1347,11 +1423,39 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 
 ## Features and ideas
 
-- [ ] R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool.
+- [ ] after I double click copy link from youtube top or embed the text shouldn't stay highlighted. Also when I hover above it it sohuld instruct to double clik to copy url. !p1
 
-- [ ] Add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner.
+- [A] The lock icon should be small but visible and yellow when the page is locked and the bar is auto hidden. (can be in small circle next to the pill)
 
-- [ ] The base64 embed for the markdown is great. But maybe nice to add 15 empty lines before the reference base64 data. And if possible it shouldn't show in markdwon editors with full text it sohuld collapse (not sur eif possibl)
+- [ ] There should be a command shortcut that opens a command palette where you can type any command. C might be nice but then lets re-assign canvas. All commands and actions should be accesible in this command interface without going through the menu. Maybe even settings can be configured through here !p3
+
+- [ ] R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool. !p2
+
+- [ ] Add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner. !p3
+
+- [A] **15 blank lines: done. Collapsing: answered, and the answer is that it was already
+  solved.** You flagged your own uncertainty on the second half, and you were right to.
+  The reference block now sits 15 blank lines below the body, which is the practical fix for a
+  plain source pane and is exactly what you asked for.
+  **The collapsing half was built, measured, and then thrown away**, which is the useful part of
+  this card. A `<details><summary>` wrapper was added and then rendered through markdown-it, the
+  engine behind both Obsidian's and VS Code's previews, with raw HTML on and off. The result:
+  link reference definitions **render no visible output at all**, so in any rendered preview the
+  base64 was already 100 percent invisible and there was nothing for a disclosure to hide. The
+  wrapper added a "click to expand" control that expands to show nothing, and in a renderer with
+  raw HTML disabled it printed the literal tags as text where previously there was nothing.
+  It also had to be left permanently unclosed to keep the definitions on the file's last line,
+  and an unclosed `<details>` swallows everything after it when a note is transcluded into
+  another note with `![[note]]`.
+  So it was dropped, and the test case that asserted the wrapper is inverted: it now asserts no
+  raw HTML is emitted, with the reasoning in the file so nobody adds it back.
+  **What that leaves:** rendered previews already hide it completely. Source panes get the 15
+  blank lines. Folding further inside a source pane is per-editor and not something the file can
+  dictate. Verified against markdown-it only; GitHub, Typora and Obsidian's own app were not
+  independently checked.
+  **How to check:** download a note with an image in base64 mode. Fifteen blank lines, then the
+  definitions, no HTML tags anywhere. The image still renders.
+  Original: The base64 embed for the markdown is great. But maybe nice to add 15 empty lines before the reference base64 data. And if possible it shouldn't show in markdwon editors with full text it sohuld collapse (not sur eif possibl) !p1
 
 - [A] Current drawing draws in segments as you drag along. !p1
   **The sliders are the deliverable, and they are in Settings > Developer mode:** smoothing
@@ -1392,7 +1496,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   **How to check:** gear icon, Developer mode, drag the three sliders and draw. Tell me the
   numbers that feel right. Performance is good but smoothness and feel leaves a lot to desire. Can we improve this without breaking other drawing features and retaining performance and how much space and memory the drawings take up. Maybe we can for now in developer mode have some options for the drawing for me to test with sliders and I can let you know what feels best.
 
-- [A] There should be a setting option that enables you to re-arrange the items available on the toolbar. !p2
+- [x] There should be a setting option that enables you to re-arrange the items available on the toolbar. !p2
   Built. Settings > Workspace has a **Toolbar layout** row with Rearrange and Reset. Rearrange is
   a mode: a banner across the top with the instruction, a Reset and a Done, and Escape also
   exits. It is a mode rather than always-on dragging precisely because that is the clean answer
@@ -1465,7 +1569,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   **How to check:** change the accent to something obvious, then draw. The cursor ring, the size
   bubble and the stroke are all that colour. Strokes drawn earlier keep theirs.
 
-- [A] For the theme settings add a way to "return to default color scheme" button small !p2
+- [x] For the theme settings add a way to "return to default color scheme" button small !p2
   A small "Return to default colours" button at the bottom of the Theme group, resetting
   background, dot colour, grid style and accent.
   **It clears the stored theme rather than writing the defaults back**, which is a stronger
@@ -1499,7 +1603,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   **How to check:** `npm run perf:bench` prints the phases and writes an artifact. Run it twice
   with the same seed and compare; the board is identical.
 
-- [A] Add an eraser tool. Make sure it can erase in segments and not the whole line. I only needs to be able to delete drawings. The eraser brush size should also be adjustable the same way as the brush tool !p1
+- [x] Add an eraser tool. Make sure it can erase in segments and not the whole line. I only needs to be able to delete drawings. The eraser brush size should also be adjustable the same way as the brush tool !p1
 
 - [A] rewamp the pen tool: alt scroll should resize the brush size. we should be able to have different size thicknesses. I can also be adjusted by long pressing the pen tool icon in the menu and then dragging up and down. (brush size circle should be visible while doing so !p2
   Both drawing cards built together, since they share the same brush-size model.
@@ -1519,7 +1623,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   an empty canvas. One Ctrl+Z puts the whole line back. Hold Alt and scroll while drawing to
   resize, or press and hold the pen icon and drag up.
 
-- [A] The settings menu doesn't look clean. Refine it with UI UX design skills to make it nicer !p1
+- [x] The settings menu doesn't look clean. Refine it with UI UX design skills to make it nicer !p1
   Diagnosed with measurements before anything was redrawn, because "made it nicer" with no
   diagnosis is not reviewable. Nine specific defects, all measured at 1200x900:
   **The type hierarchy was upside down.** A field label computed to 16px/600 and a group heading
@@ -1567,7 +1671,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   **How to check:** click empty board, hold an arrow. It accelerates, then holds a steady top
   speed. Reload and you are where you left off. Select a video and the arrows seek it instead.
 
-- [A] I don't like how the pinning just snaps to my face currently. It should be able to be moved around on the pinned area. by dragging from its edges and corners afterwards like a window on a operating system !p1
+- [x] I don't like how the pinning just snaps to my face currently. It should be able to be moved around on the pinned area. by dragging from its edges and corners afterwards like a window on a operating system !p1
   A pinned item now carries eight grab handles, four edge bands and four corners, and Windows
   -style snap zones: left or right edge takes that half, top maximises, a corner takes that
   quarter, corner beats edge, bottom edge dead as on Windows, with a cyan preview before you
@@ -1595,7 +1699,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
   to the left edge and it takes that half; drag it off and it returns to the size it was.
   `pin-to-viewport` 12/12 and `pin-move-and-snap` 14/14.
 
-- [A] Light mode, and a theme group in settings: background, dot colour, grid style, accent. !p2
+- [x] Light mode, and a theme group in settings: background, dot colour, grid style, accent. !p2
   All four of the things you asked for. Grid style covers the scale elements you named: dots,
   tri-dots, grid lines, none, switched live by rewriting the grid pattern in place, so no
   rebuild is involved.
@@ -1745,7 +1849,7 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 - [A] Toolbar auto-hide: built, with the larger touch target you asked for (44x16px to look at,
   76x48px to hit). Folded into the combined toolbar card above.
 
-- [A] Pin an item to your viewport: it holds still on screen while the board moves under it. !p2
+- [x] Pin an item to your viewport: it holds still on screen while the board moves under it. !p2
   **Two things I had to change, and you should overrule me if you disagree.**
   1. **Ctrl+Tab is impossible**, and this was measured rather than assumed: with a real
      OS keystroke into a focused Chrome window, a plain key reaches the page and Ctrl+Tab
@@ -1960,7 +2064,7 @@ has been moved to open work above. Spot-check the others before marking them `[x
 
 - [.] Could have a canvas system where canvasses can be presented or exported later !p3
 
-- [.] There should be export as PDF option for markdown. as well as for board. (idea for now we ideate on it later with a grilling session)
+- [.] There should be export as PDF option for markdown. as well as for board. (idea for now we ideate on it later with a grilling session) !p3
 
 - [A] Realtime collaboration: assessed, and now superseded by your GitHub-sync direction. The !p3
   assessment stands in

@@ -218,6 +218,34 @@
       "model": "opus 5",
       "goal": "mechanically re-verify the Review queue",
       "color": "#b5179e"
+    },
+    {
+      "id": "opus5-31",
+      "n": 31,
+      "model": "opus 5",
+      "goal": "stroke thickness while drawing, press-and-hold resize",
+      "color": "#ef6351"
+    },
+    {
+      "id": "opus5-32",
+      "n": 32,
+      "model": "sonnet 5",
+      "goal": "base64 markdown: spacing and collapsing",
+      "color": "#59c3c3"
+    },
+    {
+      "id": "opus5-33",
+      "n": 33,
+      "model": "sonnet 5",
+      "goal": "import/export icons, lock indicator when hidden",
+      "color": "#f4d35e"
+    },
+    {
+      "id": "opus5-34",
+      "n": 34,
+      "model": "opus 5",
+      "goal": "mobile: the board must not scroll the page",
+      "color": "#845ec2"
     }
   ]
 }
