@@ -1,16 +1,100 @@
 import http from "node:http";
 import https from "node:https";
-import { createReadStream, createWriteStream, existsSync, statSync } from "node:fs";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { closeSync, createReadStream, createWriteStream, existsSync, mkdirSync, openSync, statSync } from "node:fs";
+import { appendFile, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Board path resolution, the markdown filename sanitizer and the stale-base
+// guard live in one module, shared with scripts/cosmo.mjs. The sanitizer had
+// already drifted once between the browser and this file; a third copy in the
+// CLI would drift again.
+import {
+  resolveBoardSavePath,
+  resolveMarkdownSavePath,
+  staleBaseConflict
+} from "./lib/board-store.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 // 4174, not 4173: the aide-board project owns 4173 on this machine.
 const port = Number(process.env.PORT || 4174);
+
+// Same character set as sanitizeCanvasFilename in JavaScript/braindump.js. The
+// markdown pair drifted once, when underscores were flattened here and only
+// here, which turned a note the board called `note-..._19-27-04` into
+// `note-...-19-27-04.md` on disk. These two must stay identical.
+function sanitizeCanvasFilename(value) {
+  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "canvas";
+  const safeBase = raw
+    .replace(/\.canvas$/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "") || "canvas";
+
+  return `${safeBase}.canvas`;
+}
+
+// A sub-canvas is a sidecar .canvas file beside a board's own current.canvas,
+// the same arrangement markdown notes already use. Resolves the write target
+// for one, or null when the request is not addressing a legitimate sidecar.
+// The board's own file is deliberately not reachable this way: /api/save-board
+// with neither parameter is the only route to it.
+function resolveCanvasSidecarTarget(boardTarget, pathValue, filenameValue) {
+  const boardDir = path.normalize(path.dirname(boardTarget.filePath));
+  const requestedPath = String(pathValue || "").trim();
+  let filePath = "";
+
+  if (requestedPath) {
+    const normalized = requestedPath
+      .split(/[?#]/, 1)[0]
+      .replaceAll("\\", "/")
+      .replace(/^\/+/, "");
+    if (normalized) filePath = path.normalize(path.join(rootDir, normalized));
+  } else if (filenameValue) {
+    // ?filename= means "make me a new one", so it must never land on a file that
+    // already exists. The client names these from a second-resolution timestamp,
+    // so two canvases created in the same second collided and the second silently
+    // overwrote the first, leaving the first node pointing at a canvasId that was
+    // no longer in the file. ?path= above is the opposite case, addressing a
+    // sidecar that already exists, and must not be uniquified.
+    //
+    // The name is claimed with "wx", not chosen with existsSync. This handler
+    // awaits twice between picking a name and writing it, so four creates in
+    // one tick — which is what holding the C key or clicking the tool fast
+    // does — all looked at the same free name, all got it, and all four nodes
+    // ended up pointing at one file. Measured: 4 concurrent requests, 4
+    // identical urls, 1 file, 3 canvasIds gone. "wx" is the only
+    // check-and-create the filesystem performs as a single operation, so the
+    // loop below hands out four different names instead.
+    const safeName = sanitizeCanvasFilename(filenameValue);
+    const base = safeName.replace(/\.canvas$/i, "");
+    for (let n = 1; n < 1000 && !filePath; n++) {
+      const candidate = path.normalize(path.join(boardDir, n === 1 ? safeName : `${base}-${n}.canvas`));
+      if (!candidate.startsWith(boardDir + path.sep)) return null;
+      try {
+        mkdirSync(boardDir, { recursive: true });
+        closeSync(openSync(candidate, "wx"));
+        filePath = candidate;
+      } catch (error) {
+        if (error.code !== "EEXIST") return null;
+      }
+    }
+  }
+
+  if (!filePath) return null;
+  if (!filePath.startsWith(boardDir + path.sep)) return null;
+  if (path.extname(filePath).toLowerCase() !== ".canvas") return null;
+  if (filePath === path.normalize(boardTarget.filePath)) return null;
+
+  return {
+    slug: boardTarget.slug,
+    relativePath: path.relative(rootDir, filePath).replaceAll("\\", "/"),
+    filePath
+  };
+}
 
 const mimeTypes = {
   ".canvas": "application/json; charset=utf-8",
@@ -45,32 +129,6 @@ function sendJson(response, status, data) {
   response.end(JSON.stringify(data));
 }
 
-async function resolveBoardSavePath(slugValue) {
-  const slug = String(slugValue || "braindump").replace(/[^a-z0-9-]/gi, "").toLowerCase() || "braindump";
-  try {
-    const registry = JSON.parse(await readFile(path.join(rootDir, "src", "registry.json"), "utf8"));
-    const board = Array.isArray(registry.boards)
-      ? registry.boards.find((entry) => entry.slug === slug)
-      : null;
-    if (board?.sourcePath) {
-      return {
-        slug,
-        relativePath: board.sourcePath.replaceAll("\\", "/"),
-        filePath: path.join(rootDir, board.sourcePath)
-      };
-    }
-  } catch (error) {
-    // Fall back to the historical board path when the registry cannot load.
-  }
-
-  const relativePath = `content/boards/${slug}/current.canvas`;
-  return {
-    slug,
-    relativePath,
-    filePath: path.join(rootDir, relativePath)
-  };
-}
-
 async function handleSaveBoard(request, response, parsedUrl) {
   let body = "";
   request.setEncoding("utf8");
@@ -85,7 +143,23 @@ async function handleSaveBoard(request, response, parsedUrl) {
         return;
       }
 
-      const target = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+      const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+      // ?path= (an existing sidecar) or ?filename= (a new one) retargets the
+      // write at a sub-canvas beside the board file instead of the board file
+      // itself. Routed through this handler on purpose: a nested canvas then
+      // inherits every guard below â€” the empty-save refusal, the stale-tab
+      // refusal, canvasId and createdAt preservation â€” instead of getting a
+      // second, weaker write path that would have to grow all three again.
+      const canvasPathParam = parsedUrl.searchParams.get("path") || "";
+      const canvasFileParam = parsedUrl.searchParams.get("filename") || "";
+      let target = boardTarget;
+      if (canvasPathParam || canvasFileParam) {
+        target = resolveCanvasSidecarTarget(boardTarget, canvasPathParam, canvasFileParam);
+        if (!target) {
+          sendJson(response, 403, { success: false, error: "Forbidden canvas sidecar path." });
+          return;
+        }
+      }
       const safePath = path.normalize(target.filePath);
       if (!safePath.startsWith(rootDir)) {
         sendJson(response, 403, { success: false, error: "Forbidden save path." });
@@ -119,6 +193,22 @@ async function handleSaveBoard(request, response, parsedUrl) {
       try {
         existingMeta = JSON.parse(await readFile(safePath, "utf8"));
       } catch { /* no existing file */ }
+
+      // Stale-tab guard: a client that loaded the board earlier and missed a
+      // newer on-disk save must not silently overwrite it. Clients send the
+      // updatedAt they loaded against as ?base=; when the file has moved past
+      // it, the save is refused and the client tells the user to reload.
+      // Clients that send no base (old runtimes, scripts) keep old behavior.
+      const baseParam = parsedUrl.searchParams.get("base");
+      const staleConflict = staleBaseConflict(existingMeta?.updatedAt, baseParam);
+      if (staleConflict) {
+        sendJson(response, 409, {
+          success: false,
+          stale: true,
+          error: `${staleConflict} Reload the page to pick up the newer state.`
+        });
+        return;
+      }
       if (existingMeta && typeof existingMeta === "object") {
         if (!parsed.canvasId && typeof existingMeta.canvasId === "string") {
           parsed.canvasId = existingMeta.canvasId;
@@ -170,59 +260,13 @@ async function handleSaveBoard(request, response, parsedUrl) {
         success: true,
         slug: target.slug,
         path: target.relativePath,
+        url: `/${target.relativePath}`,
         sidecarsWritten
       });
     } catch (error) {
       sendJson(response, 500, { success: false, error: error.message || "Save failed." });
     }
   });
-}
-
-function sanitizeMarkdownFilename(value) {
-  const raw = String(value || "").trim().replaceAll("\\", "/").split("/").pop() || "note";
-  const withoutExtension = raw.replace(/\.md$/i, "");
-  const safeBase = withoutExtension
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "note";
-
-  return `${safeBase}.md`;
-}
-
-async function resolveMarkdownSavePath(slugValue, pathValue, filenameValue) {
-  const boardTarget = await resolveBoardSavePath(slugValue);
-  const boardDir = path.normalize(path.dirname(boardTarget.filePath));
-  const requestedPath = String(pathValue || "").trim();
-
-  if (requestedPath) {
-    const normalizedRequestPath = requestedPath
-      .split(/[?#]/, 1)[0]
-      .replaceAll("\\", "/")
-      .replace(/^\/+/, "");
-
-    if (normalizedRequestPath) {
-      const requestedFilePath = path.normalize(path.join(rootDir, normalizedRequestPath));
-      if (
-        requestedFilePath.startsWith(boardDir) &&
-        path.extname(requestedFilePath).toLowerCase() === ".md"
-      ) {
-        const relativePath = path.relative(rootDir, requestedFilePath).replaceAll("\\", "/");
-        return {
-          slug: boardTarget.slug,
-          relativePath,
-          filePath: requestedFilePath
-        };
-      }
-    }
-  }
-
-  const safeFilename = sanitizeMarkdownFilename(filenameValue);
-  const filePath = path.join(boardDir, safeFilename);
-  return {
-    slug: boardTarget.slug,
-    relativePath: path.relative(rootDir, filePath).replaceAll("\\", "/"),
-    filePath
-  };
 }
 
 // Sections of .agents/todo.md the tracker is allowed to file a new card into.
@@ -268,6 +312,7 @@ async function handleAddTodo(request, response) {
       const card = `\n- [ ] ${text}\n`;
       const next = original.slice(0, insertAt) + card + original.slice(insertAt);
       await writeFile(todoPath, next, "utf8");
+      await updateCardMeta({ title: text, by: String(parsed?.by || "board"), created: true });
 
       sendJson(response, 200, { success: true, section, text });
     } catch (error) {
@@ -277,7 +322,105 @@ async function handleAddTodo(request, response) {
 }
 
 const REVIEW_VERDICTS = ["works", "issue", "partly"];
-const TODO_STATUSES = [" ", "~", "A", "x"];
+const TODO_STATUSES = [".", " ", "~", "A", "x"];
+
+// Every `## heading` the tracker renders as a lane. A card's lane is its kind of
+// work, and moving it between lanes is a different gesture from moving it between
+// kanban columns: the column is the marker, the lane is which section of todo.md
+// the card physically lives under. This list is wider than TODO_SECTIONS because
+// filing a *new* card into "Dead code" or "Waiting on your review" makes no
+// sense, while moving an existing one there does.
+const TODO_LANES = [
+  "Now",
+  "Bugs",
+  "Test failures",
+  "Dead code",
+  "Features and ideas",
+  "Waiting on your review",
+  "Later"
+];
+
+// A card is its `- [ ] …` line plus every indented continuation line under it.
+// Returns [start, end] inclusive, in the same line array the caller holds.
+function cardBlockEnd(lines, start) {
+  let end = start;
+  while (end + 1 < lines.length && /^\s+\S/.test(lines[end + 1])) end++;
+  return end;
+}
+
+// Cuts a card out of the line array, taking the blank separator that follows it
+// so removing a card never leaves a double blank behind. Returns the block's own
+// lines, without that separator, ready to be written back somewhere else.
+function cutCardBlock(lines, start) {
+  const end = cardBlockEnd(lines, start);
+  const block = lines.slice(start, end + 1);
+  let count = end + 1 - start;
+  if (lines[end + 1] === "") count++;
+  lines.splice(start, count);
+  return block;
+}
+
+// Puts a card block directly under a `## <lane>` heading, which is where
+// handleAddTodo puts new cards and where the board's priority sort expects the
+// newest arrival. Returns false when the heading is not in the file.
+function insertCardBlock(lines, lane, block) {
+  const heading = lines.findIndex((l) => l.replace(/\s+$/, "") === `## ${lane}`);
+  if (heading === -1) return false;
+  const insert = ["", ...block];
+  // Keep exactly one blank line between this card and whatever follows it.
+  if (lines[heading + 1] !== "") insert.push("");
+  lines.splice(heading + 1, 0, ...insert);
+  return true;
+}
+
+// Deleting a card is the only gesture here that destroys work, and the file it
+// destroys it from is one the user hand-edits all day. Every removed block is
+// appended verbatim to .tracker/deleted-cards.jsonl first, so a card deleted at
+// 2am is recoverable by hand long after the tab that deleted it is gone. The
+// board's own Undo reads the block straight out of the response instead; this
+// file is the backstop for when that tab is closed.
+async function recordDeletedCard(entry) {
+  const trashPath = path.join(rootDir, ".tracker", "deleted-cards.jsonl");
+  await mkdir(path.dirname(trashPath), { recursive: true });
+  await appendFile(trashPath, `${JSON.stringify(entry)}\n`, "utf8");
+}
+
+// Card timestamps live beside the tracker, keyed by the card title (first 60
+// chars, like the feedback log), so they survive the todo file shifting. Only
+// writes that flow through these endpoints stamp; direct file edits do not.
+const CARD_META_KEY_LENGTH = 60;
+
+function cardMetaKey(title) {
+  return String(title || "").slice(0, CARD_META_KEY_LENGTH);
+}
+
+async function updateCardMeta({ title, newTitle = null, by = "board", created = false }) {
+  const metaPath = path.join(rootDir, ".tracker", "card-meta.json");
+  let meta = {};
+  if (existsSync(metaPath)) {
+    try {
+      const parsed = JSON.parse(await readFile(metaPath, "utf8"));
+      if (parsed && typeof parsed === "object") meta = parsed;
+    } catch {
+      meta = {};
+    }
+  }
+
+  const now = new Date().toISOString();
+  const oldKey = cardMetaKey(title);
+  const key = newTitle ? cardMetaKey(newTitle) : oldKey;
+  const entry = meta[oldKey] || {};
+  if (newTitle && oldKey !== key) delete meta[oldKey];
+
+  meta[key] = {
+    createdAt: created ? now : entry.createdAt || null,
+    updatedAt: now,
+    updatedBy: by
+  };
+  if (created && !entry.createdAt) meta[key].createdAt = now;
+
+  await writeFile(metaPath, `${JSON.stringify(meta, null, 2)}\n`, "utf8");
+}
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
@@ -297,23 +440,77 @@ function readJsonBody(request) {
   });
 }
 
-// Moves a card between columns and records the user's verdict on it.
+// Moves a card between columns, moves it between lanes, deletes it, and records
+// the user's verdict on it.
 //
 // The board addresses a card by its line number in todo.md, which is only valid
 // for as long as the file has not shifted underneath it. `expect` is the start of
 // the line the board believed it was acting on; if that no longer matches, the
-// write is refused rather than applied to whatever moved into that slot.
+// write is refused rather than applied to whatever moved into that slot. Delete
+// and lane-move go through that same guard: deleting the wrong card because the
+// file shifted is not recoverable from the board.
+//
+// `remove: true` and `toLane: "<heading>"` are whole-card gestures and each own
+// the request; they are not combined with a status, text or priority edit.
+// `restore: "<block>"` puts a deleted card back, and is the only call with no
+// line to guard, so it refuses instead when the card is already in the file.
 async function handleTodoUpdate(request, response) {
   try {
     const parsed = await readJsonBody(request);
     const line = Number(parsed?.line);
     const expect = String(parsed?.expect || "");
+    const remove = parsed?.remove === true;
+    const restore = parsed?.restore == null ? null : String(parsed.restore);
+    const toLane = parsed?.toLane == null ? null : String(parsed.toLane).trim();
     const status = parsed?.status == null ? null : String(parsed.status);
     const verdict = parsed?.verdict == null ? null : String(parsed.verdict);
     const note = String(parsed?.note || "").trim();
+    const priority = parsed?.priority == null ? null : Number(parsed.priority);
+    const text = parsed?.text == null ? null : String(parsed.text).replace(/\s+/g, " ").trim();
+
+    if (toLane !== null && !TODO_LANES.includes(toLane)) {
+      sendJson(response, 400, { success: false, error: `Unknown lane "${toLane}".` });
+      return;
+    }
+
+    // --- undo of a delete ---
+    if (restore !== null) {
+      const blockLines = restore.replace(/\r\n?/g, "\n").split("\n");
+      while (blockLines.length && blockLines[blockLines.length - 1].trim() === "") blockLines.pop();
+      if (!blockLines.length || !/^-\s+\[[ xA~.]\]\s+\S/.test(blockLines[0])) {
+        sendJson(response, 400, { success: false, error: "Nothing card-shaped to restore." });
+        return;
+      }
+      if (toLane === null) {
+        sendJson(response, 400, { success: false, error: "Restoring a card needs the lane to put it back in." });
+        return;
+      }
+
+      const todoPath = path.join(rootDir, ".agents", "todo.md");
+      const original = await readFile(todoPath, "utf8");
+      const eol = original.includes("\r\n") ? "\r\n" : "\n";
+      const lines = original.split(/\r?\n/);
+      // Clicking Undo twice, or on a card someone already typed back in by hand,
+      // must not produce two copies of it.
+      if (lines.some((l) => l.trim() === blockLines[0].trim())) {
+        sendJson(response, 409, { success: false, error: "That card is already in todo.md." });
+        return;
+      }
+      if (!insertCardBlock(lines, toLane, blockLines)) {
+        sendJson(response, 404, { success: false, error: `Lane "${toLane}" is not in todo.md.` });
+        return;
+      }
+      await writeFile(todoPath, lines.join(eol), "utf8");
+      sendJson(response, 200, { success: true, restored: true, lane: toLane });
+      return;
+    }
 
     if (!Number.isInteger(line) || line < 0) {
       sendJson(response, 400, { success: false, error: "Missing line number." });
+      return;
+    }
+    if (text !== null && !text) {
+      sendJson(response, 400, { success: false, error: "Card text cannot be empty." });
       return;
     }
     if (status !== null && !TODO_STATUSES.includes(status)) {
@@ -324,7 +521,12 @@ async function handleTodoUpdate(request, response) {
       sendJson(response, 400, { success: false, error: `Unknown verdict "${verdict}".` });
       return;
     }
-    if (status === null && verdict === null && !note) {
+    if (priority !== null && (!Number.isInteger(priority) || priority < 0 || priority > 5)) {
+      sendJson(response, 400, { success: false, error: `Priority must be 0 to 5, got "${parsed.priority}".` });
+      return;
+    }
+    if (status === null && verdict === null && priority === null && text === null && !note &&
+        !remove && toLane === null) {
       sendJson(response, 400, { success: false, error: "Nothing to record." });
       return;
     }
@@ -340,7 +542,7 @@ async function handleTodoUpdate(request, response) {
     }
 
     const current = lines[line];
-    const marker = /^-\s+\[([ xA~])\]\s+/.exec(current);
+    const marker = /^-\s+\[([ xA~.])\]\s+/.exec(current);
     if (!marker) {
       sendJson(response, 409, { success: false, error: "That line is not a card any more, reload the board." });
       return;
@@ -348,27 +550,116 @@ async function handleTodoUpdate(request, response) {
     // Compare the card's text, not the whole line. The marker is the thing being
     // rewritten, so including it here would make the guard fire on the board's
     // own successful writes.
-    const currentText = current.replace(/^-\s+\[[ xA~]\]\s+/, "");
+    const currentText = current.replace(/^-\s+\[[ xA~.]\]\s+/, "");
+    // A DESTRUCTIVE request must carry `expect`. For the rewriting operations an
+    // absent `expect` is merely unguarded, and old callers relied on that. For
+    // remove it means "delete whatever card happens to sit at this line index",
+    // which with a stale tab, a concurrent edit, or a hand-edit to todo.md
+    // deletes the wrong card and takes its whole note block with it. The board
+    // always sends `expect`, so this refuses nothing a real client does.
+    if (remove && !expect) {
+      sendJson(response, 400, {
+        success: false,
+        error: "Refusing to delete without the expected card text."
+      });
+      return;
+    }
     if (expect && !currentText.startsWith(expect)) {
       sendJson(response, 409, { success: false, error: "todo.md changed, reload the board." });
       return;
     }
 
+    // The card's own title, without the marker, the @owner tag or the priority
+    // token: how the board, the feedback log and card-meta.json all key a card.
+    const stripLine = (value) => value
+      .replace(/^-\s+\[[ xA~.]\]\s+/, "")
+      .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
+      .replace(/\s*!p[1-5]\b/i, "")
+      .trim();
+
+    // --- delete the card ---
+    if (remove) {
+      const block = cutCardBlock(lines, line);
+      await writeFile(todoPath, lines.join(eol), "utf8");
+      await recordDeletedCard({
+        at: new Date().toISOString(),
+        lane: String(parsed?.lane || ""),
+        by: String(parsed?.by || "board"),
+        title: stripLine(current).slice(0, 200),
+        block: block.join("\n")
+      });
+      // The block goes back in the response so the board can offer an Undo that
+      // restores the card whole: its marker, owner, priority and every indented
+      // note line, not just the title it was showing.
+      sendJson(response, 200, {
+        success: true,
+        removed: block.join("\n"),
+        lines: block.length,
+        lane: String(parsed?.lane || "")
+      });
+      return;
+    }
+
+    // --- move the card to another lane ---
+    if (toLane !== null) {
+      const block = cutCardBlock(lines, line);
+      if (!insertCardBlock(lines, toLane, block)) {
+        sendJson(response, 404, { success: false, error: `Lane "${toLane}" is not in todo.md.` });
+        return;
+      }
+      await writeFile(todoPath, lines.join(eol), "utf8");
+      await updateCardMeta({ title: stripLine(current), by: String(parsed?.by || "board") });
+      sendJson(response, 200, { success: true, lane: toLane, laneFrom: String(parsed?.lane || "") });
+      return;
+    }
+
     const statusFrom = marker[1];
     let statusTo = statusFrom;
+    let updatedLine = current;
 
     if (status !== null && status !== statusFrom) {
       statusTo = status;
-      lines[line] = current.replace(/^(-\s+)\[[ xA~]\]/, `$1[${status}]`);
+      updatedLine = updatedLine.replace(/^(-\s+)\[[ xA~.]\]/, `$1[${status}]`);
+    }
+
+    // A text edit replaces the title while keeping the marker, the @owner tag,
+    // and the priority token, since the board never shows those in the title.
+    if (text !== null) {
+      const parts = /^(-\s+\[[ xA~.]\]\s+)(.*)$/.exec(updatedLine);
+      const rest = parts[2];
+      const ownerTag = /(^|\s)@[a-z0-9][a-z0-9._-]*/i.exec(rest);
+      const prioTag = /(^|\s)!p[1-5]\b/i.exec(rest);
+      updatedLine = `${parts[1]}${text}`;
+      if (ownerTag) updatedLine += ` ${ownerTag[0].trim()}`;
+      if (prioTag) updatedLine += ` ${prioTag[0].trim()}`;
+    }
+
+    // Priority rides in the line itself as a trailing `!p<n>` token, so it
+    // survives every tool that reads todo.md as plain markdown. 0 clears it.
+    if (priority !== null) {
+      updatedLine = updatedLine.replace(/\s*!p[1-5]\b/i, "");
+      if (priority >= 1) updatedLine = `${updatedLine.replace(/\s+$/, "")} !p${priority}`;
+    }
+
+    if (updatedLine !== current) {
+      lines[line] = updatedLine;
       await writeFile(todoPath, lines.join(eol), "utf8");
+
+      // Stamp the card's timestamps, keyed by the same stripped title.
+      await updateCardMeta({
+        title: stripLine(current),
+        newTitle: text !== null ? stripLine(updatedLine) : null,
+        by: String(parsed?.by || "board")
+      });
     }
 
     if (verdict !== null || note) {
-      // Title without the status marker or the @owner tag, so it matches how the
-      // board keys a card and survives the line moving later.
+      // Title without the status marker, the @owner tag, or the priority token,
+      // so it matches how the board keys a card and survives the line moving later.
       const title = current
-        .replace(/^-\s+\[[ xA~]\]\s+/, "")
+        .replace(/^-\s+\[[ xA~.]\]\s+/, "")
         .replace(/(^|\s)@[a-z0-9][a-z0-9._-]*/i, "")
+        .replace(/\s*!p[1-5]\b/i, "")
         .trim();
 
       const feedbackPath = path.join(rootDir, ".agents", "review-feedback.json");
@@ -597,6 +888,118 @@ async function handleListMarkdown(request, response, parsedUrl) {
   }
 }
 
+// Lists the sub-canvas sidecars in a board's directory with their canvasId.
+// That id is the point: a node stores a path, and when the file behind the
+// path is renamed or moved the board asks here which file carries the id now,
+// then repairs itself. Without this, "renaming shouldn't break links" is a
+// promise the runtime has no way to keep.
+async function handleListCanvas(request, response, parsedUrl) {
+  try {
+    const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+    const boardDir = path.normalize(path.dirname(boardTarget.filePath));
+    const boardFile = path.normalize(boardTarget.filePath);
+
+    if (!existsSync(boardDir)) {
+      sendJson(response, 200, { success: true, files: [] });
+      return;
+    }
+
+    const items = await readdir(boardDir);
+    const files = [];
+
+    for (const item of items) {
+      if (!item.toLowerCase().endsWith(".canvas")) continue;
+      const filePath = path.join(boardDir, item);
+      if (path.normalize(filePath) === boardFile) continue;
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(await readFile(filePath, "utf8"));
+      } catch {
+        // Unreadable or not JSON: still listed, just without an identity.
+      }
+
+      const relative = path.relative(rootDir, filePath).replaceAll("\\", "/");
+      files.push({
+        filename: item,
+        title:
+          typeof parsed?.title === "string" && parsed.title
+            ? parsed.title
+            : item.replace(/\.canvas$/i, ""),
+        canvasId: typeof parsed?.canvasId === "string" ? parsed.canvasId : "",
+        nodeCount: Array.isArray(parsed?.nodes) ? parsed.nodes.length : 0,
+        path: relative,
+        url: `/${relative}`,
+        mtime: statSync(filePath).mtime
+      });
+    }
+
+    files.sort((a, b) => b.mtime - a.mtime);
+    sendJson(response, 200, { success: true, files });
+  } catch (error) {
+    sendJson(response, 500, { success: false, error: error.message || "Could not list canvas files." });
+  }
+}
+
+// Removes one sub-canvas sidecar, and only one that has nothing in it.
+//
+// A sidecar exists to serve a node. The moment the last node pointing at it
+// leaves the board the file is litter: the cosmoboard collected 13 empty,
+// unreferenced .canvas files in about three minutes of use, because undo took
+// the node off the board and left the file behind. The board asks here when a
+// canvas node is removed and nothing else references its file.
+//
+// Two guards, deliberately of different kinds. resolveCanvasSidecarTarget is
+// the same function /api/save-board writes through, so nothing outside the
+// board's own directory, nothing that is not a .canvas, and never the board's
+// own current.canvas can be addressed at all. On top of that, this route reads
+// the file first and refuses unless it parses as a canvas with zero nodes. So
+// the worst a wrong or malicious caller can achieve is deleting an empty file,
+// and there is no ?force= to switch that off. Missing file answers 200 with
+// deleted:false, because undo/redo/undo must not turn into an error.
+async function handleDeleteCanvas(request, response, parsedUrl) {
+  // No body is expected; drain whatever arrived so the socket is not held open.
+  request.resume();
+  try {
+    const boardTarget = await resolveBoardSavePath(parsedUrl.searchParams.get("slug"));
+    const target = resolveCanvasSidecarTarget(boardTarget, parsedUrl.searchParams.get("path") || "", "");
+    if (!target) {
+      sendJson(response, 403, { success: false, deleted: false, error: "Forbidden canvas sidecar path." });
+      return;
+    }
+    const safePath = path.normalize(target.filePath);
+    if (!safePath.startsWith(rootDir)) {
+      sendJson(response, 403, { success: false, deleted: false, error: "Forbidden canvas sidecar path." });
+      return;
+    }
+    if (!existsSync(safePath)) {
+      sendJson(response, 200, { success: true, deleted: false, path: target.relativePath });
+      return;
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(await readFile(safePath, "utf8"));
+    } catch {
+      parsed = null;
+    }
+    const nodeCount = Array.isArray(parsed?.nodes) ? parsed.nodes.length : null;
+    if (nodeCount === null || nodeCount > 0) {
+      sendJson(response, 409, {
+        success: false,
+        deleted: false,
+        error: `Refused to delete ${target.relativePath}: it is not an empty canvas.`
+      });
+      return;
+    }
+
+    await unlink(safePath);
+    sendJson(response, 200, { success: true, deleted: true, path: target.relativePath });
+  } catch (error) {
+    sendJson(response, 500, { success: false, deleted: false, error: error.message || "Could not delete canvas file." });
+  }
+}
+
 function handleGetVideoMeta(request, response, parsedUrl) {
   const videoUrl = parsedUrl.searchParams.get("url");
   if (!videoUrl) return sendText(response, 400, "Missing url parameter");
@@ -627,6 +1030,75 @@ function handleGetVideoMeta(request, response, parsedUrl) {
   }).on("error", (err) => {
     sendJson(response, 500, { error: err.message });
   });
+}
+
+// GET /api/frame-check?url=… — reports whether a site's response headers let
+// it render inside an iframe here. Browsers enforce X-Frame-Options and CSP
+// frame-ancestors but hide the refusal from page JS, so a doomed live embed
+// only ever shows a grey error box. The server can read the headers; the
+// board asks it before trusting an iframe, and falls back to a preview card.
+async function handleFrameCheck(request, response, parsedUrl) {
+  const target = parsedUrl.searchParams.get("url") || "";
+  let targetUrl;
+  try {
+    targetUrl = new URL(target);
+  } catch {
+    return sendJson(response, 400, { error: "Invalid url parameter" });
+  }
+  if (targetUrl.protocol !== "http:" && targetUrl.protocol !== "https:") {
+    return sendJson(response, 400, { error: "Only http and https urls can be checked" });
+  }
+
+  const probe = async (method) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+      return await fetch(targetUrl, {
+        method,
+        redirect: "follow",
+        signal: controller.signal,
+        headers: { "user-agent": "Mozilla/5.0 (cosmoboard frame-check)" }
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    let res = null;
+    try {
+      res = await probe("HEAD");
+    } catch {
+      res = null;
+    }
+    if (!res || res.status >= 400) res = await probe("GET");
+    try {
+      res.body?.cancel?.();
+    } catch {}
+
+    const xfo = String(res.headers.get("x-frame-options") || "").toLowerCase();
+    const csp = String(res.headers.get("content-security-policy") || "").toLowerCase();
+    const ancestors = /frame-ancestors\s+([^;]+)/.exec(csp)?.[1]?.trim() || "";
+
+    let framable = true;
+    let reason = "";
+    if (xfo.includes("deny") || xfo.includes("sameorigin")) {
+      framable = false;
+      reason = `x-frame-options: ${xfo}`;
+    }
+    if (ancestors) {
+      // frame-ancestors overrides X-Frame-Options when both are present. Only
+      // a wildcard or bare scheme source can match an arbitrary local origin.
+      const tokens = ancestors.split(/\s+/);
+      framable = tokens.some((t) => t === "*" || t === "http:" || t === "https:");
+      reason = framable ? "" : `frame-ancestors ${ancestors}`;
+    }
+    sendJson(response, 200, { framable, status: res.status, reason });
+  } catch (error) {
+    // An unreachable or slow site is not evidence of refusal; let the browser
+    // show whatever the embed produces rather than falsely downgrading it.
+    sendJson(response, 200, { framable: true, reason: `probe failed: ${String((error && error.message) || error)}` });
+  }
 }
 
 function resolveRequestPath(urlPath) {
@@ -677,8 +1149,53 @@ function getNetworkAccessUrls() {
     .map((entry) => `http://${entry.address}:${port}`);
 }
 
+// Every host this server can legitimately be reached on: loopback, plus this
+// machine's own LAN addresses, because testing a board on a real phone means
+// loading it over wifi and that page's Origin is the LAN address.
+function isLocalHostname(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "0.0.0.0") return true;
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.address && entry.address.toLowerCase() === host) return true;
+    }
+  }
+  return false;
+}
+
+// A write request from a page this server did not serve is a cross-site request,
+// and the browser will have labelled it with that site's Origin. Refusing those
+// is the whole defence: without it, any website open in a tab could POST to this
+// server while it runs and rewrite the user's boards, because a form or fetch
+// POST is not blocked by the same-origin policy, only its response is.
+//
+// A MISSING Origin is allowed on purpose. Browsers always send it on POST, so a
+// real attack cannot hide by omitting it, while curl, the test suites and any
+// non-browser tool send nothing and would otherwise be locked out of their own
+// development server for no security gain.
+function isAllowedWriteOrigin(request) {
+  const origin = request.headers.origin;
+  if (!origin) return true;
+  let parsed;
+  try {
+    parsed = new URL(origin);
+  } catch (error) {
+    return false; // An unparseable Origin is not one we put there.
+  }
+  return isLocalHostname(parsed.hostname);
+}
+
 const server = http.createServer((request, response) => {
   const parsedUrl = new URL(request.url || "/", `http://127.0.0.1:${port}`);
+
+  const isWrite = request.method === "POST" || request.method === "PUT" || request.method === "DELETE";
+  if (isWrite && !isAllowedWriteOrigin(request)) {
+    sendJson(response, 403, {
+      success: false,
+      error: "Cross-site write refused. This server only accepts writes from pages it served."
+    });
+    return;
+  }
 
   if (request.method === "POST" && parsedUrl.pathname === "/api/save-board") {
     handleSaveBoard(request, response, parsedUrl);
@@ -710,8 +1227,23 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (request.method === "POST" && parsedUrl.pathname === "/api/delete-canvas") {
+    handleDeleteCanvas(request, response, parsedUrl);
+    return;
+  }
+
+  if (request.method === "GET" && parsedUrl.pathname === "/api/list-canvas") {
+    handleListCanvas(request, response, parsedUrl);
+    return;
+  }
+
   if (request.method === "GET" && parsedUrl.pathname === "/api/get-video-meta") {
     handleGetVideoMeta(request, response, parsedUrl);
+    return;
+  }
+
+  if (request.method === "GET" && parsedUrl.pathname === "/api/frame-check") {
+    handleFrameCheck(request, response, parsedUrl);
     return;
   }
 
@@ -741,10 +1273,16 @@ const server = http.createServer((request, response) => {
   }
 
   const extension = path.extname(finalPath).toLowerCase();
-  const size = statSync(finalPath).size;
+  const stats = statSync(finalPath);
   response.writeHead(200, {
     "Content-Type": mimeTypes[extension] || "application/octet-stream",
-    "Content-Length": size
+    "Content-Length": stats.size,
+    // Lets long-lived pages (the tracker) notice their own file changed on
+    // disk and offer a reload instead of running stale code silently.
+    "Last-Modified": stats.mtime.toUTCString(),
+    // Lets the board runtime detect a write-capable host with a silent HEAD
+    // probe, instead of discovering it via a 405 on the first save attempt.
+    "X-Cosmoboard-Server": "1"
   });
   if (request.method === "HEAD") {
     response.end();

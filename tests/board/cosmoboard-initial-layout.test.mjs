@@ -1,10 +1,26 @@
+// The cosmoboard opens with its title clear of the side nav and its demo cards
+// not overlapping each other.
+//
+// This asserts the LAYOUT, so it serves the board's real content with a fixed
+// camera rather than whatever camera is on disk. Merely panning a board marks it
+// dirty, so an open tab autosaves its live camera into current.canvas, and a
+// board without a defaultViewport then opens wherever that session was standing.
+// Leaving that behaviour alone is a product decision, taken 2026-07-31 and
+// recorded in .agents/todo.md; what it must not do is make this suite red at
+// random, which it did. Pinning the camera here is the same trick the stage gate
+// uses when it seeds the sandbox from a fixture: test the code, not the drift.
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { spawn } from "node:child_process";
 
 import { chromium } from "playwright";
 
 const port = 4184;
 const baseUrl = `http://127.0.0.1:${port}`;
+const canvasPath = path.join(process.cwd(), "content", "boards", "cosmoboard", "current.canvas");
+// The camera the board was committed with, which frames the title.
+const FIXED_VIEWPORT = { x: 438.5862987850285, y: -714.4976659255917, z: 0.7820227919797041 };
 
 function waitForServer(child) {
   return new Promise((resolve, reject) => {
@@ -44,6 +60,29 @@ try {
     viewport: { width: 1440, height: 960 }
   });
   const page = await context.newPage();
+
+  // Real nodes, fixed camera. Also refuse the save endpoint: this suite must
+  // never be the thing that writes a camera back into the board.
+  const boardOnDisk = JSON.parse(await readFile(canvasPath, "utf8"));
+  const boardWithFixedCamera = { ...boardOnDisk, viewport: FIXED_VIEWPORT };
+  await page.route("**/content/boards/cosmoboard/current.canvas*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(boardWithFixedCamera)
+    })
+  );
+  await page.route("**/api/save-board*", (route) =>
+    route.fulfill({ status: 503, body: "blocked by test" })
+  );
+  // A camera this visitor saved locally would win over the file, which is the
+  // whole point of that precedence, but it would also defeat the fixed camera.
+  await context.addInitScript(() => {
+    if (window.top !== window) return;
+    localStorage.removeItem("board:cosmoboard");
+    localStorage.removeItem("board:cosmoboard:meta");
+  });
+
   await page.goto(`${baseUrl}/cosmoboard`, { waitUntil: "networkidle" });
   await page.locator("#cosmo-title").waitFor();
 

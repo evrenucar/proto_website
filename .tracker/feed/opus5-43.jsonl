@@ -1,0 +1,3 @@
+﻿{"at":"2026-08-02T00:00:00Z","text":"opus5-43 starting on !p3 presentation/export of canvases. Reading router, test audit, runtime."}
+{"at":"2026-08-02T00:12:00Z","text":"Mapped the ground: camera/updateTransform (4141), defaultViewport + applyCameraOverride (14982), serializeState (2078), SHORTCUT_GROUPS/PALETTE_KEY_COMMANDS (14208/14440). Design forming: viewpoints[] as authored board content, presentation session state per-screen."}
+{"at":"2026-08-02T00:40:00Z","text":"Patch built: 10 hunks, all anchors unique, mirror syntax-clean. Test written at tests/board/presentation-mode.test.mjs, port 4402. Running it unpatched first to see it fail."}

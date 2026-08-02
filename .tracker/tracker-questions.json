@@ -1,43 +1,60 @@
 {
-  "updated": "2026-07-31",
+  "updated": "2026-08-01",
   "branch": "main",
   "suites": [
-    { "name": "build", "pass": 4, "total": 4 },
-    { "name": "preview", "pass": 4, "total": 4 },
-    { "name": "features", "pass": 4, "total": 4 },
-    { "name": "board", "pass": 33, "total": 33 },
-    { "name": "export", "pass": 2, "total": 3 }
-  ],
-  "answered": [
-    { "q": "Underscores", "a": "Add underscore emphasis, word boundaries only" },
-    { "q": "Shared entity", "a": "Add the entity node, un-park both tests" },
-    { "q": "Orphan node", "a": "Delete it from the cosmoboard canvas" },
-    { "q": "Preview port", "a": "Move to 4174 permanently, update the docs" }
-  ],
-  "questions": [
     {
-      "id": 5,
-      "label": "Landing page",
-      "title": "Should cosmoboard-landing.html be the page strangers are pointed at?",
-      "why": "It is the clearest explanation of Cosmoboard on the site, and objective criterion 3 is about a stranger understanding what this is. But it is noindex,nofollow, absent from the sitemap, and has no site nav, while onboarding.html gets the nav entry and the indexing. It is also hand-maintained, so it silently drifts: today it was still serving an old braindump.css hash and would have missed the panel fix entirely. This is a positioning call, not a technical one, so I have not touched any of it.",
-      "options": [
-        { "key": "A", "title": "Promote the landing page", "note": "Index it, add it to the sitemap, give it the nav entry, and point the nav there instead of onboarding.html.", "answer": "Promote cosmoboard-landing.html: index it, list it, give it the nav" },
-        { "key": "B", "title": "Keep onboarding as the front door", "note": "Landing stays an unlisted deep link you share by hand. No change.", "answer": "Leave onboarding.html as the front door, landing stays unlisted" },
-        { "key": "C", "title": "Both, landing first", "note": "Index both, but the nav and the sitemap lead with the landing page.", "answer": "Index both pages, lead with cosmoboard-landing.html" }
-      ]
+      "name": "build",
+      "pass": 4,
+      "total": 4
     },
     {
-      "id": 6,
-      "label": "Public PDFs",
-      "title": "Four PDFs are served publicly from the boards. Which stay?",
-      "why": "Two identical copies of the Maker Faire exhibitor list under content/boards/braindump/ (229 KB each, naming 119 people with zone and set-up assignments), plus two more on the cosmoboard board that were not on the earlier card: participant-information.pdf (118 KB, a different document, not a copy) and funda-hoca-sunum-26-4-28.pdf (8.7 MB). Cosmoboard is the board a stranger is most likely to open. I have not opened, moved, or deleted any of them — third-party material and your files are your call.",
-      "options": [
-        { "key": "A", "title": "Take all four down", "note": "Remove them from the boards and the repo, and adjust any node that points at one.", "answer": "Remove all four PDFs from the public boards and the repo" },
-        { "key": "B", "title": "Only the exhibitor list", "note": "The 119-name list is the privacy problem. The cosmoboard two stay.", "answer": "Remove the Maker Faire exhibitor list copies only" },
-        { "key": "C", "title": "I will check them myself", "note": "Leave everything in place until you have looked at what each one contains.", "answer": "Leave the PDFs alone for now, you will review them" }
-      ]
+      "name": "preview",
+      "pass": 4,
+      "total": 4
+    },
+    {
+      "name": "features",
+      "pass": 4,
+      "total": 4
+    },
+    {
+      "name": "board",
+      "pass": 33,
+      "total": 33
+    },
+    {
+      "name": "export",
+      "pass": 2,
+      "total": 3
     }
   ],
+  "answered": [
+    {
+      "q": "Underscores",
+      "a": "Add underscore emphasis, word boundaries only"
+    },
+    {
+      "q": "Shared entity",
+      "a": "Add the entity node, un-park both tests"
+    },
+    {
+      "q": "Orphan node",
+      "a": "Delete it from the cosmoboard canvas"
+    },
+    {
+      "q": "Preview port",
+      "a": "Move to 4174 permanently, update the docs"
+    },
+    {
+      "q": "Landing page",
+      "a": "Index both, and lead with cosmoboard-landing.html"
+    },
+    {
+      "q": "Public PDFs",
+      "a": "Remove all four PDFs from the boards and the repo"
+    }
+  ],
+  "questions": [],
   "archivedQuestions": [
     {
       "id": 1,
@@ -45,9 +62,24 @@
       "title": "Should _underscore_ render as italic?",
       "why": "It does not today. The renderer handles **bold**, *em*, `code` and links, but has no underscore rule, so _word_ shows its underscores. I found this while fixing the caret mapping, which had wrongly assumed the opposite. The caret is correct either way now, so this is purely your call on rendering.",
       "options": [
-        { "key": "A", "title": "Add the rule", "note": "Match standard markdown. _word_ becomes italic.", "answer": "Add underscore emphasis to the renderer" },
-        { "key": "B", "title": "Leave it as is", "note": "Keeps snake_case identifiers safe from accidental italics.", "answer": "Leave underscores literal, protects snake_case" },
-        { "key": "C", "title": "Only when spaced", "note": "Italic for _word_ but never inside a word, so file_name_here stays literal.", "answer": "Add underscore emphasis but only at word boundaries" }
+        {
+          "key": "A",
+          "title": "Add the rule",
+          "note": "Match standard markdown. _word_ becomes italic.",
+          "answer": "Add underscore emphasis to the renderer"
+        },
+        {
+          "key": "B",
+          "title": "Leave it as is",
+          "note": "Keeps snake_case identifiers safe from accidental italics.",
+          "answer": "Leave underscores literal, protects snake_case"
+        },
+        {
+          "key": "C",
+          "title": "Only when spaced",
+          "note": "Italic for _word_ but never inside a word, so file_name_here stays literal.",
+          "answer": "Add underscore emphasis but only at word boundaries"
+        }
       ]
     },
     {
@@ -56,9 +88,24 @@
       "title": "Build the missing shared-entity node?",
       "why": "src/entities/, content/entities/index.json and the base-data entityRef all exist, but the entity node was never added to the cosmoboard canvas, in any commit, despite a proof block once claiming it was. Two tests sit parked on this: shared-entity-build.pending.mjs and shared-entity-runtime-e2e.pending.mjs. This is the last thing keeping anything parked.",
       "options": [
-        { "key": "A", "title": "Add the node", "note": "Put an entity node on the cosmoboard canvas and un-park both tests.", "answer": "Add the entity node to the cosmoboard canvas and un-park the two tests" },
-        { "key": "B", "title": "Drop the feature", "note": "Delete the half-built entity plumbing and the two parked tests with it.", "answer": "Drop the shared-entity feature and its parked tests" },
-        { "key": "C", "title": "Leave parked", "note": "Not now. The tests stay out of the suite.", "answer": "Leave shared entities parked for now" }
+        {
+          "key": "A",
+          "title": "Add the node",
+          "note": "Put an entity node on the cosmoboard canvas and un-park both tests.",
+          "answer": "Add the entity node to the cosmoboard canvas and un-park the two tests"
+        },
+        {
+          "key": "B",
+          "title": "Drop the feature",
+          "note": "Delete the half-built entity plumbing and the two parked tests with it.",
+          "answer": "Drop the shared-entity feature and its parked tests"
+        },
+        {
+          "key": "C",
+          "title": "Leave parked",
+          "note": "Not now. The tests stay out of the suite.",
+          "answer": "Leave shared entities parked for now"
+        }
       ]
     },
     {
@@ -67,8 +114,18 @@
       "title": "What about the orphan markdown node?",
       "why": "The cosmoboard canvas has node hgr0v5cjqam pointing at note-2026-07-28-15-37-36.md, a file two earlier commits deleted on purpose as test litter. Its content was empty, so nothing was lost, but loading the board recreates the file as an empty sidecar and it shows up untracked every time.",
       "options": [
-        { "key": "A", "title": "Delete the node", "note": "Remove it from the canvas. Nothing was in it.", "answer": "Delete the orphan markdown node from the cosmoboard canvas" },
-        { "key": "B", "title": "Keep and fill it", "note": "The node stays, I commit a real file for it. Tell me what it should say.", "answer": "Keep the node and commit a real markdown file for it" }
+        {
+          "key": "A",
+          "title": "Delete the node",
+          "note": "Remove it from the canvas. Nothing was in it.",
+          "answer": "Delete the orphan markdown node from the cosmoboard canvas"
+        },
+        {
+          "key": "B",
+          "title": "Keep and fill it",
+          "note": "The node stays, I commit a real file for it. Tell me what it should say.",
+          "answer": "Keep the node and commit a real markdown file for it"
+        }
       ]
     },
     {
@@ -77,9 +134,76 @@
       "title": "Which port should the preview server use?",
       "why": "Your aide-board serve.mjs is holding 4173, so I started proto_website's preview on 4174 rather than killing your other project. Every doc in this repo still says 4173.",
       "options": [
-        { "key": "A", "title": "Stay on 4174", "note": "I update AGENTS.md and the docs to say 4174.", "answer": "Move proto_website preview to 4174 permanently and update the docs" },
-        { "key": "B", "title": "Take 4173 back", "note": "You stop aide-board when working here, I keep the docs as they are.", "answer": "Keep 4173 for proto_website, aide-board moves instead" },
-        { "key": "C", "title": "Leave it ad hoc", "note": "Whichever is free at the time. No doc change.", "answer": "No fixed port, use whatever is free" }
+        {
+          "key": "A",
+          "title": "Stay on 4174",
+          "note": "I update AGENTS.md and the docs to say 4174.",
+          "answer": "Move proto_website preview to 4174 permanently and update the docs"
+        },
+        {
+          "key": "B",
+          "title": "Take 4173 back",
+          "note": "You stop aide-board when working here, I keep the docs as they are.",
+          "answer": "Keep 4173 for proto_website, aide-board moves instead"
+        },
+        {
+          "key": "C",
+          "title": "Leave it ad hoc",
+          "note": "Whichever is free at the time. No doc change.",
+          "answer": "No fixed port, use whatever is free"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "label": "Landing page",
+      "title": "Should cosmoboard-landing.html be the page strangers are pointed at?",
+      "why": "It is the clearest explanation of Cosmoboard on the site, and objective criterion 3 is about a stranger understanding what this is. But it is noindex,nofollow, absent from the sitemap, and has no site nav, while onboarding.html gets the nav entry and the indexing. It is also hand-maintained, so it silently drifts: today it was still serving an old braindump.css hash and would have missed the panel fix entirely. This is a positioning call, not a technical one, so I have not touched any of it.",
+      "options": [
+        {
+          "key": "A",
+          "title": "Promote the landing page",
+          "note": "Index it, add it to the sitemap, give it the nav entry, and point the nav there instead of onboarding.html.",
+          "answer": "Promote cosmoboard-landing.html: index it, list it, give it the nav"
+        },
+        {
+          "key": "B",
+          "title": "Keep onboarding as the front door",
+          "note": "Landing stays an unlisted deep link you share by hand. No change.",
+          "answer": "Leave onboarding.html as the front door, landing stays unlisted"
+        },
+        {
+          "key": "C",
+          "title": "Both, landing first",
+          "note": "Index both, but the nav and the sitemap lead with the landing page.",
+          "answer": "Index both pages, lead with cosmoboard-landing.html"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "label": "Public PDFs",
+      "title": "Four PDFs are served publicly from the boards. Which stay?",
+      "why": "Two identical copies of the Maker Faire exhibitor list under content/boards/braindump/ (229 KB each, naming 119 people with zone and set-up assignments), plus two more on the cosmoboard board that were not on the earlier card: participant-information.pdf (118 KB, a different document, not a copy) and funda-hoca-sunum-26-4-28.pdf (8.7 MB). Cosmoboard is the board a stranger is most likely to open. I have not opened, moved, or deleted any of them — third-party material and your files are your call.",
+      "options": [
+        {
+          "key": "A",
+          "title": "Take all four down",
+          "note": "Remove them from the boards and the repo, and adjust any node that points at one.",
+          "answer": "Remove all four PDFs from the public boards and the repo"
+        },
+        {
+          "key": "B",
+          "title": "Only the exhibitor list",
+          "note": "The 119-name list is the privacy problem. The cosmoboard two stay.",
+          "answer": "Remove the Maker Faire exhibitor list copies only"
+        },
+        {
+          "key": "C",
+          "title": "I will check them myself",
+          "note": "Leave everything in place until you have looked at what each one contains.",
+          "answer": "Leave the PDFs alone for now, you will review them"
+        }
       ]
     }
   ]

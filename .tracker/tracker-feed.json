@@ -15,6 +15,156 @@
     "text": "Starting on three cards: the recommendation panel escaping the viewport near 1024px, plus the two you already answered on the board — delete the orphan node, make 4174 the documented port."
   },
   {
+    "at": "2026-07-30T17:55:00Z",
+    "agent": "claude",
+    "text": "VNC is built and demonstrated, so the three cards I claimed are all in Review. noVNC 1.7.0 vendored, a real vnc node type, client loaded on first connect so boards without one pay nothing. Target in the canvas, password in this browser only, and a node with both comes back by itself on reload with no typing. Proven against a 200-line RFB 3.8 server I wrote for the test: wrong password refused, right one connects, and the pixel drawn on the canvas is the pixel the server sent. It caught a real trap on the way: normalizeAssetUrl was turning ws://127.0.0.1:6080 into a bare slash. I see your three new bug cards, picking them up now. One finding for you in Bugs: cosmoboard-initial-layout is red because a live session saved a panned-away camera into the cosmoboard canvas, not because of any code. I left the file alone since it holds your uncommitted work."
+  },
+  {
+    "at": "2026-07-30T16:35:00Z",
+    "agent": "claude",
+    "text": "Two of the three To do cards are in Review. YouTube: the timeline is clickable now (the shield hands the pointer to the player on the first click and takes it back when the cursor returns to the canvas), and arrow keys seek from the real playhead (the API handshake was fired once before the player was ready, so it was dropped and every seek started from zero). Measured a scrub from 5.4s to 153.2s on a click 60 percent along the bar. Firefox Alt: a bare Alt is claimed in both directions, so the menu bar stays shut, with AltGr, Alt+letter and text fields deliberately left alone. Two new suites, plus stage gate, esc-deselect, wheel routing and the old YouTube embed suite all green. On to VNC."
+  },
+  {
+    "at": "2026-07-30T15:55:00Z",
+    "agent": "claude",
+    "text": "Alt-drag copy upgraded to your spec: Alt engages or disengages the copy at any moment of the drag, the stay-behind keeps the selected outline, the moving item glows teal at 20 percent, and release finalizes selection cleanly. Verified through every phase in a browser; suites green; sandbox restored."
+  },
+  {
+    "at": "2026-07-30T15:40:00Z",
+    "agent": "claude",
+    "text": "New goal from you: clear the To do column and test each one properly. Claimed all three: VNC support demonstrated on the test board with credentials that survive a reload, YouTube timeline scrubbing and arrow-key seeking, and the Firefox Alt menu bar. Diagnosis on the YouTube one already: the wheel shield sits over the whole player permanently and turns every left click into play/pause, so the controls never even appear, which is why the timeline is unclickable. Starting with the two small ones."
+  },
+  {
+    "at": "2026-07-30T15:30:00Z",
+    "agent": "claude",
+    "text": "The worst standing bug is dead: stale tabs can no longer silently overwrite newer board state. Saves carry the loaded baseline, the server refuses older ones, the tab says reload and keeps your work locally. Tested at the endpoint and in the suites. Backlog op-writes card annotated: it now buys merging, not safety, since safety is in."
+  },
+  {
+    "at": "2026-07-30T15:05:00Z",
+    "agent": "claude",
+    "text": "Fallback cards shipped: a live embed of a site that refuses iframes (github, google, notion, or anything the new /api/frame-check header probe catches) now shows a card naming the site with an open-in-new-tab hint, instead of the grey error box. Verified in a browser on github (known list), MDN (header probe) and example.com (stays live). Server on 4174 restarted with the endpoint; stage gate, YouTube and routes suites green. That is all three Backlog pulls done and in Review: perf budget test, benchmark backfill, fallback cards."
+  },
+  {
+    "at": "2026-07-30T15:00:00Z",
+    "agent": "claude",
+    "text": "Board clear again: zero To do, zero In progress. Final four built and verified: markdown downloads bundle their images as a zip with rewritten refs, Alt-drag copies (clone stays, drag moves), spawn placement probes for free space, and the dev board is linked from the tracker footer with an eleven-node showcase including the VNC slot and a drawing. Backlog holds the tagged roadmap. Handoff file is current; safe to /clear."
+  },
+  {
+    "at": "2026-07-30T14:40:00Z",
+    "agent": "claude",
+    "text": "Machine-readability is 100 percent: all 13 legacy markdown nodes carry stable ids now, and the four litter nodes (two empty texts, two links with no url and no title, zero edges touching them) are deleted. Site rebuilt, stage gate green. RELOAD any open braindump, cosmoboard or onboarding tabs; the guard would refuse their stale saves anyway, but reloading skips the interruption. Next: fallback preview cards for iframe-refusing sites."
+  },
+  {
+    "at": "2026-07-30T14:31:00Z",
+    "agent": "claude",
+    "text": "Perf budget test is in Review, and it caught something on arrival: the sandbox had drifted (stray nodes, a dead image ref, the markdown node renamed), which had the stage gate silently red. Both tests now seed canonical sandbox state before running, so play on the test board can never break the gates again; your sandbox is reset to canonical. The budget test measures idle, zoom, drag, pan frame times plus pointer dispatch cost, and runs in CI on every PR via the new board-tests workflow. Next: benchmark backfill to 100 percent."
+  },
+  {
+    "at": "2026-07-30T14:20:00Z",
+    "agent": "claude",
+    "text": "Embed overflow is fixed and in Review. Handoff written to .agents/handoffs/handoff_2026-07-30_cosmoboard_sprint.md: full session map, the four remaining To dos in pickup order, and every gotcha. Safe to /clear; the next session starts from the handoff and the board."
+  },
+  {
+    "at": "2026-07-30T14:17:30Z",
+    "agent": "claude",
+    "text": "New session from the handoff. Board is clear of open work, so pulling the next ranked items out of Backlog per the performance plan: the perf budget test first (the plan says it lands with the next test pass), then the benchmark backfill to 100 percent, then fallback preview cards for iframe-refusing sites. Incremental saves and staged mount stay parked until a board slow enough to prove them exists, as the plan specifies."
+  },
+  {
+    "at": "2026-07-30T14:00:00Z",
+    "agent": "claude",
+    "text": "Captured your five new reports as tagged To do cards and swept sixteen roadmap items into the new Backlog column, tagged by work area (sync, perf, runtime, apps, bases, shell, data, direction). Now building the To dos: overflow clipping first, then download-with-images, alt-drag copy, placement, and the dev board showcase."
+  },
+  {
+    "at": "2026-07-30T13:40:00Z",
+    "agent": "claude",
+    "text": "The board is fully cleared: zero To do, zero In progress. Last batch: parallel-suite flake fixed with a build lock, one-click entry into notes (drag still wins), claimed cards sort first, Done is a full-width bar below the columns, download button verified complete, and the direction plus runtime decisions are drafted in holistic_planning.md awaiting your approve or edit. Everything is in Review with how-to-check steps."
+  },
+  {
+    "at": "2026-07-30T13:20:00Z",
+    "agent": "claude",
+    "text": "Both performance features shipped and in Review. Lazy embeds: iframes load only when their node nears the viewport and unload after two minutes offscreen, verified live. Selection as state: one observer-backed Set behind a single getter, O(selection) reads, zero behavior change, all suites green."
+  },
+  {
+    "at": "2026-07-30T12:00:00Z",
+    "agent": "claude",
+    "text": "Your two notes (cant see compact, wrap not taking effect): both are the tab running the old page. RELOAD THE TRACKER TAB ONCE and both appear. Also fixed permanently: the tracker now watches its own file and shows a New version reload button whenever it changes under an open tab."
+  },
+  {
+    "at": "2026-07-30T11:50:00Z",
+    "agent": "claude",
+    "text": "GitHub sync is built and in Review: repo, branch and token in the gear panel, every save commits the canvas via the Contents API, works from static hosts too, token never leaves your browser. Proven end to end with a deliberate bad token reaching GitHub and failing cleanly. Paste a real fine-grained token to go live."
+  },
+  {
+    "at": "2026-07-30T11:20:00Z",
+    "agent": "claude",
+    "text": "Dev board docs are real markdown nodes now, content rendered on the board. IMPORTANT: reload your dev-board tab before touching it. Your open tab autosaved its old link-node state over the first conversion (the stale-tab clobber the op-writes plan is for); a tab from before this change will do it again."
+  },
+  {
+    "at": "2026-07-30T08:00:00Z",
+    "agent": "claude",
+    "text": "Every p3, p4 and p5 item is cleared into Review, old and new. Built: crisp-after-zoom text, instant more-button, compact mode, wrapping headings, Backlog column with collapsed Done, underscore emphasis, Notion sync unblocked (the page needs re-sharing, details on the card), landing page fully generated. Written: perf action plan, VNC and iframe answers, machine-readability benchmark scoring 89 percent, all linked on the new dev board at /content/boards/dev.html. GitHub sync is filed p1 and is the next big build."
+  },
+  {
+    "at": "2026-07-30T06:10:00Z",
+    "agent": "claude",
+    "text": "Filed your ten observations as cards: pixelated text and GitHub sync at p1, the four tracker UX items at p2, VNC, iframes, perf analysis and the machine-readable benchmark at p3. Now clearing everything at p3 to p5, old and new."
+  },
+  {
+    "at": "2026-07-30T05:50:00Z",
+    "agent": "claude",
+    "text": "In progress is empty again, all thirteen cards in Review. The last five: card timestamps live on the board, file IDs verified already built, realtime assessed with a staged plan in whiteboard/realtime_collaboration_note.md, image paste into markdown notes shipped and proven on the test board, and .playwright-mcp untracked from the public site. Caret probes still 72/72, stage gate 9/9."
+  },
+  {
+    "at": "2026-07-30T05:35:00Z",
+    "agent": "claude",
+    "text": "Eight of twelve done: shared-entity duplicate resolved, filename separator, shift-arrow selection, panel overflow, lightbox hit area, landing page promoted to the nav and index, the 405 killed at the source with host detection, and the export e2e passes for the first time ever after finding a real bug: the import picker silently ignored zip and canvas files. Export suite 3/3. Four to go."
+  },
+  {
+    "at": "2026-07-30T04:00:00Z",
+    "agent": "claude",
+    "text": "Claimed the twelve cards you moved to In progress. Order: quick fixes first (separator, shift-arrows, panel overflow, focus-view hit area, stale shared-entity duplicate), then landing page promotion, 405 quieting, export e2e diagnosis, card timestamps, image paste, file IDs, and a realtime feasibility write-up last."
+  },
+  {
+    "at": "2026-07-30T03:40:00Z",
+    "agent": "claude",
+    "text": "All four In progress cards are in Review. Entity node built with a real runtime renderer, both parked tests green. Orphan node verified gone. Port 4174 docs finished. Zoom spikes: will-change on the board layer plus a worst-frame and spike counter in the dev overlay; the 60fps cap is your display setting, details on the card. Reload any open cosmoboard tab before editing it."
+  },
+  {
+    "at": "2026-07-30T03:05:00Z",
+    "agent": "claude",
+    "text": "Picked up all four In progress cards: orphan node, port 4174 docs, entity node with its parked tests, and the 240hz plus zoom-spike performance question. Working them in that order."
+  },
+  {
+    "at": "2026-07-30T02:50:00Z",
+    "agent": "claude",
+    "text": "Stage-gate suite is in: nine cases on the test board covering load, zoom, drag, undo, resize, text editing, markdown and dev mode, all green, tree clean after each run. Tracker controls also got proper screen-reader names. Direction card filed for the OS trajectory."
+  },
+  {
+    "at": "2026-07-30T02:26:00Z",
+    "agent": "claude",
+    "text": "Test board is live at /content/boards/test-board.html: one node of each kind, an instructions list, a disposable markdown sidecar. Not indexed, not in the sitemap. Break it freely; git checkout resets it."
+  },
+  {
+    "at": "2026-07-30T01:45:00Z",
+    "agent": "claude",
+    "text": "Performance pass: found and removed the ten-window-listeners-per-node pattern in drag and resize. Pointer-move overhead down 34x on the 145-node board, deleted nodes no longer leak. All six interaction suites pass. Zoom was measured already at 60 FPS, so nothing speculative shipped."
+  },
+  {
+    "at": "2026-07-30T00:58:00Z",
+    "agent": "claude",
+    "text": "Shipped: priority chips (click again to clear), developer mode overlay reading 60 FPS on the live board, inline card editing from your note, feedback drafts that survive reloads, and both Maker Faire PDFs deleted. Preview, build and board suites green."
+  },
+  {
+    "at": "2026-07-30T00:05:00Z",
+    "agent": "claude",
+    "text": "Claimed two cards: priority labels on the tracker, and a developer mode with FPS, camera, pointer and selection readouts in the board settings."
+  },
+  {
+    "at": "2026-07-29T21:20:53Z",
+    "agent": "claude",
+    "text": "Read COSMOBOARD_MIGRATION.md, the direction handoff written in the Punchlist repo, and reconciled it against this repo. Summary in chat, nothing changed, direction call is yours."
+  },
+  {
     "at": "2026-07-29T14:05:00Z",
     "agent": "claude",
     "text": "Shipped. 31 commits merged to main, first deploy since 22 June. onboarding.html is live and the nav points at it. Runtime went from v=58 to current."

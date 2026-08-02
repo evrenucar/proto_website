@@ -77,6 +77,11 @@ try {
   };
 
   const reset = (itemId) => page.evaluate((itemId) => {
+    // One-click entry leaves the editor focused; a focused contenteditable
+    // body intentionally refuses drags, so blur it before the next case.
+    if (document.activeElement && document.activeElement !== document.body) {
+      document.activeElement.blur?.();
+    }
     document.querySelectorAll(".bd-item.selected").forEach(n => n.classList.remove("selected"));
     document.querySelectorAll(".bd-md-line--active").forEach(n => n.classList.remove("bd-md-line--active"));
     const sel = window.getSelection();
@@ -90,7 +95,10 @@ try {
   const itemId = await page.evaluate(() => document.querySelector(".bd-item.bd-layer-markdown")?.id);
   assert.ok(itemId, "found a markdown bd-item");
 
-  // 1) Click body of unselected markdown — should select item but NOT activate any line
+  // 1) One-click entry (2026-07-30): a stationary click on an unselected
+  // markdown body selects the item AND activates the clicked line. Drag
+  // precedence is preserved because activation happens on a movement-free
+  // mouseup, which case 2 pins.
   await reset(itemId);
   await simulate({ down: true, up: true }, itemId, ".bd-markdown-body");
   await new Promise(r => setTimeout(r, 60));
@@ -103,7 +111,7 @@ try {
     };
   }, itemId);
   assert.equal(afterClick.selected, true, "click on unselected markdown body should select the item");
-  assert.equal(afterClick.activeLines, 0, "click on unselected markdown body must NOT activate a line (drag must take precedence)");
+  assert.equal(afterClick.activeLines, 1, "a stationary click on an unselected markdown body enters editing (one-click entry)");
 
   // 2) Drag from body — item should move
   await reset(itemId);

@@ -10,10 +10,24 @@
   display: none !important;
 }
 
+/* The board is a fixed viewport, so the page under it must never scroll. The
+   `overflow: hidden` on `.page-board` above cannot do that on its own: it sits
+   on `body`, and body's overflow only reaches the viewport when the ROOT
+   element's overflow is `visible` in both axes. `CSS/site.css` sets
+   `html { overflow-x: clip }` site-wide, so it never is, and that declaration
+   has been inert since it was written.
+   It matters on a phone and nowhere else. `100vh` there is the large viewport,
+   the height you get once the URL bar has gone, so a board page is about 56px
+   taller than the screen for as long as the bar is showing. Flick past the end
+   of a note or of the settings panel and the gesture chains out of them and
+   into that 56px, which is the "randomly becomes scrollable" in the report.
+   Scoped to board pages on purpose: the rest of the site scrolls normally and
+   a global rule here would break it. */
 .page-board html,
 html.page-board,
 html:has(body.page-board) {
   scrollbar-gutter: auto !important;
+  overflow: hidden;
 }
 
 .page-board .main-shell {
@@ -44,9 +58,9 @@ html:has(body.page-board) {
   height: 100vh;
   z-index: 1;
   overflow: hidden;
-  background-color: #151515;
+  background-color: var(--bd-canvas-bg, #151515);
   cursor: grab;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   touch-action: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -63,7 +77,7 @@ html:has(body.page-board) {
   z-index: 8;
   width: min(360px, calc(100vw - var(--desktop-nav-width) - 56px));
   padding: 18px 18px 16px;
-  border: 1px solid rgba(63, 218, 202, 0.2);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
   border-radius: 14px;
   background: rgba(17, 17, 17, 0.9);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
@@ -74,7 +88,7 @@ html:has(body.page-board) {
 .board-page-panel-eyebrow {
   margin: 0 0 10px;
   padding-right: 32px;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -84,7 +98,7 @@ html:has(body.page-board) {
 .board-page-panel-title {
   margin: 0 0 12px;
   padding-right: 32px;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font-size: clamp(1.35rem, 2vw, 1.7rem);
   line-height: 1.15;
 }
@@ -92,7 +106,7 @@ html:has(body.page-board) {
 .board-page-panel-copy,
 .board-page-panel-note {
   margin: 0;
-  color: rgba(250, 250, 250, 0.78);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.78);
   font-size: 14px;
   line-height: 1.55;
 }
@@ -106,7 +120,7 @@ html:has(body.page-board) {
 
 .board-page-panel-list {
   padding-left: 1.1rem;
-  color: rgba(250, 250, 250, 0.9);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.9);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -126,23 +140,23 @@ html:has(body.page-board) {
   align-items: center;
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgba(63, 218, 202, 0.24);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.24);
   border-radius: 999px;
-  background: rgba(63, 218, 202, 0.08);
-  color: #fafafa;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.08);
+  color: var(--bd-ink, #fafafa);
   font-size: 12px;
   font-weight: 600;
   transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .board-page-panel-link:hover {
-  border-color: rgba(63, 218, 202, 0.44);
-  background: rgba(63, 218, 202, 0.16);
-  color: #3fdaca;
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.44);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.16);
+  color: var(--bd-accent, #3fdaca);
 }
 
 .board-page-panel-note {
-  color: rgba(250, 250, 250, 0.62);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.62);
   font-size: 12px;
 }
 
@@ -161,7 +175,7 @@ html:has(body.page-board) {
   border: 1px solid transparent;
   border-radius: 8px;
   background: none;
-  color: rgba(250, 250, 250, 0.55);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.55);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -169,9 +183,9 @@ html:has(body.page-board) {
 }
 
 .board-page-panel-dismiss:hover {
-  border-color: rgba(63, 218, 202, 0.35);
-  background: rgba(63, 218, 202, 0.12);
-  color: #3fdaca;
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.35);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.12);
+  color: var(--bd-accent, #3fdaca);
 }
 
 .board-page-panel-close {
@@ -180,10 +194,10 @@ html:has(body.page-board) {
   align-items: center;
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgba(250, 250, 250, 0.16);
+  border: 1px solid rgba(var(--bd-ink-rgb, 250, 250, 250), 0.16);
   border-radius: 999px;
   background: none;
-  color: rgba(250, 250, 250, 0.7);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.7);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -192,14 +206,14 @@ html:has(body.page-board) {
 }
 
 .board-page-panel-close:hover {
-  border-color: rgba(250, 250, 250, 0.34);
-  background: rgba(250, 250, 250, 0.08);
-  color: #fafafa;
+  border-color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.34);
+  background: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.08);
+  color: var(--bd-ink, #fafafa);
 }
 
 .board-page-panel-dismiss:focus-visible,
 .board-page-panel-close:focus-visible {
-  outline: 2px solid #3fdaca;
+  outline: 2px solid var(--bd-accent, #3fdaca);
   outline-offset: 2px;
 }
 
@@ -218,6 +232,14 @@ html:has(body.page-board) {
   transform-origin: 0 0;
 }
 
+/* Only while a zoom gesture is running: the layer stays composited so scale
+   changes reuse stale-scale tiles instead of stalling the frame. The class
+   drops shortly after the gesture ends, which forces a crisp re-raster at
+   rest. A permanent will-change here left text pixelated after zooming. */
+.braindump-canvas.is-zooming {
+  will-change: transform;
+}
+
 .braindump-grid {
   position: absolute;
   top: -120000px;
@@ -229,7 +251,7 @@ html:has(body.page-board) {
 }
 
 .braindump-grid-dot {
-  fill: #333;
+  fill: var(--bd-grid-dot, #333);
   shape-rendering: geometricPrecision;
 }
 
@@ -242,10 +264,28 @@ html:has(body.page-board) {
   z-index: 500;
 }
 
+/* No stroke-width in this rule. startDrawing sets the live stroke's width as a
+   presentation attribute from the brush size, and a stylesheet declaration
+   silently beats a presentation attribute, so `stroke-width: 4px` here pinned
+   the preview to 4 canvas units at every brush size: the line under the cursor
+   was thin and jumped to the real width the moment you let go. Measured with a
+   brush of 24, in screen pixels: live 4.00 vs finished 24.00 at zoom 1, and
+   2.00 vs 12.00 at zoom 0.5. The ratio is brush/4 at any zoom. */
+/* No `stroke` and no `stroke-width` here, deliberately. A stylesheet
+   declaration outranks an SVG presentation attribute, so both of those silently
+   beat what startDrawing writes onto the live path.
+   `stroke-width: 4px` did exactly that and was the whole of the "as you draw a
+   thin line shows, but when you let go it goes to the set thickness" bug: the
+   live preview was pinned at 4 units at every brush size while the finished node
+   rendered at its own attribute. Measured at brush 24: live 4.00px against a
+   finished 23.999px on screen, and the ratio held at every zoom. It hid for
+   months because the default brush is 4, the same number.
+   `stroke` was the same bug waiting for a trigger. It is invisible only because
+   getPenStrokeColor() returns the accent, so the two values agree today; the
+   moment the pen gets a colour of its own it would have overridden it in
+   exactly the same way. Removed while the reason is written down. */
 #braindump-svg-layer path {
   fill: none;
-  stroke: #3fdaca;
-  stroke-width: 4px;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: auto;
@@ -262,14 +302,217 @@ html:has(body.page-board) {
 }
 
 .braindump-viewport[data-mode="draw"] .bd-item,
-.braindump-viewport[data-mode="draw"] .bd-item * {
+.braindump-viewport[data-mode="draw"] .bd-item *,
+.braindump-viewport[data-mode="shape"] .bd-item,
+.braindump-viewport[data-mode="shape"] .bd-item * {
   pointer-events: none !important;
 }
 
 .bd-item.selected {
-  outline: 2px solid #3fdaca;
+  outline: 2px solid var(--bd-accent, #3fdaca);
   outline-offset: 4px;
   z-index: 100 !important;
+}
+
+/* Pinned to the viewport. The item is counter-transformed so it holds still on
+   screen while the board moves under it, so it has to float above everything it
+   passes over, including a selected item. The cyan ring is a box-shadow rather
+   than an outline so it does not fight the selection outline: a pinned item is
+   still selectable and still shows selection. */
+.bd-item.is-pinned {
+  z-index: 200 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(var(--bd-accent-rgb, 63, 218, 202), 0.55);
+}
+
+/* Resizing writes the model's width and height, which a pin must never change,
+   so the handle goes away while pinned. !important because the rule that shows
+   it is scoped to the viewport's select mode and outranks this one. */
+.bd-item.is-pinned .resize-handle {
+  display: none !important;
+}
+
+/* The place the pinned item came from. Inert to the pointer so it never eats a
+   rubber-band selection, and sized from the stored footprint, so it is also the
+   visible proof that pinning left the geometry alone. */
+.bd-pin-ghost {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.45);
+  border-radius: 8px;
+  color: var(--bd-accent, #3fdaca);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* The ring you grab a pinned item by. It sits in the viewport layer rather than
+   inside the node, for two reasons: nothing is added to the node, so an iframe
+   is never touched, and the handles land above .bd-embed-shield, which swallows
+   every mousedown over a live embed and leaves it no other handle.
+   The frame must sit over the board and UNDER the toolbar, which is where the
+   pinned item itself already sits. That means below .braindump-toolbar-shell's
+   z-index 10, not above it: at 30 the handles' pointer-events:auto laid an
+   invisible 12px band (24px at the corners) over the toolbar buttons, so
+   dragging a pin's bottom edge onto the toolbar row made "Select (V)" start a
+   pin drag instead. The frame is inert; only the handles take the pointer. */
+.bd-pin-frame {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Invisible until you approach it. All eight move the box, so all eight show
+   the move cursor: resizing comes from the snap zones, not from the handles. */
+.bd-pin-handle {
+  position: absolute;
+  pointer-events: auto;
+  cursor: move;
+  background-color: transparent;
+  border-radius: 3px;
+  transition: background-color 120ms ease;
+}
+
+.bd-pin-handle:hover,
+.bd-pin-handle:active {
+  background-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.35);
+}
+
+/* 12px bands straddling the border, 6px either side, so the grab area never
+   eats more than 6px of the item's own content. */
+.bd-pin-handle-n { left: -6px; right: -6px; top: -6px; height: 12px; }
+.bd-pin-handle-s { left: -6px; right: -6px; bottom: -6px; height: 12px; }
+.bd-pin-handle-w { top: -6px; bottom: -6px; left: -6px; width: 12px; }
+.bd-pin-handle-e { top: -6px; bottom: -6px; right: -6px; width: 12px; }
+.bd-pin-handle-nw { left: -6px; top: -6px; width: 24px; height: 24px; }
+.bd-pin-handle-ne { right: -6px; top: -6px; width: 24px; height: 24px; }
+.bd-pin-handle-sw { left: -6px; bottom: -6px; width: 24px; height: 24px; }
+.bd-pin-handle-se { right: -6px; bottom: -6px; width: 24px; height: 24px; }
+
+/* A finger is not a mouse pointer. 12px bands and 24px corners are the numbers
+   you pick when you can aim at a single pixel; every touch guideline in
+   circulation says 44. So the bands grow to 44 here, and they carry a faint
+   tint because there is no hover on a touchscreen to discover an invisible
+   ring with.
+   They grow INWARD, not outward. Weighted outward (32 out, 12 in) the ring
+   reached 32px past the pinned box on all four sides, and since a handle takes
+   the pointer and swallows the event, every pinned item would sit inside a
+   26px-wider interception ring: a tap on an ordinary node near a pinned one
+   starts a pin drag instead of selecting that node. The cost of growing inward
+   is paid by the pinned item's own content, which is already what the 12px
+   band does, and it is the item you are deliberately manipulating. 6px of
+   outward reach is kept so the ring is still grabbable when a pin is flush
+   against a screen edge. */
+@media (pointer: coarse) {
+  .bd-pin-handle {
+    background-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.14);
+  }
+  .bd-pin-handle-n { left: -6px; right: -6px; top: -6px; height: 44px; }
+  .bd-pin-handle-s { left: -6px; right: -6px; bottom: -6px; height: 44px; }
+  .bd-pin-handle-w { top: -6px; bottom: -6px; left: -6px; width: 44px; }
+  .bd-pin-handle-e { top: -6px; bottom: -6px; right: -6px; width: 44px; }
+  .bd-pin-handle-nw { left: -6px; top: -6px; width: 44px; height: 44px; }
+  .bd-pin-handle-ne { right: -6px; top: -6px; width: 44px; height: 44px; }
+  .bd-pin-handle-sw { left: -6px; bottom: -6px; width: 44px; height: 44px; }
+  .bd-pin-handle-se { right: -6px; bottom: -6px; width: 44px; height: 44px; }
+}
+
+/* Where the box lands if you let go now. Same 20% cyan as the ghost, so the two
+   cyan rectangles on screen read as one idea: where it came from, where it is
+   going. Sits just under the frame so a handle is never tinted by it. */
+.bd-pin-snap-preview {
+  position: absolute;
+  pointer-events: none;
+  z-index: 29;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.5);
+  border-radius: 8px;
+}
+
+/* The axis lock used to live entirely in your fingers: you held Shift and hoped.
+   This is the line it is snapping to, drawn through the drag's ORIGIN at the
+   angle the offset chose. It is not touch-only, because the desktop gesture had
+   no on-screen feedback either. 300vmax so it reaches both edges at any angle. */
+.bd-axis-lock-guide {
+  position: absolute;
+  display: none;
+  left: 0;
+  top: 0;
+  width: 300vmax;
+  height: 0;
+  border-top: 1px dashed rgba(var(--bd-accent-rgb, 63, 218, 202), 0.8);
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* The touch gesture bar. It only exists on a device that reports a touch point,
+   so a mouse-only board never renders it. Right edge, vertically centred: the
+   toolbar pill spans the whole width of a 393px phone along the bottom, the
+   board lock sits just above its right end, and the site's nav toggle owns the
+   top right corner. */
+.braindump-touch-gestures {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(26, 25, 25, 0.92);
+  border: 1px solid #2d2c2c;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  touch-action: manipulation;
+}
+
+/* 48, not 44. 44 is the floor, and this is a control pressed with a thumb while
+   the other hand is holding the phone. */
+.braindump-touch-gesture {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #bfbfbf;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.braindump-touch-gesture.is-on {
+  background: #2a2a2a;
+  border-color: #343434;
+  color: var(--bd-accent, #3fdaca);
+}
+
+.braindump-touch-gesture.is-idle {
+  opacity: 0.45;
+}
+
+[data-bd-theme="light"] .braindump-touch-gestures {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-touch-gesture {
+  color: var(--bd-light-muted);
+}
+
+[data-bd-theme="light"] .braindump-touch-gesture.is-on {
+  background: var(--bd-light-raised);
+  border-color: var(--bd-light-line);
+  color: var(--bd-accent);
 }
 
 .bd-item .resize-handle {
@@ -296,15 +539,33 @@ html:has(body.page-board) {
   bottom: 14px;
   width: 12px;
   height: 12px;
-  background: #fafafa;
+  background: var(--bd-ink, #fafafa);
   border: 1px solid #1a1a1a;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
 
-.braindump-viewport[data-mode="select"] .bd-item.selected .resize-handle {
+.braindump-viewport[data-mode="select"] .bd-item.selected .resize-handle,
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle {
   display: block;
+}
+
+/* Rotation mode reuses the corner handle rather than growing a second one, so
+   the only difference the user sees is what it does and what it looks like.
+   The accent fill is the mode's indicator: R has no toolbar button to light up,
+   so without this the board gives no sign it is in rotation mode at all. */
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle {
+  cursor: grab;
+}
+
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle::after {
+  background: var(--bd-accent, #3fdaca);
+  border-color: var(--bd-accent, #3fdaca);
+}
+
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle:active {
+  cursor: grabbing;
 }
 
 /* Image crop */
@@ -335,7 +596,7 @@ html:has(body.page-board) {
 
 .bd-item.is-cropping {
   z-index: 200 !important;
-  outline: 2px solid #3fdaca;
+  outline: 2px solid var(--bd-accent, #3fdaca);
   outline-offset: 4px;
 }
 
@@ -372,7 +633,7 @@ html:has(body.page-board) {
 
 .bd-crop-window {
   position: absolute;
-  border: 1px solid rgba(63, 218, 202, 0.9);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.9);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
   cursor: move;
   touch-action: none;
@@ -397,7 +658,7 @@ html:has(body.page-board) {
   top: 6px;
   width: 12px;
   height: 12px;
-  background: #fafafa;
+  background: var(--bd-ink, #fafafa);
   border: 1px solid #1a1a1a;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
@@ -435,7 +696,7 @@ html:has(body.page-board) {
   font-size: 11px;
   color: rgba(245, 245, 245, 0.78);
   background: rgba(20, 20, 20, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.15);
   padding: 4px 8px;
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
@@ -448,7 +709,7 @@ html:has(body.page-board) {
 
 .bd-crop-actionbar button {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.18);
   background: rgba(20, 20, 20, 0.92);
   color: #f5f5f5;
   font: inherit;
@@ -461,15 +722,15 @@ html:has(body.page-board) {
 
 .bd-crop-actionbar button:hover {
   background: rgba(40, 40, 40, 0.96);
-  border-color: rgba(63, 218, 202, 0.6);
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.6);
 }
 
 .bd-crop-actionbar button.bd-crop-bake {
-  border-color: rgba(63, 218, 202, 0.55);
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.55);
 }
 
 .bd-crop-actionbar button.bd-crop-done {
-  background: rgba(63, 218, 202, 0.9);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.9);
   color: #0a0a0a;
   border-color: transparent;
 }
@@ -481,7 +742,7 @@ html:has(body.page-board) {
   border: 1px solid #343434;
   border-radius: 8px;
   padding: 12px;
-  color: #fff;
+  color: var(--bd-ink, #fff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -518,7 +779,7 @@ html:has(body.page-board) {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  caret-color: #fafafa;
+  caret-color: var(--bd-ink, #fafafa);
 }
 
 .bd-text-editor[contenteditable="true"] {
@@ -562,7 +823,7 @@ html:has(body.page-board) {
 }
 
 .bd-item.bd-layer-draw.selected {
-  outline: 2px dashed #3fdaca !important;
+  outline: 2px dashed var(--bd-accent, #3fdaca) !important;
   outline-offset: 2px;
 }
 
@@ -573,11 +834,10 @@ html:has(body.page-board) {
   border: 1px solid #343434;
   border-radius: 8px;
   padding: 16px;
-  min-width: 200px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  color: #fff;
+  color: var(--bd-ink, #fff);
 }
 
 .bd-link-shell {
@@ -585,6 +845,13 @@ html:has(body.page-board) {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  /* Fill the node and clip, the same deal .bd-link-live already gets below.
+     Without it the shell keeps its intrinsic content height however short the
+     node is dragged, and the card paints outside the box: image, title and
+     description hanging 279px below a 50px node. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .bd-link-shell.bd-link-live {
@@ -594,14 +861,18 @@ html:has(body.page-board) {
   border-radius: 8px;
   border: 1px solid #333;
   position: relative;
+  /* Content stays inside the node box; the iframe used to poke out below by
+     the header's height (flex:1 fought height:100%). */
+  overflow: hidden;
 }
 
 .bd-auto-size-content {
+  /* renderNode writes width and height inline on every node, so the max-content
+     sizes here never applied. The clamp did: it pinned preview cards to a
+     250-400px band and swallowed every sideways resize drag outside it, which
+     is why a link card felt like it only resized up and down, and why a wide
+     live embed snapped back to 400px when toggled to preview. */
   box-sizing: border-box;
-  width: max-content;
-  height: max-content;
-  min-width: 250px;
-  max-width: 400px;
 }
 
 .bd-link-editor {
@@ -627,7 +898,7 @@ html:has(body.page-board) {
   border: 1px solid #3a3a3a;
   border-radius: 8px;
   background: #121212;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font: inherit;
   outline: none;
   user-select: text;
@@ -637,13 +908,13 @@ html:has(body.page-board) {
 }
 
 .bd-link-editor-input:focus {
-  border-color: #3fdaca;
-  box-shadow: 0 0 0 3px rgba(63, 218, 202, 0.15);
+  border-color: var(--bd-accent, #3fdaca);
+  box-shadow: 0 0 0 3px rgba(var(--bd-accent-rgb, 63, 218, 202), 0.15);
 }
 
 .bd-link-editor-hint {
   margin: 0;
-  color: rgba(250, 250, 250, 0.62);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.62);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -651,6 +922,10 @@ html:has(body.page-board) {
 .bd-bookmark-image {
   width: 100%;
   height: 160px;
+  /* Shrinkable, so a short card crops the hero rather than shoving the title
+     and description out of the node. object-fit keeps the crop centred. */
+  flex: 0 1 160px;
+  min-height: 0;
   border-radius: 4px;
   object-fit: cover;
   background-color: #1f1f1f;
@@ -672,7 +947,7 @@ html:has(body.page-board) {
 
 .bd-bookmark-desc {
   margin: 0;
-  color: rgba(250, 250, 250, 0.7);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.7);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -683,7 +958,7 @@ html:has(body.page-board) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   text-decoration: none;
   font-size: 14px;
 }
@@ -697,8 +972,8 @@ html:has(body.page-board) {
   top: 8px;
   right: 8px;
   background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.15);
+  color: var(--bd-ink, #fff);
   border-radius: 6px;
   width: 28px;
   height: 28px;
@@ -713,8 +988,8 @@ html:has(body.page-board) {
 
 .bd-bookmark-live-btn:hover {
   background: rgba(0, 0, 0, 0.8);
-  border-color: rgba(63, 218, 202, 0.4);
-  color: #3fdaca;
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.4);
+  color: var(--bd-accent, #3fdaca);
   transform: scale(1.05);
 }
 
@@ -734,8 +1009,8 @@ html:has(body.page-board) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.08);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
   color: #ccc;
   font-size: 11px;
   font-weight: 600;
@@ -749,50 +1024,163 @@ html:has(body.page-board) {
 
 .bd-embed-toggle-btn:hover,
 .bd-embed-open-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.15);
+  color: var(--bd-ink, #fff);
 }
 
 .bd-embed-domain {
-  flex: 1;
+  /* Hug the address and let the auto margins centre it. The whole header still
+     drags the node (mousedown on the address bubbles), so this is about keeping
+     a long url from crowding out the buttons, not about preserving a grab
+     target. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 60%;
+  margin: 0 auto;
   text-align: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.4);
+  pointer-events: none;
+  /* Anchors the hover tooltip below. Ellipsis truncation moved onto the inner
+     .bd-embed-domain-text span so this element can be overflow: visible and
+     not clip the tooltip it hosts (a pseudo-element is clipped by its own
+     parent's overflow, not just by outer ancestors). */
+  position: relative;
+}
+
+.bd-embed-domain-text {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  pointer-events: none;
+}
+
+/* Only a real address is interactive. A local file has nothing worth copying,
+   so it keeps the old inert behaviour and stays part of the drag handle. */
+.bd-embed-domain[data-embed-url] {
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.bd-embed-domain[data-embed-url]:hover {
+  color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.7);
+}
+
+/* Hover hint, gated to real pointer+hover devices so it can never appear on
+   touch (there is no hover there, and a tap would leave it stuck). Opens
+   downward, not upward: .bd-link-shell.bd-link-live clips overflow, and the
+   header sits at its very top, so a tooltip opening upward would be cut off
+   at the node's edge. Downward stays inside the node's own box instead. */
+@media (hover: hover) and (pointer: fine) {
+  .bd-embed-domain[data-embed-url]::after {
+    content: "Double-click to copy";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translate(-50%, 4px);
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+    z-index: 5;
+  }
+
+  .bd-embed-domain[data-embed-url]:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 .bd-embed-iframe {
   flex: 1;
   width: 100%;
-  height: 100%;
+  /* height:100% alongside flex:1 made the iframe as tall as the whole shell,
+     overflowing by the header height. flex sizing alone is correct. */
+  height: auto;
+  min-height: 0;
   border: none;
   background: #fff;
   border-radius: 0 0 8px 8px;
 }
 
-/* Transparent shield over YouTube iframes only. Captures wheel so canvas zoom
-   keeps working while the cursor is over the video (YouTube has no scrollable
-   content, so we never need iframe scroll). On click the shield disables itself
-   (.is-passthrough) so play/pause/seek reach the iframe; it re-enables once the
-   user clicks anywhere outside this embed. See JavaScript/braindump.js. */
-.bd-yt-wheel-shield {
+/* Transparent shield over every live embed: PDFs, websites and videos alike.
+   Captures wheel so canvas zoom keeps working while the cursor is over an
+   iframe, which otherwise swallows it and scrolls its own content instead. The
+   first click turns the shield into .is-passthrough, which hands the pointer to
+   the embed so its own controls work: a PDF scrolls and its pages are
+   clickable, a video gets timeline scrub, volume and settings. The shield takes
+   over again the moment the cursor comes back to the canvas.
+   See JavaScript/braindump.js. */
+.bd-embed-shield {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Sit below the .bd-embed-header (~32px). Cover only the iframe area so
-     header buttons (Preview / Open) stay clickable without indirection. */
-  top: 32px;
+  inset: 0;
   z-index: 2;
   background: transparent;
   pointer-events: auto;
 }
 
-.bd-yt-wheel-shield.is-passthrough {
+/* The headers stack above the shield rather than the shield starting below a
+   hard-coded header height. That guessed 32px was already approximate, and app
+   headers are a different height entirely, so the offset could not be shared.
+   Stacking keeps every header button (Preview / Open / fullscreen / Minimize)
+   directly clickable whatever the header grows into. */
+.bd-embed-header,
+.bd-app-header {
+  position: relative;
+  z-index: 3;
+}
+
+.bd-embed-shield.is-passthrough {
   pointer-events: none;
+}
+
+/* Nothing to shield until a real iframe is mounted. While the slot holds the
+   lazy "loads when nearby" placeholder or a frame-refused card, the shield
+   would only block that card's own link. Link nodes mount .bd-embed-iframe,
+   app nodes .bd-app-iframe. */
+.bd-embed-slot:not(:has(.bd-embed-iframe, .bd-app-iframe)) ~ .bd-embed-shield {
+  display: none;
+}
+
+.bd-embed-fullscreen-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--bd-accent, #3fdaca);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s, transform 0.12s;
+  border-radius: 4px;
+}
+
+.bd-embed-fullscreen-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Native fullscreen on the shell itself, rather than re-parenting the iframe
+   into an overlay, which would tear down its browsing context and reload it.
+   The browser puts the shell in the top layer, so the canvas transform above it
+   no longer applies and the inline node width/height must be overridden here. */
+.bd-link-shell:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+  background: #111;
 }
 
 /* App Node CSS */
@@ -801,12 +1189,28 @@ html:has(body.page-board) {
   flex-direction: column;
   min-width: 0;
   height: 100%;
+  /* App nodes carry .bd-auto-size-content too, so they lost the same 250-400px
+     clamp the link cards did. Without this they gained the spill the clamp had
+     been hiding: the icon escaping above the node and the launch button below
+     it. Clip to the box, like .bd-link-shell. */
+  min-height: 0;
+  overflow: hidden;
 }
 
 .bd-app-shell.bd-app-live {
   background: #111;
   border-radius: 8px;
   border: 1px solid #333;
+  /* The embed shield positions against this. */
+  position: relative;
+}
+
+.bd-app-shell:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+  background: #111;
 }
 
 .bd-app-card {
@@ -816,8 +1220,8 @@ html:has(body.page-board) {
   justify-content: center;
   gap: 16px;
   padding: 32px 24px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.02);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.05);
   border-radius: 12px;
   text-align: center;
   height: 100%;
@@ -839,13 +1243,13 @@ html:has(body.page-board) {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--bd-ink, #fff);
 }
 
 .bd-app-card-desc {
   margin: 0;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.5);
   max-width: 280px;
   line-height: 1.4;
 }
@@ -853,7 +1257,7 @@ html:has(body.page-board) {
 .bd-app-launch-btn {
   margin-top: 8px;
   padding: 8px 24px;
-  background: #3fdaca;
+  background: var(--bd-accent, #3fdaca);
   color: #000;
   font-weight: 600;
   font-size: 14px;
@@ -883,7 +1287,7 @@ html:has(body.page-board) {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #fff;
+  color: var(--bd-ink, #fff);
   font-weight: 500;
   font-size: 13px;
 }
@@ -898,8 +1302,8 @@ html:has(body.page-board) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.08);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
   color: #ccc;
   font-size: 11px;
   font-weight: 600;
@@ -910,8 +1314,8 @@ html:has(body.page-board) {
 }
 
 .bd-app-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.15);
+  color: var(--bd-ink, #fff);
 }
 
 .bd-app-iframe {
@@ -923,15 +1327,207 @@ html:has(body.page-board) {
   border-radius: 0 0 8px 8px;
 }
 
+/* VNC node CSS. A live remote desktop inside a node: header as the drag handle,
+   then either the connection form or the noVNC screen. See renderVncNode in
+   JavaScript/braindump.js. */
+.bd-vnc-shell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  background: #0b0d10;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bd-vnc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #111;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--bd-ink, #fff);
+}
+
+.bd-vnc-title {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.bd-vnc-status-text {
+  color: #8b949e;
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One dot carries the whole connection state, so the header stays quiet. */
+.bd-vnc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+  flex-shrink: 0;
+}
+
+.bd-vnc-shell[data-vnc-state="connecting"] .bd-vnc-dot { background: #d29922; }
+.bd-vnc-shell[data-vnc-state="connected"] .bd-vnc-dot { background: var(--bd-accent, #3fdaca); }
+.bd-vnc-shell[data-vnc-state="error"] .bd-vnc-dot { background: #f85149; }
+.bd-vnc-shell[data-vnc-state="needs-credentials"] .bd-vnc-dot { background: #d29922; }
+.bd-vnc-shell[data-vnc-state="needs-host"] .bd-vnc-dot { background: #6e7681; }
+.bd-vnc-shell[data-vnc-state="error"] .bd-vnc-status-text { color: #f85149; }
+
+.bd-vnc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.bd-vnc-actions button {
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.08);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
+  color: #ccc;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bd-vnc-actions button:hover {
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.15);
+  color: var(--bd-ink, #fff);
+}
+
+.bd-vnc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow: auto;
+}
+
+.bd-vnc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.bd-vnc-field input,
+.bd-vnc-field select {
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.06);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.12);
+  border-radius: 4px;
+  color: var(--bd-ink, #fff);
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.bd-vnc-field input:focus,
+.bd-vnc-field select:focus {
+  outline: none;
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.6);
+}
+
+/* The protocol switch is a native select, so its popup list is drawn by the
+   OS in the OS's colours. Only the closed control is ours to style. */
+.bd-vnc-field select option {
+  background: #14181d;
+  color: #e6edf3;
+}
+
+/* What a protocol needs, in place of the credential fields it has no use for. */
+.bd-vnc-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 2px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.18);
+  padding-left: 10px;
+}
+
+.bd-vnc-req-head {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bd-ink, #fff);
+}
+
+.bd-vnc-req-why {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: #8b949e;
+}
+
+.bd-vnc-req-steps {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #8b949e;
+}
+
+.bd-vnc-req-steps li {
+  margin-bottom: 4px;
+}
+
+.bd-vnc-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.bd-vnc-note {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #6e7681;
+}
+
+.bd-vnc-submit {
+  align-self: flex-start;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.16);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.4);
+  color: var(--bd-accent, #3fdaca);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bd-vnc-submit:hover {
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.26);
+}
+
+/* noVNC builds its own canvas inside this box and sizes it to fit. */
+.bd-vnc-screen {
+  flex: 1;
+  min-height: 0;
+  background: #0b0d10;
+}
+
 .bd-layer-board-preview {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(180deg, rgba(var(--bd-veil-rgb, 255, 255, 255), 0.03) 0%, rgba(var(--bd-veil-rgb, 255, 255, 255), 0) 100%),
     rgba(0, 0, 0, 0.88);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(63, 218, 202, 0.24);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.24);
   border-radius: 12px;
   padding: 16px;
-  color: #fff;
+  color: var(--bd-ink, #fff);
   box-sizing: border-box;
 }
 
@@ -941,10 +1537,13 @@ html:has(body.page-board) {
   gap: 12px;
   min-width: 0;
   align-content: start;
+  /* An embedded board view must not spill past its node box. */
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .bd-board-preview-meta {
-  color: rgba(63, 218, 202, 0.92);
+  color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.92);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -967,7 +1566,7 @@ html:has(body.page-board) {
 
 .bd-board-preview-desc {
   margin: 0;
-  color: rgba(250, 250, 250, 0.72);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.72);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -975,10 +1574,10 @@ html:has(body.page-board) {
 .bd-board-preview-stage {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(63, 218, 202, 0.16);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.16);
   border-radius: 10px;
   background:
-    radial-gradient(circle at top left, rgba(63, 218, 202, 0.12), transparent 50%),
+    radial-gradient(circle at top left, rgba(var(--bd-accent-rgb, 63, 218, 202), 0.12), transparent 50%),
     linear-gradient(180deg, rgba(18, 30, 30, 0.98) 0%, rgba(12, 12, 12, 0.98) 100%);
   width: 100%;
   min-height: 118px;
@@ -998,19 +1597,19 @@ html:has(body.page-board) {
 }
 
 .bd-board-preview-shape {
-  fill: rgba(255, 255, 255, 0.12);
-  stroke: rgba(255, 255, 255, 0.2);
+  fill: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.12);
+  stroke: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.2);
   stroke-width: 1.1;
 }
 
 .bd-board-preview-shape.is-text {
-  fill: rgba(255, 255, 255, 0.1);
-  stroke: rgba(255, 255, 255, 0.16);
+  fill: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
+  stroke: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.16);
 }
 
 .bd-board-preview-shape.is-link {
-  fill: rgba(63, 218, 202, 0.22);
-  stroke: rgba(63, 218, 202, 0.55);
+  fill: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.22);
+  stroke: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.55);
 }
 
 .bd-board-preview-shape.is-file {
@@ -1032,7 +1631,7 @@ html:has(body.page-board) {
 }
 
 .bd-board-preview-shape-line.is-draw {
-  stroke: rgba(63, 218, 202, 0.86);
+  stroke: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.86);
 }
 
 .bd-board-preview-status {
@@ -1042,7 +1641,7 @@ html:has(body.page-board) {
   width: 100%;
   height: 100%;
   padding: 18px;
-  color: rgba(250, 250, 250, 0.76);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.76);
   font-size: 13px;
   text-align: center;
   line-height: 1.45;
@@ -1055,7 +1654,7 @@ html:has(body.page-board) {
   gap: 10px;
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid rgba(63, 218, 202, 0.12);
+  border-top: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.12);
 }
 
 .bd-board-preview-actions .board-preview-open-link,
@@ -1064,7 +1663,7 @@ html:has(body.page-board) {
 }
 
 .bd-board-preview-action-disabled {
-  color: rgba(250, 250, 250, 0.52);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.52);
   font-size: 12px;
 }
 
@@ -1089,6 +1688,14 @@ html:has(body.page-board) {
   max-width: calc(100% - 24px);
   gap: 12px;
   z-index: 10;
+  /* The shell is centered and shrink-wrapped, so a wide side panel (the
+     recommend row is ~558px) used to push past the viewport in the
+     1000-1200px fine-pointer window that neither mobile breakpoint covers.
+     Cap it to the viewport and let the panel wrap under the toolbar. */
+  max-width: calc(100vw - 24px);
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 10px;
 }
 
 .braindump-toolbar {
@@ -1124,14 +1731,14 @@ html:has(body.page-board) {
 
 .braindump-toolbar button:hover,
 .braindump-file-label:hover {
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   background: #232222;
 }
 
 .braindump-toolbar button.active {
   background: #2a2a2a;
   border-color: #343434;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
 }
 
 .braindump-toolbar-actions {
@@ -1163,7 +1770,7 @@ html:has(body.page-board) {
   padding: 0 12px;
   border-color: #2d2c2c;
   background: #1f1f1f;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
 }
 
 .braindump-toolbar-action-label {
@@ -1192,7 +1799,190 @@ html:has(body.page-board) {
 .braindump-toolbar-more[aria-expanded="true"] {
   background: #2a2a2a;
   border-color: #343434;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
+}
+
+/* Lock + auto-hide dock: a flex sibling of the pill, not a child, so the
+   lock icon keeps rendering and the reveal tab keeps taking clicks while
+   .braindump-toolbar itself is collapsed out of view below. */
+.braindump-toolbar-dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.braindump-toolbar-lock {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #2d2c2c;
+  background: #1a1919;
+  color: #bfbfbf;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.braindump-toolbar-lock:hover {
+  color: var(--bd-ink, #fafafa);
+  background: #232222;
+}
+
+/* Locked reads as "on", the same accent used everywhere else in the toolbar
+   for that (see .braindump-toolbar button.active). */
+.braindump-toolbar-lock.is-locked {
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.14);
+  border-color: var(--bd-accent, #3fdaca);
+  color: var(--bd-accent, #3fdaca);
+}
+
+/* Only relevant once the toolbar can collapse at all — see
+   .is-autohide.is-collapsed below, the one state that shows it. */
+.braindump-toolbar-reveal {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid #2d2c2c;
+  border-radius: 8px;
+  background: #1a1919;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+}
+
+.braindump-toolbar-reveal-grip {
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+  background: #6b6b6b;
+}
+
+.braindump-toolbar-reveal:hover .braindump-toolbar-reveal-grip {
+  background: #bfbfbf;
+}
+
+/* visibility, not display:none or position:absolute, and the pill keeps its
+   layout box while hidden: removing it from flow would let the flex row
+   re-center around the dock alone, which shifts the dock (and the reveal
+   tab inside it) sideways the instant a hover reveals the pill again —
+   moving the target out from under the very cursor that's reaching for it.
+   `inert`, set in JS, is what actually keeps the hidden pill out of the tab
+   order; this rule is only the paint. */
+.braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* "Also it should be at the bottom of the window centerd" — the second half of
+   the user's card, and the half that was measurably not done. The rule above
+   keeps the hidden pill's layout box on purpose, so the dock, and this tab
+   inside it, ride to the right of the shell's centre: measured 275px off at
+   1440px, which is not "centered" by any reading.
+   Taking the tab out of flow and centring it against the shell fixes that
+   without touching the shell's own width, which is what the panel-fit rules
+   from the 1024px overflow fix depend on. The shell is centred in the window,
+   so the shell's centre IS the window's centre, in both the desktop rule and
+   the mobile left:12px/right:12px one.
+   position:absolute rather than fixed, deliberately: the shell carries
+   translateX(-50%), and a transformed ancestor becomes the containing block
+   for fixed descendants, so left:50% would resolve against the shell's own
+   width and land nowhere near the middle.
+   The tab is display:none once expanded, so the pill that replaces it arrives
+   centred under the same cursor that reached for the tab. */
+.braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-reveal {
+  display: flex;
+  position: absolute;
+  left: 50%;
+  /* Sat vertically centred in the shell at first, which put it about 50px off
+     the window's bottom edge and read as floating. The shell's own bottom is
+     32px up, so -24px brings the tab's bottom to 8px from the edge: tucked
+     against it without touching, and still clear of a phone's home indicator. */
+  bottom: -24px;
+  transform: translateX(-50%);
+}
+
+/* While collapsed, only the tab takes the pointer. The pill keeps its layout
+   box (see above), so the shell still spans the full toolbar width even though
+   nothing in it is visible, and the reveal listener lives on the shell. That
+   made the whole invisible toolbar a hover target: the toolbar sprang back
+   when the cursor was nowhere near the tab. pointer-events:none on the shell
+   does not take it out of the hover chain, so entering the tab still fires the
+   shell's mouseenter and the reveal keeps working, now only from the tab. */
+.braindump-toolbar-shell.is-autohide.is-collapsed {
+  pointer-events: none;
+}
+
+.braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-reveal {
+  pointer-events: auto;
+}
+
+/* The user's explicit correction to the shipped design: the lock used to
+   live in its own always-visible slot specifically so it would survive
+   collapse; now it must fold away WITH the pill instead. Same treatment as
+   the pill above (visibility, not display: none, so the dock's own box
+   doesn't change size and shift the reveal tab sideways when this toggles);
+   JS mirrors this with `inert` on the lock button itself, same reasoning
+   as the pill's inert toggle. */
+.braindump-toolbar-shell.is-autohide.is-collapsed .braindump-toolbar-lock {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* "The lock icon should be small but visible and yellow when the page is
+   locked and the bar is auto hidden." The real lock button folds away with
+   the pill (rule above), so a locked board reads as identical to an unlocked
+   one once collapsed — a trap. This is a small dot badged onto the reveal
+   tab itself instead: it lives inside .braindump-toolbar-reveal, which is
+   already position:absolute only in the one state (collapsed) it needs, so
+   it rides along with the tab for free and needs no centering math of its
+   own. Inset fully WITHIN the tab's own box (not overflowing any edge), so
+   its entire area already belongs to the tab's existing hover/hit region —
+   it cannot add hover area the tab did not already have, so it is not a
+   second target, large or otherwise: hovering it is hovering the tab.
+   pointer-events:none besides, purely so the badge itself is never the
+   element a hit-test resolves to. Hidden by default; shown only when the
+   shell carries BOTH .is-collapsed (this section) and .is-locked (mirrored
+   from the lock button's own state in updateBoardLockUI, since the button
+   that normally carries .is-locked is itself invisible here). Unlocked +
+   collapsed stays exactly as before: only the tab. */
+.braindump-toolbar-lock-indicator {
+  display: none;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  /* The tab this sits on is a hard-coded #1a1919 in both themes (nothing in
+     this file re-skins .braindump-toolbar-reveal for light mode), so one
+     yellow reads correctly against it either way. Still a custom property
+     with a literal fallback, matching every other themed colour in this
+     file, in case that ever changes. */
+  background: var(--bd-lock-indicator, #f2b705);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.braindump-toolbar-shell.is-autohide.is-collapsed.is-locked .braindump-toolbar-lock-indicator {
+  display: block;
+}
+
+/* Buttons inherit visibility from the pill, and their own transition: all
+   (see .braindump-toolbar button) would otherwise pick that inherited flip
+   up too — per the CSS visibility-transition rule that keeps a hidden->
+   visible change looking instant, that should be harmless, but it left a
+   button reporting hidden for a moment right after a reveal, long enough to
+   lose a focus() or an eager click aimed at it. Buttons don't need to fade;
+   only the pill's own paint might, if this ever grows one, so give
+   visibility its own untransitioned lane here rather than touching the
+   shared button rule every board's toolbar uses. */
+.braindump-toolbar-shell.is-autohide .braindump-toolbar button {
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .braindump-settings-panel {
@@ -1230,7 +2020,7 @@ html:has(body.page-board) {
 .braindump-settings-title,
 .braindump-help-title {
   margin: 0;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font-size: 15px;
   line-height: 1.2;
 }
@@ -1246,8 +2036,8 @@ html:has(body.page-board) {
 }
 
 .braindump-settings-reset:hover {
-  color: #fafafa;
-  border-color: #3fdaca;
+  color: var(--bd-ink, #fafafa);
+  border-color: var(--bd-accent, #3fdaca);
 }
 
 .braindump-settings-toggle,
@@ -1268,20 +2058,20 @@ html:has(body.page-board) {
 }
 
 .braindump-settings-label {
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font-weight: 600;
   line-height: 1.3;
 }
 
 .braindump-settings-copy {
-  color: rgba(250, 250, 250, 0.7);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.7);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .braindump-settings-toggle input {
   margin-top: 0.2rem;
-  accent-color: #3fdaca;
+  accent-color: var(--bd-accent, #3fdaca);
 }
 
 .braindump-settings-field {
@@ -1302,7 +2092,7 @@ html:has(body.page-board) {
   border: 1px solid #3a3a3a;
   border-radius: 8px;
   background: #111;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font: inherit;
 }
 
@@ -1311,13 +2101,13 @@ html:has(body.page-board) {
 }
 
 .braindump-settings-input-row span {
-  color: rgba(250, 250, 250, 0.72);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.72);
   font-size: 13px;
 }
 
 .braindump-help-copy {
   margin: 10px 0 0;
-  color: rgba(250, 250, 250, 0.7);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.7);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -1325,7 +2115,7 @@ html:has(body.page-board) {
 .braindump-help-list {
   margin: 10px 0 0;
   padding-left: 1.2rem;
-  color: rgba(250, 250, 250, 0.86);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.86);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -1336,13 +2126,198 @@ html:has(body.page-board) {
 
 .braindump-help-list code {
   padding: 2px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fafafa;
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.05);
+  color: var(--bd-ink, #fafafa);
   font-family: "Courier New", monospace;
   font-size: 11px;
 }
+
+/* ==========================================================================
+   Settings panel: hierarchy, rhythm and control geometry
+   --------------------------------------------------------------------------
+   Measured on the panel as it stood before this block, at 1200x900 on
+   content/boards/test-board.html:
+
+     - A field label computed to 16px/600 while a section heading computed to
+       15px/700. "Developer mode" rendered larger than "Theme". The panel had
+       no readable hierarchy, which is the main reason it looked like a pile.
+     - The vertical gaps down the first group were 12, 12, 0, 0px. Two toggles
+       sat flush against the row above them, because .braindump-settings-field
+       carried a margin-top and .braindump-settings-toggle carried none.
+     - Six control heights (13, 30, 36, 40px plus a 36px button) and five
+       different right edges: 881.5 for checkboxes (a UA margin), 884.5 for the
+       colour swatches and the grid select, 888.2 for the markdown select, and
+       two rows left-aligned at 554.5.
+     - The repository, branch and token fields were all 88px wide, from a
+       single width rule. A fine-grained GitHub token is 93 characters and 88px
+       shows nine of them.
+     - The markdown-download select overhung the panel's content box by 3.7px.
+     - 1630px of content scrolled inside a 558px box while the panel title and
+       the Reset button scrolled out of reach after 40px.
+
+   Nothing here changes a colour value. Every colour is still the theme custom
+   property with its original literal as the fallback, so a board with no theme
+   stored renders as before.
+   ========================================================================== */
+
+.braindump-settings-panel {
+  /* Vertical padding moves onto the sticky header and the panel's own bottom,
+     so the header can reach the panel's edges when it sticks. */
+  padding: 0 16px 16px;
+  /* Tabbing to a field near the top of the view would otherwise scroll it to
+     exactly where the sticky header covers it. */
+  scroll-padding-top: 52px;
+}
+
+/* The header is the panel's, not the first group's. It stays put through a
+   1600px scroll so the title and Reset are always reachable.
+   `background: inherit` copies whatever the panel resolved to, which means
+   light mode needs no second rule here. */
+.braindump-settings-panel .braindump-settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 -16px;
+  padding: 14px 16px 12px;
+  background: inherit;
+  border-bottom: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
+}
+
+/* One gap for every row in a group, instead of each row carrying its own
+   margin-top and some carrying none. */
+.braindump-settings-panel .braindump-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.braindump-settings-panel .braindump-settings-section + .braindump-settings-section {
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.braindump-settings-panel .braindump-settings-field,
+.braindump-settings-panel .braindump-settings-swatch-row,
+.braindump-settings-panel .braindump-settings-modes,
+.braindump-settings-panel .braindump-help-copy,
+.braindump-settings-panel .braindump-help-list {
+  margin: 0;
+}
+
+/* A group heading should be the quietest thing in its group, not the loudest.
+   11px uppercase with tracking reads as a divider label, which leaves the
+   control labels below it unambiguously the content. */
+.braindump-settings-panel .braindump-help-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.7);
+}
+
+.braindump-settings-panel .braindump-settings-label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* The swatch rows set their labels to 400, so "Accent" and "Default" rendered
+   lighter than "Developer mode" two groups above them. One label weight. */
+.braindump-settings-panel .braindump-settings-swatch-row .braindump-settings-label {
+  font-weight: 600;
+}
+
+.braindump-settings-panel .braindump-settings-copy {
+  line-height: 1.45;
+}
+
+/* 36px here against 34px everywhere else. */
+.braindump-settings-panel .braindump-settings-mode {
+  min-height: 34px;
+}
+
+.braindump-settings-panel .braindump-settings-field {
+  gap: 6px;
+}
+
+.braindump-settings-panel .braindump-settings-input-row {
+  width: 100%;
+}
+
+/* Text fields take the row. Only the numeric sync interval keeps a fixed
+   width, because it holds three digits and a "seconds" suffix sits beside it. */
+.braindump-settings-panel .braindump-settings-input-row input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+.braindump-settings-panel .braindump-settings-input-row input[type="number"] {
+  flex: 0 0 88px;
+}
+
+/* 13px was the raw user-agent checkbox, and its 3px UA right margin is what
+   pulled the checkbox column 3px off every other right-aligned control. The
+   whole label is already the hit area; 18px keeps the box on the optical
+   centre of the label's first line. */
+.braindump-settings-panel .braindump-settings-toggle input[type="checkbox"] {
+  flex: none;
+  align-self: flex-start;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.braindump-settings-panel .braindump-settings-swatch-row input[type="color"] {
+  width: 52px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.braindump-settings-panel .braindump-settings-select {
+  min-height: 34px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* One option here reads "Single .md, assets embedded as base64", which gives
+   the select a 273px intrinsic width. Next to a label that pushed it past the
+   panel's content box, so this row stacks its label above the control. */
+.braindump-settings-panel .braindump-settings-swatch-row-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.braindump-settings-panel .braindump-settings-swatch-row-stacked .braindump-settings-label {
+  flex: none;
+}
+
+.braindump-settings-panel .braindump-settings-swatch-row-stacked .braindump-settings-select {
+  width: 100%;
+}
+
+.braindump-settings-panel .braindump-settings-reset {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Focus was whatever the user agent drew, which differed per control type. */
+.braindump-settings-panel input:focus-visible,
+.braindump-settings-panel select:focus-visible,
+.braindump-settings-panel button:focus-visible {
+  outline: 2px solid var(--bd-accent, #3fdaca);
+  outline-offset: 2px;
+}
+
 
 .braindump-toolbar-divider {
   width: 1px;
@@ -1377,23 +2352,23 @@ html:has(body.page-board) {
   border-radius: 8px;
   border: 1px solid #3a3a3a;
   background: #111;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font: inherit;
   outline: none;
 }
 
 .braindump-issue-input:focus {
-  border-color: #3fdaca;
-  box-shadow: 0 0 0 3px rgba(63, 218, 202, 0.15);
+  border-color: var(--bd-accent, #3fdaca);
+  box-shadow: 0 0 0 3px rgba(var(--bd-accent-rgb, 63, 218, 202), 0.15);
 }
 
 .braindump-issue-submit {
   height: 40px;
   padding: 0 14px;
   border-radius: 8px;
-  border: 1px solid #3fdaca;
-  background: rgba(63, 218, 202, 0.12);
-  color: #3fdaca;
+  border: 1px solid var(--bd-accent, #3fdaca);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.12);
+  color: var(--bd-accent, #3fdaca);
   font: inherit;
   cursor: pointer;
   white-space: nowrap;
@@ -1402,8 +2377,8 @@ html:has(body.page-board) {
 }
 
 .braindump-issue-submit:hover {
-  background: rgba(63, 218, 202, 0.22);
-  color: #fff;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.22);
+  color: var(--bd-ink, #fff);
 }
 
 .braindump-toolbar-toast {
@@ -1415,7 +2390,7 @@ html:has(body.page-board) {
   border-radius: 10px;
   border: 1px solid #3a3a3a;
   background: rgba(17, 17, 17, 0.96);
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   box-shadow: 0 10px 26px rgba(0,0,0,0.4);
   opacity: 0;
   transform: translateY(6px);
@@ -1429,7 +2404,7 @@ html:has(body.page-board) {
 }
 
 .braindump-toolbar-toast[data-variant="success"] {
-  border-color: rgba(63, 218, 202, 0.45);
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.45);
 }
 
 .braindump-toolbar-toast[data-variant="error"] {
@@ -1458,11 +2433,11 @@ html:has(body.page-board) {
 
 .braindump-modal-panel {
   width: min(100%, 560px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.08);
   border-radius: 3px;
   padding: 28px;
   background: #161616;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
 }
 
 .braindump-modal-title {
@@ -1473,21 +2448,21 @@ html:has(body.page-board) {
 
 .braindump-modal-description {
   margin: 0 0 18px;
-  color: rgba(250, 250, 250, 0.75);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.75);
   line-height: 1.5;
 }
 
 .braindump-modal-file-note {
   margin: 0 0 18px;
   padding: 12px 14px;
-  border: 1px solid rgba(63, 218, 202, 0.22);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.22);
   border-radius: 3px;
   background: #1b1b1b;
-  color: rgba(250, 250, 250, 0.88);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.88);
 }
 
 .braindump-modal-file-note code {
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font-size: 0.95rem;
   word-break: break-word;
 }
@@ -1501,7 +2476,7 @@ html:has(body.page-board) {
 }
 
 .braindump-modal-steps li::marker {
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   font-weight: 700;
 }
 
@@ -1510,18 +2485,18 @@ html:has(body.page-board) {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  color: rgba(250, 250, 250, 0.86);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.86);
   line-height: 1.45;
   cursor: pointer;
 }
 
 .braindump-modal-checkbox input {
   margin-top: 0.18rem;
-  accent-color: #3fdaca;
+  accent-color: var(--bd-accent, #3fdaca);
 }
 
 .braindump-file-emphasis {
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   font-weight: 800;
 }
 
@@ -1543,25 +2518,25 @@ html:has(body.page-board) {
 }
 
 .braindump-modal-button-secondary {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(250, 250, 250, 0.84);
+  border: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.12);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.84);
 }
 
 .braindump-modal-button-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fafafa;
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.08);
+  color: var(--bd-ink, #fafafa);
 }
 
 .braindump-modal-button-primary {
-  border: 1px solid rgba(63, 218, 202, 0.44);
-  background: rgba(63, 218, 202, 0.16);
-  color: #3fdaca;
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.44);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.16);
+  color: var(--bd-accent, #3fdaca);
 }
 
 .braindump-modal-button-primary:hover {
-  background: rgba(63, 218, 202, 0.24);
-  color: #fff;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.24);
+  color: var(--bd-ink, #fff);
 }
 
 /* Mobile Adjustments */
@@ -1617,6 +2592,14 @@ html:has(body.page-board) {
 
   .braindump-toolbar-divider {
     display: none;
+  }
+
+  /* Off to the side rather than centered like the settings/issue panels, so
+     the two don't land in the same spot when both happen to be open. */
+  .braindump-toolbar-dock {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
   }
 
   .braindump-toolbar-actions {
@@ -1702,6 +2685,24 @@ html:has(body.page-board) {
     width: 14px;
     height: 14px;
   }
+
+  .braindump-toolbar-lock {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Small rounded-rectangle tab on screen, generous invisible tap target
+     around it, so the deliberately subtle visual doesn't cost accuracy on a
+     touchscreen: ~76x48px hit area around a 44x16px visible tab. */
+  .braindump-toolbar-reveal {
+    position: relative;
+  }
+
+  .braindump-toolbar-reveal::before {
+    content: "";
+    position: absolute;
+    inset: -16px;
+  }
 }
 
 /* Embedded preview mode */
@@ -1721,6 +2722,318 @@ html:has(body.page-board) {
   display: none;
 }
 
+/* Alt-drag copy feedback: the stay-behind clone keeps the selected-style
+   outline; the moving set carries a translucent glow across its face. */
+.bd-item.bd-copy-source {
+  outline: 2px solid var(--bd-accent, #3fdaca);
+  outline-offset: 4px;
+}
+
+.bd-item.bd-copy-ghost::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Lazy embed placeholder: what an iframe shows until its node nears the viewport */
+.bd-embed-slot {
+  display: contents;
+}
+
+.bd-embed-lazy {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #171616;
+  border-radius: 6px;
+  color: #707070;
+  font-size: 12px;
+}
+
+.bd-embed-lazy-domain {
+  color: #9b9b9b;
+  font-size: 13px;
+}
+
+/* Fallback card when a site's headers refuse iframe embedding */
+.bd-embed-refused {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #171616;
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+
+.bd-embed-refused-domain {
+  color: #9b9b9b;
+  font-size: 13px;
+}
+
+.bd-embed-refused-note {
+  margin: 0;
+  max-width: 320px;
+  color: #707070;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Whole-line images inside markdown notes */
+.bd-md-line--image {
+  padding: 2px 0;
+}
+
+.bd-md-line--image img.bd-md-line-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* A base row backed by a shared entity names the entity under its title */
+.bd-base-entity-tag {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--bd-accent, #3fdaca);
+  margin-top: 2px;
+}
+
+/* Entity node: a card over a shared record in content/entities/index.json */
+.bd-layer-entity {
+  background: #1c1b1b;
+  border: 1px solid #2d2c2c;
+  border-radius: 10px;
+}
+
+.bd-entity-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  overflow: auto;
+}
+
+.bd-entity-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bd-entity-badge {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bd-accent, #3fdaca);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 1px 6px;
+  flex: none;
+}
+
+.bd-entity-title {
+  font-weight: 650;
+  font-size: 15px;
+  color: var(--bd-ink, #fafafa);
+}
+
+.bd-entity-summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #9b9b9b;
+}
+
+.bd-entity-refs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.bd-entity-ref {
+  font-size: 12px;
+  color: var(--bd-accent, #3fdaca);
+  text-decoration: none;
+  border: 1px solid #2d2c2c;
+  border-radius: 6px;
+  padding: 5px 9px;
+}
+
+.bd-entity-ref:hover {
+  border-color: var(--bd-accent, #3fdaca);
+}
+
+/* Developer mode overlay (Settings > Developer mode) */
+.bd-dev-overlay {
+  position: absolute;
+  /* Bottom RIGHT, and both halves of that matter.
+     Right, because the left is where the 232px site nav sits: it is fixed at
+     z-index 50 over the board, and a panel under it had every slider return
+     aside.sidenav from elementFromPoint, so no drag reached them.
+     Bottom, but clear of the toolbar's row: the toolbar is centred at
+     bottom: 32px and about 52px tall, and it grows outward in BOTH directions
+     every time a tool is added, which is how the shape tool made the curve
+     slider unclickable. Sitting to the right of a centred toolbar and above its
+     row means no future tool can reach this, which a z-index bump would not
+     achieve without the panel covering the toolbar instead.
+     It also has to stay off the middle of the canvas, because that is where
+     you draw, and the drawing suites assert their strokes never cross it. */
+  right: 14px;
+  left: auto;
+  bottom: 96px;
+  z-index: 9;
+  min-width: 190px;
+  padding: 9px 11px;
+  border: 1px solid #2d2c2c;
+  border-radius: 8px;
+  background: rgba(12, 12, 12, 0.85);
+  color: #9b9b9b;
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  pointer-events: none;
+  user-select: none;
+}
+
+.bd-dev-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  white-space: nowrap;
+}
+
+.bd-dev-row span {
+  color: #707070;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  padding-top: 1px;
+}
+
+.bd-dev-row b {
+  font-weight: 600;
+  color: var(--bd-ink, #fafafa);
+  font-variant-numeric: tabular-nums;
+}
+
+.bd-dev-sel b {
+  white-space: normal;
+  word-break: break-word;
+  text-align: right;
+  max-width: 230px;
+}
+
+/* The drawing tuning harness. The overlay is pointer-transparent so it can
+   never swallow a stroke; this block is the one part meant to be touched. */
+.bd-dev-tuning {
+  pointer-events: auto;
+  min-width: 246px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2d2c2c;
+}
+
+.bd-dev-stroke b { color: var(--bd-accent, #3fdaca); }
+
+.bd-dev-slider {
+  display: grid;
+  grid-template-columns: 62px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.bd-dev-slider > span {
+  color: #707070;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+
+.bd-dev-slider > b {
+  color: var(--bd-ink, #fafafa);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-size: 10px;
+}
+
+.bd-dev-slider input[type="range"] {
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--bd-accent, #3fdaca);
+  cursor: ew-resize;
+}
+
+.bd-dev-check input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  justify-self: start;
+  accent-color: var(--bd-accent, #3fdaca);
+  cursor: pointer;
+}
+
+.bd-dev-tuning-reset {
+  margin-top: 8px;
+  padding: 3px 9px;
+  border: 1px solid #2d2c2c;
+  border-radius: 5px;
+  background: transparent;
+  color: #9b9b9b;
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.bd-dev-tuning-reset:hover {
+  color: var(--bd-ink, #fafafa);
+  border-color: #4a4a4a;
+}
+
+.bd-dev-overlay b.is-good { color: #5cc47f; }
+.bd-dev-overlay b.is-ok { color: #e0b054; }
+.bd-dev-overlay b.is-bad { color: #e0655f; }
+
+/* The site's sidenav is position:fixed at z-index 50 over the left 232px of
+   the board viewport, and the dev overlay sits at left:14px underneath it. That
+   never mattered while the overlay was a pointer-transparent readout. It matters
+   the moment it carries sliders: measured on both board shells, elementFromPoint
+   at the centre of a slider returned aside.sidenav, so every drag would have hit
+   the nav. Clearing the nav is what .board-page-panel already does. */
+/* The nav-clearing rules below are obsolete: the panel is anchored to the RIGHT
+   now, so it was never over the nav to begin with. Kept as a comment rather than
+   deleted silently, because the reason they existed is still true and someone
+   moving this panel back to the left will need it: aside.sidenav is fixed at
+   z-index 50 across the left 232px of the board, and anything under it is
+   unclickable however high its own z-index. */
+
+@media (max-width: 768px) {
+  .bd-dev-overlay {
+    right: 12px;
+    left: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  }
+}
+
 /* Corner "Open board" overlay button */
 .bd-preview-corner-link {
   position: absolute;
@@ -1732,9 +3045,9 @@ html:has(body.page-board) {
   gap: 5px;
   padding: 6px 12px;
   background: rgba(10, 10, 10, 0.72);
-  border: 1px solid rgba(63, 218, 202, 0.32);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.32);
   border-radius: 8px;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
@@ -1746,9 +3059,9 @@ html:has(body.page-board) {
 }
 
 .bd-preview-corner-link:hover {
-  background: rgba(63, 218, 202, 0.18);
-  border-color: rgba(63, 218, 202, 0.6);
-  color: #fff;
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.18);
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.6);
+  color: var(--bd-ink, #fff);
 }
 
 .board-preview-open-link {
@@ -1756,10 +3069,10 @@ html:has(body.page-board) {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  background: rgba(63, 218, 202, 0.12);
-  border: 1px solid rgba(63, 218, 202, 0.3);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.12);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.3);
   border-radius: 8px;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
@@ -1769,8 +3082,8 @@ html:has(body.page-board) {
 }
 
 .board-preview-open-link:hover {
-  background: rgba(63, 218, 202, 0.2);
-  border-color: rgba(63, 218, 202, 0.5);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.5);
 }
 
 /* Markdown node — outer must NOT clip overflow, otherwise the corner resize
@@ -1796,14 +3109,14 @@ html:has(body.page-board) {
   align-items: center;
   gap: 7px;
   padding: 8px 10px 7px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
   border-bottom: 1px solid #2e2e2e;
   flex-shrink: 0;
 }
 
 .bd-markdown-icon {
   flex-shrink: 0;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   opacity: 0.75;
 }
 
@@ -1820,7 +3133,7 @@ html:has(body.page-board) {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: rgba(250, 250, 250, 0.72);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.72);
   text-transform: uppercase;
 }
 
@@ -1837,7 +3150,7 @@ html:has(body.page-board) {
   padding: 4px;
   background: transparent;
   border: none;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   cursor: pointer;
   opacity: 0.6;
   transition: opacity 0.12s, transform 0.12s;
@@ -1855,7 +3168,7 @@ html:has(body.page-board) {
   padding: 4px;
   background: transparent;
   border: none;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   cursor: pointer;
   opacity: 0.6;
   transition: opacity 0.12s, transform 0.12s;
@@ -1909,7 +3222,7 @@ html:has(body.page-board) {
   height: 85vh;
   max-height: 900px;
   background: #1a1a1e;
-  border: 1px solid rgba(63, 218, 202, 0.25);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.25);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -1928,15 +3241,15 @@ html:has(body.page-board) {
   align-items: center;
   gap: 8px;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(63, 218, 202, 0.15);
-  background: rgba(63, 218, 202, 0.03);
+  border-bottom: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.15);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.03);
 }
 
 .bd-markdown-fullscreen-title {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1949,7 +3262,7 @@ html:has(body.page-board) {
   padding: 6px;
   background: transparent;
   border: none;
-  color: rgba(250, 250, 250, 0.6);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.6);
   cursor: pointer;
   border-radius: 6px;
   transition: color 0.12s, background 0.12s;
@@ -1961,8 +3274,8 @@ html:has(body.page-board) {
 
 .bd-markdown-fullscreen-download:hover,
 .bd-markdown-fullscreen-close:hover {
-  color: #fafafa;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--bd-ink, #fafafa);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.1);
 }
 
 .bd-markdown-fullscreen-body {
@@ -1995,9 +3308,9 @@ html:has(body.page-board) {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 44px;
+  height: 22px;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent 0%, rgba(63, 218, 202, 0.35) 55%, rgba(63, 218, 202, 0.85) 100%);
+  background: linear-gradient(to bottom, transparent 0%, rgba(var(--bd-accent-rgb, 63, 218, 202), 0.35) 55%, rgba(var(--bd-accent-rgb, 63, 218, 202), 0.85) 100%);
   z-index: 2;
 }
 
@@ -2007,7 +3320,7 @@ html:has(body.page-board) {
 .bd-markdown-body h3,
 .bd-markdown-body h4 {
   margin: 16px 0 6px;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   line-height: 1.2;
   font-weight: 600;
 }
@@ -2017,12 +3330,12 @@ html:has(body.page-board) {
 .bd-markdown-body h4 { font-size: 12px; opacity: 0.9; }
 .bd-markdown-body ul { margin: 0 0 10px; padding-left: 18px; }
 .bd-markdown-body li { margin-bottom: 3px; }
-.bd-markdown-body a { color: #3fdaca; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(63, 218, 202, 0.4); }
-.bd-markdown-body a:hover { text-decoration-color: rgba(63, 218, 202, 0.8); }
+.bd-markdown-body a { color: var(--bd-accent, #3fdaca); cursor: pointer; text-decoration: underline; text-decoration-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.4); }
+.bd-markdown-body a:hover { text-decoration-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.8); }
 .bd-md-line--active a { cursor: text; text-decoration: none; }
 .bd-markdown-body code {
   padding: 1px 5px;
-  background: rgba(255,255,255,0.07);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.07);
   border-radius: 3px;
   font-family: "Courier New", monospace;
   font-size: 11px;
@@ -2038,8 +3351,8 @@ html:has(body.page-board) {
 .bd-markdown-body blockquote {
   margin: 0 0 10px;
   padding: 8px 12px;
-  border-left: 3px solid #3fdaca;
-  background: rgba(63,218,202,0.05);
+  border-left: 3px solid var(--bd-accent, #3fdaca);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.05);
 }
 .bd-markdown-body blockquote p { margin: 0; }
 .bd-markdown-body hr {
@@ -2047,7 +3360,7 @@ html:has(body.page-board) {
   border-top: 1px solid #2e2e2e;
   margin: 12px 0;
 }
-.bd-markdown-body strong { color: #fafafa; font-weight: 600; }
+.bd-markdown-body strong { color: var(--bd-ink, #fafafa); font-weight: 600; }
 .bd-markdown-body em { font-style: italic; color: #e0e0e0; }
 
 .bd-markdown-loading,
@@ -2055,7 +3368,7 @@ html:has(body.page-board) {
 .bd-markdown-error {
   margin: 0;
   font-size: 12px;
-  color: rgba(250, 250, 250, 0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   font-style: italic;
 }
 .bd-markdown-error { color: #e8836a; }
@@ -2063,7 +3376,7 @@ html:has(body.page-board) {
 /* Inline line-active markdown editor (Obsidian-style live preview) */
 .bd-markdown-editor {
   outline: none;
-  caret-color: #3fdaca;
+  caret-color: var(--bd-accent, #3fdaca);
   scrollbar-width: thin;
   scrollbar-color: rgba(130, 130, 130, 0.55) transparent;
 }
@@ -2099,29 +3412,29 @@ html:has(body.page-board) {
   white-space: pre;
 }
 .bd-md-line--blank { min-height: 0.6em; }
-.bd-md-line--h1 { font-size: 18px; font-weight: 600; color: #fafafa; margin: 8px 0 2px; }
-.bd-md-line--h2 { font-size: 15px; font-weight: 600; color: #fafafa; margin: 6px 0 2px; }
-.bd-md-line--h3 { font-size: 13px; font-weight: 600; color: #fafafa; margin: 4px 0 2px; }
-.bd-md-line--h4 { font-size: 12px; font-weight: 600; color: rgba(250,250,250,0.9); }
+.bd-md-line--h1 { font-size: 18px; font-weight: 600; color: var(--bd-ink, #fafafa); margin: 8px 0 2px; }
+.bd-md-line--h2 { font-size: 15px; font-weight: 600; color: var(--bd-ink, #fafafa); margin: 6px 0 2px; }
+.bd-md-line--h3 { font-size: 13px; font-weight: 600; color: var(--bd-ink, #fafafa); margin: 4px 0 2px; }
+.bd-md-line--h4 { font-size: 12px; font-weight: 600; color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.9); }
 .bd-md-line--h5,
 .bd-md-line--h6 { font-size: 12px; font-weight: 600; opacity: 0.8; }
 .bd-md-line--li { padding-left: 18px; position: relative; }
 .bd-md-line-bullet {
   position: absolute;
   left: 4px;
-  color: rgba(250,250,250,0.45);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.45);
   user-select: none;
 }
 .bd-md-line--quote {
   padding-left: 12px;
-  border-left: 3px solid rgba(63,218,202,0.55);
-  background: rgba(63,218,202,0.04);
+  border-left: 3px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.55);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.04);
   color: rgba(220,220,220,0.85);
 }
 .bd-md-line--hr { border-top: 1px solid #2e2e2e; height: 1px; margin: 8px 0; min-height: 0; }
 .bd-md-line--hr * { display: none; }
 .bd-md-line--active {
-  background: rgba(63, 218, 202, 0.06);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.06);
   font-family: "Menlo", "Consolas", monospace;
   font-size: 12px;
   color: #d8d8d8;
@@ -2129,9 +3442,9 @@ html:has(body.page-board) {
 
 /* Drop highlight when dragging files onto the viewport */
 .bd-md-drop-target {
-  outline: 3px dashed #3fdaca;
+  outline: 3px dashed var(--bd-accent, #3fdaca);
   outline-offset: -10px;
-  box-shadow: inset 0 0 0 9999px rgba(63, 218, 202, 0.06);
+  box-shadow: inset 0 0 0 9999px rgba(var(--bd-accent-rgb, 63, 218, 202), 0.06);
 }
 
 .bd-drop-overlay {
@@ -2148,10 +3461,10 @@ html:has(body.page-board) {
 }
 .bd-drop-overlay-card {
   background: rgba(15, 18, 24, 0.92);
-  border: 1px solid rgba(63, 218, 202, 0.55);
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.55);
   border-radius: 14px;
   padding: 22px 28px;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.92);
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -2164,11 +3477,11 @@ html:has(body.page-board) {
 }
 .bd-drop-overlay-title {
   font-size: 16px;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   font-weight: 600;
 }
 .bd-drop-overlay-hint {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.6);
   font-size: 12px;
 }
 
@@ -2191,21 +3504,21 @@ html:has(body.page-board) {
   align-items: center;
   gap: 8px;
   padding: 8px 10px 7px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
   border-bottom: 1px solid #2e2e2e;
   flex-shrink: 0;
 }
-.bd-markdown-db-icon { color: #3fdaca; opacity: 0.75; flex-shrink: 0; }
+.bd-markdown-db-icon { color: var(--bd-accent, #3fdaca); opacity: 0.75; flex-shrink: 0; }
 .bd-markdown-db-title {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: rgba(250,250,250,0.72);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.72);
   text-transform: uppercase;
 }
 .bd-markdown-db-count {
   font-size: 11px;
-  color: rgba(250,250,250,0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   font-variant-numeric: tabular-nums;
 }
 .bd-markdown-db-search {
@@ -2220,7 +3533,7 @@ html:has(body.page-board) {
   border-radius: 4px;
   outline: none;
 }
-.bd-markdown-db-search:focus { border-color: #3fdaca; }
+.bd-markdown-db-search:focus { border-color: var(--bd-accent, #3fdaca); }
 .bd-markdown-db-body {
   flex: 1;
   overflow-y: auto;
@@ -2242,21 +3555,21 @@ html:has(body.page-board) {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(250,250,250,0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   background: rgba(0,0,0,0.2);
   position: sticky;
   top: 0;
 }
 .bd-markdown-db-row { cursor: pointer; transition: background 0.1s; }
-.bd-markdown-db-row:hover { background: rgba(63,218,202,0.06); }
-.bd-markdown-db-col-date { color: rgba(250,250,250,0.45); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-markdown-db-row:hover { background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.06); }
+.bd-markdown-db-col-date { color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.45); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bd-markdown-db-loading,
 .bd-markdown-db-empty-msg,
 .bd-markdown-db-error {
   margin: 0;
   padding: 12px 14px;
   font-size: 12px;
-  color: rgba(250,250,250,0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   font-style: italic;
 }
 .bd-markdown-db-error { color: #e8836a; }
@@ -2283,7 +3596,7 @@ html:has(body.page-board) {
   align-items: center;
   gap: 7px;
   padding: 8px 10px 7px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
   border-bottom: 1px solid #2e2e2e;
   flex-shrink: 0;
 }
@@ -2303,7 +3616,7 @@ html:has(body.page-board) {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: rgba(250, 250, 250, 0.72);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.72);
   text-transform: uppercase;
 }
 
@@ -2345,20 +3658,20 @@ html:has(body.page-board) {
 
 .bd-base-table th {
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
   border-bottom: 1px solid #2e2e2e;
   text-align: left;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(250, 250, 250, 0.45);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.45);
   white-space: nowrap;
 }
 
 .bd-base-table td {
   padding: 7px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
   color: #d0d0d0;
   white-space: nowrap;
   overflow: hidden;
@@ -2367,7 +3680,7 @@ html:has(body.page-board) {
 }
 
 .bd-base-table td:first-child {
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
   font-weight: 500;
   max-width: 260px;
 }
@@ -2409,17 +3722,17 @@ html:has(body.page-board) {
 
 .bd-base-pill--just-idea,
 .bd-base-pill--just-an-idea {
-  background: rgba(250, 250, 250, 0.06);
-  color: rgba(250, 250, 250, 0.45);
+  background: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.06);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.45);
 }
 
 .bd-base-pill--archived {
-  background: rgba(250, 250, 250, 0.04);
-  color: rgba(250, 250, 250, 0.3);
+  background: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.04);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.3);
 }
 
 .bd-base-empty {
-  color: rgba(250, 250, 250, 0.2);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.2);
 }
 
 .bd-base-loading,
@@ -2428,7 +3741,7 @@ html:has(body.page-board) {
   margin: 0;
   padding: 14px;
   font-size: 12px;
-  color: rgba(250, 250, 250, 0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   font-style: italic;
 }
 .bd-base-error { color: #e8836a; }
@@ -2452,9 +3765,9 @@ html:has(body.page-board) {
   text-align: left;
 }
 .bd-markdown-body th {
-  background: rgba(255,255,255,0.05);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.05);
   font-weight: 600;
-  color: #fafafa;
+  color: var(--bd-ink, #fafafa);
 }
 
 /* Markdown images */
@@ -2471,7 +3784,7 @@ html:has(body.page-board) {
 }
 .bd-markdown-checklist input[type="checkbox"] {
   margin-right: 6px;
-  accent-color: #3fdaca;
+  accent-color: var(--bd-accent, #3fdaca);
 }
 
 /* Block-level inline edit */
@@ -2486,14 +3799,14 @@ html:has(body.page-board) {
 }
 
 .bd-markdown-editing .bd-markdown-block:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.03);
 }
 
 .bd-markdown-block-input {
   width: 100%;
   padding: 8px 10px;
   margin: 4px 0;
-  border: 1px solid #3fdaca66;
+  border: 1px solid rgba(var(--bd-accent-rgb, 63, 218, 202), 0.4);
   border-radius: 4px;
   background: #0d1117;
   color: #c9d1d9;
@@ -2506,15 +3819,15 @@ html:has(body.page-board) {
 }
 
 .bd-markdown-block-input:focus {
-  border-color: #3fdaca;
+  border-color: var(--bd-accent, #3fdaca);
 }
 
 .bd-markdown-editing {
-  border-color: #3fdaca66 !important;
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.4) !important;
 }
 
 .bd-markdown-editing .bd-markdown-header {
-  border-bottom-color: #3fdaca33;
+  border-bottom-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.2);
 }
 
 /* Markdown Database Node */
@@ -2538,14 +3851,14 @@ html:has(body.page-board) {
   align-items: center;
   gap: 7px;
   padding: 8px 10px 7px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.04);
   border-bottom: 1px solid #2e2e2e;
   flex-shrink: 0;
 }
 
 .bd-markdown-db-icon {
   flex-shrink: 0;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
 }
 
 .bd-markdown-db-title {
@@ -2556,7 +3869,7 @@ html:has(body.page-board) {
   white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(250, 250, 250, 0.72);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.72);
   text-transform: uppercase;
 }
 
@@ -2568,11 +3881,11 @@ html:has(body.page-board) {
   align-items: center;
   justify-content: center;
   padding: 0 5px;
-  background: rgba(63, 218, 202, 0.15);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.15);
   border-radius: 9px;
   font-size: 10px;
   font-weight: 600;
-  color: #3fdaca;
+  color: var(--bd-accent, #3fdaca);
   line-height: 1;
 }
 
@@ -2593,7 +3906,7 @@ html:has(body.page-board) {
 }
 
 .bd-markdown-db-search:focus {
-  border-color: #3fdaca;
+  border-color: var(--bd-accent, #3fdaca);
   width: 160px;
   outline: none;
 }
@@ -2611,7 +3924,7 @@ html:has(body.page-board) {
 .bd-markdown-db-table th {
   text-align: left;
   font-size: 11px;
-  color: rgba(250, 250, 250, 0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   font-weight: 500;
   padding: 8px 10px;
   border-bottom: 1px solid #2e2e2e;
@@ -2620,8 +3933,8 @@ html:has(body.page-board) {
 .bd-markdown-db-table td {
   padding: 8px 10px;
   font-size: 12px;
-  color: rgba(250, 250, 250, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.85);
+  border-bottom: 1px solid rgba(var(--bd-veil-rgb, 255, 255, 255), 0.02);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2633,12 +3946,427 @@ html:has(body.page-board) {
 }
 
 .bd-markdown-db-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--bd-veil-rgb, 255, 255, 255), 0.05);
 }
 
 .bd-markdown-db-col-date {
-  color: rgba(250, 250, 250, 0.4);
+  color: rgba(var(--bd-ink-rgb, 250, 250, 250), 0.4);
   text-align: right;
   width: 80px;
 }
 
+/* ==========================================================================
+   Theme tokens and the light preset
+   --------------------------------------------------------------------------
+   Every token above is written as var(--name, <original literal>). The literal
+   fallback is why a board with no stored theme renders exactly as it did before
+   themes existed: applyBoardTheme only defines these properties once a theme is
+   in play, so with nothing stored the cascade never sees them and each var()
+   resolves to the colour that was hard-coded there.
+
+   The attribute lands on the board viewport, and additionally on <html> for a
+   full-page board, because the intro panel (.board-page-panel) is a page-level
+   aside outside the viewport. Preview embeds only ever mark their own viewport,
+   so a landing page mounting several boards themes each one independently.
+   ========================================================================== */
+
+[data-bd-theme="light"] {
+  /* Paper rather than pure white: white nodes and panels need something to sit
+     on or the whole board flattens into one sheet. */
+  --bd-canvas-bg: #f2f1ee;
+  --bd-grid-dot: #c4c2bc;
+  --bd-ink: #17181a;
+  --bd-ink-rgb: 23, 24, 26;
+  /* The white washes and hairlines the dark theme layers over its surfaces
+     (rgba(255,255,255,α)) have to become dark washes here, or they vanish. The
+     alphas they were tuned at carry over unchanged. */
+  --bd-veil-rgb: 18, 20, 22;
+  /* The brand cyan is 1.66:1 on this background. Same hue, dropped in
+     lightness until body text on paper clears AA. */
+  --bd-accent: #0d7a70;
+  --bd-accent-rgb: 13, 122, 112;
+
+  /* Surface roles used only by this block. The dark theme has ~40 distinct
+     near-black shades; collapsing them into four is deliberate, since the
+     shade-per-component drift reads as noise once the background is light. */
+  --bd-light-panel: #ffffff;
+  --bd-light-raised: #eceae4;
+  --bd-light-sunken: #f7f6f3;
+  --bd-light-line: #d8d5ce;
+  --bd-light-muted: #5b6066;
+  /* Text that sits on an accent fill. Cyan took black; this teal takes white. */
+  --bd-on-accent: #ffffff;
+}
+
+/* Chrome: toolbar, its menus, the settings and issue panels, toasts, modals. */
+[data-bd-theme="light"] .braindump-toolbar {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+/* The :not()s are load-bearing. The dark sheet gives the active tool and the
+   open "more" menu the accent at the same specificity this rule would have, and
+   this block comes later in the file, so without them a light toolbar would
+   have no active state at all. */
+[data-bd-theme="light"] .braindump-toolbar button:not(.active):not([aria-expanded="true"]),
+[data-bd-theme="light"] .braindump-file-label {
+  color: var(--bd-light-muted);
+}
+
+[data-bd-theme="light"] .braindump-toolbar button:hover,
+[data-bd-theme="light"] .braindump-file-label:hover {
+  background: var(--bd-light-raised);
+}
+
+[data-bd-theme="light"] .braindump-toolbar button.active,
+[data-bd-theme="light"] .braindump-toolbar-more[aria-expanded="true"] {
+  background: var(--bd-light-raised);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-toolbar-divider {
+  background: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-toolbar-actions {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-toolbar-actions .braindump-toolbar-action,
+[data-bd-theme="light"] .braindump-toolbar-actions .braindump-file-label {
+  background: var(--bd-light-sunken);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-settings-panel,
+[data-bd-theme="light"] .braindump-issue-panel,
+[data-bd-theme="light"] .braindump-toolbar-toast,
+[data-bd-theme="light"] .braindump-modal-panel {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-settings-section + .braindump-settings-section {
+  border-top-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-settings-reset {
+  background: var(--bd-light-sunken);
+  border-color: var(--bd-light-line);
+  color: var(--bd-light-muted);
+}
+
+[data-bd-theme="light"] .braindump-settings-input-row input,
+[data-bd-theme="light"] .braindump-issue-input {
+  background: var(--bd-light-sunken);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .braindump-modal {
+  /* The scrim still darkens, just less: it now sits over a light page. */
+  background: rgba(24, 26, 28, 0.5);
+}
+
+[data-bd-theme="light"] .braindump-modal-file-note {
+  background: var(--bd-light-sunken);
+}
+
+[data-bd-theme="light"] .board-page-panel {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+/* Nodes. */
+[data-bd-theme="light"] .bd-layer-text,
+[data-bd-theme="light"] .bd-layer-bookmark,
+[data-bd-theme="light"] .bd-layer-link,
+[data-bd-theme="light"] .bd-layer-entity,
+[data-bd-theme="light"] .bd-layer-markdown,
+[data-bd-theme="light"] .bd-layer-markdown-db,
+[data-bd-theme="light"] .bd-layer-base {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .bd-link-shell.bd-link-live,
+[data-bd-theme="light"] .bd-link-shell:fullscreen,
+[data-bd-theme="light"] .bd-app-shell.bd-app-live,
+[data-bd-theme="light"] .bd-app-shell:fullscreen {
+  background: var(--bd-light-panel);
+  border-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .bd-embed-header,
+[data-bd-theme="light"] .bd-app-header,
+[data-bd-theme="light"] .bd-markdown-header,
+[data-bd-theme="light"] .bd-markdown-db-header,
+[data-bd-theme="light"] .bd-base-header {
+  background: var(--bd-light-sunken);
+  border-bottom-color: var(--bd-light-line);
+}
+
+[data-bd-theme="light"] .bd-embed-lazy,
+[data-bd-theme="light"] .bd-embed-refused,
+[data-bd-theme="light"] .bd-bookmark-image,
+[data-bd-theme="light"] .bd-markdown-fullscreen-container {
+  background: var(--bd-light-sunken);
+}
+
+[data-bd-theme="light"] .bd-link-editor-input,
+[data-bd-theme="light"] .bd-markdown-block-input,
+[data-bd-theme="light"] .bd-markdown-db-search {
+  background: var(--bd-light-sunken);
+  border-color: var(--bd-light-line);
+  color: var(--bd-ink);
+}
+
+[data-bd-theme="light"] .bd-entity-ref,
+[data-bd-theme="light"] .bd-markdown-body hr,
+[data-bd-theme="light"] .bd-md-line--hr,
+[data-bd-theme="light"] .bd-markdown-body th,
+[data-bd-theme="light"] .bd-markdown-body td,
+[data-bd-theme="light"] .bd-markdown-db-table th,
+[data-bd-theme="light"] .bd-markdown-db-table td,
+[data-bd-theme="light"] .bd-base-table th {
+  border-color: var(--bd-light-line);
+}
+
+/* The greys the dark theme uses for prose and for secondary labels. Two rules
+   rather than a token sweep, because these literals never needed to be
+   configurable, only to flip with the preset. */
+[data-bd-theme="light"] .bd-markdown-body,
+[data-bd-theme="light"] .bd-markdown-db-body,
+[data-bd-theme="light"] .bd-base-table td,
+[data-bd-theme="light"] .bd-md-line--active,
+[data-bd-theme="light"] .bd-markdown-body em,
+[data-bd-theme="light"] .bd-link-editor-label {
+  color: var(--bd-ink);
+}
+
+[data-bd-theme="light"] .bd-embed-toggle-btn,
+[data-bd-theme="light"] .bd-embed-open-btn,
+[data-bd-theme="light"] .bd-app-toggle-btn,
+[data-bd-theme="light"] .bd-embed-lazy,
+[data-bd-theme="light"] .bd-embed-lazy-domain,
+[data-bd-theme="light"] .bd-embed-refused-note,
+[data-bd-theme="light"] .bd-embed-refused-domain,
+[data-bd-theme="light"] .bd-entity-summary,
+[data-bd-theme="light"] .bd-dev-row span {
+  color: var(--bd-light-muted);
+}
+
+/* The address in an embed header is a label, not prose, but at the dark
+   theme's 0.4 veil alpha it lands at 2.9:1 on paper. Ink at 0.66 clears AA. */
+[data-bd-theme="light"] .bd-embed-domain {
+  color: rgba(var(--bd-ink-rgb), 0.66);
+}
+
+[data-bd-theme="light"] .bd-embed-domain[data-embed-url]:hover {
+  color: var(--bd-ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-bd-theme="light"] .bd-embed-domain[data-embed-url]::after {
+    background: var(--bd-light-panel);
+    border-color: var(--bd-light-line);
+    color: var(--bd-ink);
+  }
+}
+
+/* The fullscreen control is an accent glyph on the header. At 0.6 the darker
+   teal drops under the 3:1 that non-text UI needs, so it carries more weight
+   here than it does on black. */
+[data-bd-theme="light"] .bd-embed-fullscreen-btn {
+  opacity: 0.85;
+}
+
+/* Fills that were cyan took black text; this teal takes white. */
+[data-bd-theme="light"] .bd-app-launch-btn,
+[data-bd-theme="light"] .bd-crop-actionbar button.bd-crop-done {
+  color: var(--bd-on-accent);
+}
+
+[data-bd-theme="light"] .bd-dev-overlay,
+[data-bd-theme="light"] .bd-preview-corner-link,
+[data-bd-theme="light"] .bd-drop-overlay-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--bd-light-line);
+  color: var(--bd-light-muted);
+}
+
+[data-bd-theme="light"] .bd-board-preview-stage {
+  background: linear-gradient(180deg, #ffffff 0%, var(--bd-light-sunken) 100%);
+}
+
+/* A code block is a darker card than the prose around it; rgba(0,0,0,0.3) does
+   that on black and lands on mid-grey on paper, which puts dark code on a dark
+   card. */
+[data-bd-theme="light"] .bd-markdown-body pre {
+  background: var(--bd-light-raised);
+}
+
+/* Same fade, lighter hand: at the dark theme's alphas this teal paints a solid
+   band across the last line instead of hinting that more is below. */
+[data-bd-theme="light"] .bd-markdown-body--has-overflow ~ .bd-markdown-overflow-gradient,
+[data-bd-theme="light"] .bd-markdown-shell:has(.bd-markdown-body--has-overflow)::after {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(var(--bd-accent-rgb), 0.14) 55%,
+    rgba(var(--bd-accent-rgb), 0.32) 100%
+  );
+}
+
+/* Status hues, kept at their own hue and dropped in lightness. Every one of
+   these was picked against black and lands between 1.8:1 and 2.6:1 on paper. */
+[data-bd-theme="light"] .bd-markdown-error,
+[data-bd-theme="light"] .bd-markdown-db-error,
+[data-bd-theme="light"] .bd-base-error {
+  color: #b03a1c;
+}
+
+[data-bd-theme="light"] .bd-base-icon,
+[data-bd-theme="light"] .bd-base-count {
+  color: #6d28d9;
+}
+
+[data-bd-theme="light"] .bd-base-pill--greenlit {
+  color: #0f7048;
+}
+
+[data-bd-theme="light"] .bd-base-pill--published {
+  color: #1d4ed8;
+}
+
+[data-bd-theme="light"] .bd-base-pill--draft {
+  color: #8a5a06;
+}
+
+/* Left dark on purpose: the crop bar floats over a photograph and the VNC node
+   frames a live remote desktop. Both are dark chrome around someone else's
+   pixels, and a light frame there fights the content instead of matching it. */
+
+/* ==========================================================================
+   Grid styles
+   --------------------------------------------------------------------------
+   The grid is inline SVG baked into every generated board page, so the style
+   switch rewrites the <pattern> contents at runtime (see applyGridStyle). Only
+   the line variant needs a rule the generated markup never had.
+   ========================================================================== */
+
+.braindump-grid-line {
+  fill: none;
+  stroke: var(--bd-grid-dot, #333);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* ==========================================================================
+   Theme controls in the settings panel
+   --------------------------------------------------------------------------
+   The panel's markup is emitted by scripts/build-site.mjs into every generated
+   board page. Adding a field there would mean rebuilding every page, so the
+   theme group is built by ensureThemeSettingsUi() instead and these classes
+   exist for it.
+   ========================================================================== */
+
+.braindump-settings-modes {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.braindump-settings-mode {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--bd-light-line, #3a3a3a);
+  border-radius: 8px;
+  color: var(--bd-ink, #fafafa);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.braindump-settings-mode input {
+  /* The whole chip is the hit target; the radio only carries the state and the
+     accessible name, so it stays in the tree rather than being display:none. */
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.braindump-settings-mode:hover {
+  border-color: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.5);
+}
+
+.braindump-settings-mode:has(input:checked) {
+  border-color: var(--bd-accent, #3fdaca);
+  background: rgba(var(--bd-accent-rgb, 63, 218, 202), 0.14);
+  color: var(--bd-accent, #3fdaca);
+}
+
+.braindump-settings-mode:has(input:focus-visible) {
+  outline: 2px solid var(--bd-accent, #3fdaca);
+  outline-offset: 2px;
+}
+
+.braindump-settings-swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.braindump-settings-swatch-row .braindump-settings-label {
+  flex: 1;
+  font-weight: 400;
+}
+
+.braindump-settings-swatch-row input[type="color"] {
+  width: 44px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--bd-light-line, #3a3a3a);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.braindump-settings-select {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--bd-light-line, #3a3a3a);
+  border-radius: 8px;
+  background: var(--bd-light-sunken, #111);
+  color: var(--bd-ink, #fafafa);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.braindump-settings-reset-btn {
+  display: block;
+  /* No margin-top: the settings groups are flex columns with a single 14px
+     gap now, so a margin here stacks on top of it and makes this one row sit
+     28px down while every other row sits 14px down. Zeroing ad-hoc margins in
+     favour of the group's own gap is the whole point of that rhythm rule. */
+  padding: 6px 12px;
+  border: 1px solid var(--bd-light-line, #3a3a3a);
+  border-radius: 8px;
+  background: none;
+  color: var(--bd-ink, #fafafa);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.braindump-settings-reset-btn:hover {
+  border-color: var(--bd-accent, #3fdaca);
+  color: var(--bd-accent, #3fdaca);
+}

@@ -14,7 +14,9 @@ const rootDir = path.resolve(__dirname, "..");
 
 const PREVIEW_SERVER_SCRIPT = "scripts/preview-server.mjs";
 const BOARD_PATH = "content/boards/cosmoboard/current.canvas";
-const PARTICIPANT_PDF_PATH = "content/boards/cosmoboard/participant-information.pdf";
+// Roughly the size of the real PDF this used to borrow from the cosmoboard, so
+// the upload timings stay comparable to earlier runs in test_results/.
+const SYNTHETIC_PDF_BYTES = 118 * 1024;
 const RESULT_ROOT = ".agents/performance_testing/test_results";
 const TEMP_ASSET_ROOT = ".tmp/performance-assets";
 const VIEWPORT = { width: 1440, height: 960 };
@@ -176,6 +178,35 @@ function sanitizeAssetFilename(value) {
   return `${base}${ext}`;
 }
 
+// A real, valid PDF of a realistic size, generated rather than borrowed.
+//
+// This used to upload content/boards/cosmoboard/participant-information.pdf,
+// which was a document of Evren's sitting on a public board. It was taken down
+// on 2026-08-01, and the audit never needed that file specifically: it needs a
+// PDF big enough for the upload path to be worth measuring. Generating one also
+// means the audit no longer depends on board content that can be edited or
+// deleted underneath it.
+//
+// Padding rides in a comment after the trailer. Readers stop at %%EOF, so the
+// file stays valid at any size, and the byte count is what the measurement is
+// actually about.
+function buildSyntheticPdf(runId, targetBytes = SYNTHETIC_PDF_BYTES) {
+  const body = [
+    "%PDF-1.4",
+    "1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj",
+    "2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj",
+    "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 4 0 R>>>>/Contents 5 0 R>>endobj",
+    "4 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj",
+    `5 0 obj<</Length 74>>stream\nBT /F1 24 Tf 72 760 Td (performance audit fixture ${runId}) Tj ET\nendstream endobj`,
+    "trailer<</Root 1 0 R>>",
+    "%%EOF",
+    ""
+  ].join("\n");
+
+  const padding = Math.max(0, targetBytes - Buffer.byteLength(body) - 2);
+  return `${body}%${"p".repeat(padding)}\n`;
+}
+
 function buildLargeSvg(runId) {
   const pieces = [
     '<svg xmlns="http://www.w3.org/2000/svg" width="4096" height="4096" viewBox="0 0 4096 4096">',
@@ -297,10 +328,8 @@ async function prepareBenchmarkAssets(runId) {
   const assetDir = path.join(rootDir, TEMP_ASSET_ROOT, runId);
   await mkdir(assetDir, { recursive: true });
 
-  const pdfSource = path.join(rootDir, PARTICIPANT_PDF_PATH);
-  const pdfPath = path.join(assetDir, `${runId}-participant-information.pdf`);
-  const pdfBytes = await readFile(pdfSource);
-  await writeFile(pdfPath, pdfBytes);
+  const pdfPath = path.join(assetDir, `${runId}-synthetic-document.pdf`);
+  await writeFile(pdfPath, buildSyntheticPdf(runId), "utf8");
 
   const svgPath = path.join(assetDir, `${runId}-large-image.svg`);
   await writeFile(svgPath, buildLargeSvg(runId), "utf8");

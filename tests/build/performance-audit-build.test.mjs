@@ -23,7 +23,14 @@ assert.match(runnerSource, /board:cosmoboard:meta/, "runner clears the Cosmoboar
 assert.match(runnerSource, /Network\.setCacheDisabled/, "runner disables HTTP cache through CDP");
 assert.match(runnerSource, /Emulation\.setCPUThrottlingRate/, "runner applies CDP CPU throttling");
 assert.match(runnerSource, /api\/save-asset/, "runner covers save-asset import routes");
-assert.match(runnerSource, /participant-information\.pdf/, "runner uses the existing participant PDF");
+// The audit used to upload a real document off the cosmoboard. That file was
+// taken down on 2026-08-01, and the audit only ever needed a PDF of realistic
+// size, so it generates one now and no longer depends on board content.
+assert.match(runnerSource, /buildSyntheticPdf/, "runner generates its own PDF fixture");
+// Names the constant that used to hold the path, not the word: the comment
+// above the generator explains what was removed and why, and a test that
+// forbids saying so would delete its own explanation.
+assert.doesNotMatch(runnerSource, /PARTICIPANT_PDF_PATH/, "runner must not read a document out of content/");
 assert.match(runnerSource, /performance-assets/, "runner generates temporary large image assets");
 assert.match(runnerSource, /results\.json/, "runner writes JSON results");
 assert.match(runnerSource, /summary\.csv/, "runner writes CSV results");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { chromium } from "playwright";
@@ -9,6 +9,7 @@ const port = 4182;
 const baseUrl = `http://127.0.0.1:${port}`;
 const outDir = path.join(process.cwd(), ".tmp", "export-bundling-e2e");
 const bundlePath = path.join(outDir, "portable-project-bundle.zip");
+const cosmoboardCanvasPath = path.join(process.cwd(), "content", "boards", "cosmoboard", "current.canvas");
 
 const textEncoder = new TextEncoder();
 
@@ -122,7 +123,17 @@ function waitForServer(child) {
 
 await mkdir(outDir, { recursive: true });
 
+// Import semantics: a bundle whose canvasId matches the open board goes
+// through the reconcile prompt and replaces the board; a foreign canvasId is
+// embedded as a sub-page instead. This test exercises the replace path, so
+// the bundle carries the real cosmoboard canvasId, read from the file.
+const cosmoboardCanvasBackup = await readFile(cosmoboardCanvasPath, "utf8");
+const cosmoboardCanvasId = JSON.parse(cosmoboardCanvasBackup).canvasId;
+assert.ok(cosmoboardCanvasId, "cosmoboard canvas must carry a canvasId");
+
 const boardState = {
+  canvasId: cosmoboardCanvasId,
+  updatedAt: new Date().toISOString(),
   nodes: [
     {
       id: "bundle-image",
@@ -200,6 +211,22 @@ try {
 
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
+  // Autosave stays off: this test leaves an imported 3-node board dirty in the
+  // page, and a timed autosave against the live endpoint would overwrite the
+  // real content/boards/cosmoboard/current.canvas with it.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "board:cosmoboard:settings",
+      JSON.stringify({ autosaveEnabled: false, autosaveSeconds: 20, devMode: false })
+    );
+  });
+  // The reconcile-apply path fires a manual saveBoard afterwards; that write
+  // must never land in the real repository canvas from a test. The canvas is
+  // also backed up and restored in finally as the second line of defence.
+  await page.route("**/api/save-board*", (route) =>
+    route.fulfill({ status: 405, contentType: "application/json", body: JSON.stringify({ success: false }) })
+  );
+
   await page.goto(`${baseUrl}/cosmoboard`, { waitUntil: "domcontentloaded", timeout: 15000 });
   await page.waitForSelector("[data-tool='more']", { timeout: 15000 });
   await page.evaluate(() => {
@@ -215,25 +242,56 @@ try {
   await page.locator("#braindump-export-cancel").click();
 
   await page.locator("#braindump-import").setInputFiles(bundlePath);
+
+  // Same canvasId: the reconcile prompt appears; applying replaces the board.
+  await page.locator("[data-action='apply']").click({ timeout: 10000 });
+  // Markdown sidecars from a bundle are persisted to disk when the save
+  // endpoint is up, so the node's ref becomes a repo path; blob: is only the
+  // fallback when persistence fails. The old blob-only expectation here is
+  // why this test failed for as long as the persistence phase has existed.
   await page.waitForFunction(() => {
     const rawState = localStorage.getItem("board:cosmoboard");
     if (!rawState) return false;
     const state = JSON.parse(rawState);
     return state.nodes?.some((node) => node.type === "file" && String(node.file).startsWith("blob:")) &&
-      state.nodes?.some((node) => node.type === "markdown" && String(node.file).startsWith("blob:")) &&
+      state.nodes?.some((node) =>
+        node.type === "markdown" &&
+        (String(node.file).startsWith("blob:") || String(node.file).endsWith("bundle-note.md"))
+      ) &&
       state.nodes?.some((node) => node.type === "board-preview" && String(node.boardSource).startsWith("blob:"));
   }, { timeout: 5000 });
 
-  await page.waitForSelector(".bd-markdown-body h1", { timeout: 5000 });
+  // The line editor renders headings as styled line divs, not <h1> elements,
+  // so assert on the rendered text rather than a tag from the old renderer.
+  await page.waitForFunction(
+    () => document.querySelector(".bd-markdown-body")?.textContent?.includes("Bundled markdown"),
+    null,
+    { timeout: 5000 }
+  );
   await page.waitForFunction(() => document.body.innerText.includes("Nested bundle board"), null, { timeout: 5000 });
   await page.screenshot({ path: path.join(outDir, "imported-bundle.png"), fullPage: true });
 
   const importedState = await page.evaluate(() => JSON.parse(localStorage.getItem("board:cosmoboard")));
   assert.equal(importedState.nodes.length, 3);
-  assert.equal(importedState.nodes.filter((node) => String(node.file || node.boardSource || "").startsWith("blob:")).length, 3);
+  const fileNode = importedState.nodes.find((node) => node.type === "file");
+  const markdownNode = importedState.nodes.find((node) => node.type === "markdown");
+  const previewNode = importedState.nodes.find((node) => node.type === "board-preview");
+  assert.match(String(fileNode?.file), /^blob:/, "image asset must resolve to a blob URL");
+  assert.match(String(previewNode?.boardSource), /^blob:/, "nested board must resolve to a blob URL");
+  assert.match(
+    String(markdownNode?.file),
+    /(^blob:|bundle-note\.md$)/,
+    "markdown must resolve to the persisted sidecar path, or a blob URL as fallback"
+  );
+  assert.match(String(markdownNode?._rawMarkdown), /Bundled markdown/, "markdown content must be inlined for reloads");
 } finally {
   if (browser) await browser.close();
   child.kill();
+  // The persistence phase writes the bundled sidecar into the real board
+  // directory; a test must not leave that litter behind. The canvas restore
+  // covers the (route-blocked) replace path as the second line of defence.
+  await rm(path.join(process.cwd(), "content", "boards", "cosmoboard", "markdown", "bundle-note.md"), { force: true });
+  await writeFile(cosmoboardCanvasPath, cosmoboardCanvasBackup, "utf8");
 }
 
 console.log("export bundling browser import check passed");

@@ -41,6 +41,24 @@
       "description": "Working board for the 600×400 modular eurocontainer storage system.",
       "tags": ["project"],
       "projectSlug": "eurocrate-storage-universal-solution"
+    },
+    {
+      "slug": "test-board",
+      "title": "Test board",
+      "file": "content/boards/test-board.html",
+      "sourcePath": "content/boards/test-board/current.canvas",
+      "storageKey": "board:test-board",
+      "description": "Sandbox board for testing basic functionality. Not real content, not indexed, not in the nav.",
+      "tags": ["test"]
+    },
+    {
+      "slug": "dev",
+      "title": "Development board",
+      "file": "content/boards/dev.html",
+      "sourcePath": "content/boards/dev/current.canvas",
+      "storageKey": "board:dev",
+      "description": "Everything about building Cosmoboard: tracker, sandbox, benchmarks, standing analyses. Not indexed.",
+      "tags": ["dev"]
     }
   ],
 
@@ -65,6 +83,13 @@
       "file": "content/boards/projects/eurocrate-storage/open-questions.md",
       "description": "Unresolved decisions on the storage system: anti-tip interlock, sourcing, weight budget.",
       "tags": ["project", "storage"]
+    },
+    {
+      "slug": "test-board-notes",
+      "title": "Markdown test note",
+      "file": "content/boards/test-board/notes.md",
+      "description": "Disposable markdown sidecar on the test board, for exercising markdown authoring.",
+      "tags": ["test"]
     }
   ],
 

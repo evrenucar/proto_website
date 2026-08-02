@@ -73,13 +73,27 @@ try {
   await page.addInitScript(({ state, meta }) => {
     localStorage.setItem("board:cosmoboard", JSON.stringify(state));
     localStorage.setItem("board:cosmoboard:meta", JSON.stringify(meta));
+    // Autosave OFF, or this suite proves nothing. It waits for a save POST
+    // after Ctrl+S, and the 20 second autosave timer fires comfortably inside
+    // waitForResponse's 30 second default. Measured with the whole Ctrl+S
+    // branch deleted: zero POSTs within 1.5s of the keypress, then one at
+    // 19.4s from the timer, and the suite went green. It stayed green through
+    // the entire period when Ctrl+S opened a Save-As dialog and saved nothing.
+    localStorage.setItem(
+      "board:cosmoboard:settings",
+      JSON.stringify({ autosaveEnabled: false, autosaveSeconds: 20, devMode: false })
+    );
   }, { state: savedState, meta: savedMeta });
 
   await page.goto(`${baseUrl}/cosmoboard`, { waitUntil: "networkidle" });
   await page.waitForSelector("#reload-save-marker");
 
+  // Bounded to 4s on purpose. Ctrl+S is a synchronous user action, so its save
+  // arrives immediately; anything slower than this is a background timer doing
+  // the work and taking the credit, which is exactly how this suite went blind.
   const saveResponse = page.waitForResponse((response) =>
-    response.url().includes("/api/save-board") && response.request().method() === "POST"
+    response.url().includes("/api/save-board") && response.request().method() === "POST",
+    { timeout: 4000 }
   );
   await page.keyboard.press("Control+S");
   const response = await saveResponse;

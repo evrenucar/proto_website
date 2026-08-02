@@ -9,9 +9,6 @@ This file is the shared short-term work log for the current session.
 Jot anything here mid-session. Anything that outlives the session moves to
 [`.agents/todo.md`](./.agents/todo.md), which is now the single live task list.
 
-The bugs, feature requests, and ideas that used to sit here were moved there on 2026-07-28. Nothing
-was dropped.
-
 
 
 ## How To Use It
@@ -40,25 +37,129 @@ was dropped.
 
 ## Current Scope
 
-- Preview server: `http://127.0.0.1:4174` (`npm run preview`). Question 4 is answered: 4174 is the
-  port now, and the docs are being updated to match.
+- Goal for the ongoing sessions, refined by the user 2026-07-30: make Cosmoboard a high
+  performance interface with polished UX and UI, with tests confirming basic functionality at
+  each stage. Long term it grows toward an operating environment; today it is a local-first,
+  folder-based, lightweight canvas, and stays that.
+- The tracker board is checked for new user updates every work cycle, and updated every cycle.
+- Sandbox for stage checks: `/content/boards/test-board.html`, noindex, out of the sitemap,
+  saves confined to `content/boards/test-board/`.
+- Preview server: `http://127.0.0.1:4174` (`npm run preview`), and 4174 is the documented port
+  everywhere now. 4173 belongs to `aide-board`.
+- The user works the tracker live while agents run. Expect concurrent writes to
+  `.agents/todo.md` and treat mid-session file changes as normal, not corruption.
+- Previous session's full map:
+  [`.agents/handoffs/handoff_2026-07-30_cosmoboard_sprint.md`](./.agents/handoffs/handoff_2026-07-30_cosmoboard_sprint.md).
+
+### Start Of Session
+
+- Date: 2026-08-01
+- Working on: clearing the whole open board, fanned out across agents. The user's instruction is
+  to execute all To do and Backlog items, carefully reviewed and folded into the code.
+- Wave 1, seven agents, all claimed on the board: pin drag by edges and corners (`opus5-9`),
+  toolbar folding with the lock at bottom centre plus the markdown gradient (`opus5-10`), eraser
+  and pen revamp (`opus5-11`), base64 markdown assets (`opus5-12`), canvas tool and safe rename
+  (`opus5-13`), tracker scroll and card ids (`opus5-14`), recreatable perf benchmark (`opus5-15`).
+- Shape: nobody writes `JavaScript/braindump.js` or `CSS/braindump.css`. Agents prove their fix in
+  a running page and hand back anchor-based hunks; `opus5-0` is the single writer and applies them.
+  Own port each (4181 to 4187), own test file each, no builds while others work. Every patch goes
+  through an adversarial reviewer that re-verifies each anchor occurs exactly once before apply.
+- Known constraints: the user edits `todo.md` live, so re-read before every edit and never rewrite
+  the whole file. The preview server on 4174 went down once already this session and was restarted
+  detached. Three new cards filed as critical: nothing is pushed, the PDFs are still in git
+  history, and the 47-card Review queue is now the bottleneck.
+- Not started, deliberately: the mobile fast-zoom crash (blocked on the user's phone by their own
+  decision), `defaultViewport` (decided: leave alone), and the frozen roadmap phases 3, 4, 6, 7
+  and 8 plus the desktop shell, which are multi-week programmes the objective freeze covers and
+  which need an explicit unfreeze rather than an agent starting them quietly.
+
+### End Of Session, 2026-08-01
+
+**Full map: [`handoff_2026-08-01_four_wave_sprint.md`](./.agents/handoffs/handoff_2026-08-01_four_wave_sprint.md).**
+Read that, not this, if you are picking the work up.
+
+- **Committed and pushed.** `41df9af`, 75 files, +14,148 lines, on
+  `origin/fix-markdown-sidecar-405-error`. In sync with its remote, 5 ahead of `origin/main`.
+- **Wave 4 was still running when the session ended.** `opus5-27` drawing smoothness with dev
+  sliders, `opus5-28` re-arrangeable toolbar, `opus5-29` canvas shortcut and hover hints,
+  `opus5-30` mechanical Review-queue verification. Cards are claimed `[~]`; patches land in
+  `.tmp/scratch/<id>/patch.json` and are **not applied**. Check those before assuming the cards
+  are unstarted.
+- Board at close: 5 To do, 4 in progress, 70 Review, 17 Backlog.
+- **The user's three decisions this session:** Ctrl+S saves the board (Ctrl+Alt+S keeps the
+  write-back-to-opened-file path), push the branch without a PR, and leave the PDF git history
+  alone.
+- **CI still has not run.** `board-tests.yml` triggers on `pull_request` and `workflow_dispatch`,
+  and dispatch is refused because the file is not on the default branch. Pushing alone runs
+  nothing. Opening a PR is the fix, and the user was offered that and chose the plain push.
+- Six live bug reports from the user against work that had just shipped were fixed: the canvas
+  endpoint (a stale server process, mine), the toolbar tab sitting too high and its hover target
+  being the whole invisible toolbar (both mine, from the centring fix), and the eraser brush drag
+  running out of screen (now takes a pointer lock). The drawing-colour report did not reproduce
+  and was measured rather than argued: it was a stale runtime in the user's tab.
+
+- **Before this: 17 cards across three waves, 26 agents, whole suite green 64 of 64.**
+- Waves 1 and 3 landed about 2,400 lines into `JavaScript/braindump.js` through 84 + 44 anchored
+  hunks. `braindump.js` and `braindump.css` were never edited by an agent: they hand back hunks
+  and `opus5-0` applies them. That discipline held across 26 concurrent agents with nothing lost.
+- **The applier had a real bug and a reviewer found it by running it.** It wrote each file as
+  that file's hunks resolved, so a patch spanning the client and the server could write a patched
+  client and then throw on the server. It is all-or-nothing across files now, verified by making
+  a patch fail deliberately and confirming nothing was written.
+- **Eleven reviewer-proven defects were fixed before or just after apply.** The ones worth
+  remembering are the ones a green suite could not see: an arrow-pan suite that passed with the
+  speed cap deleted and again with the "nothing selected" gate deleted; a toolbar suite asserting
+  a centring that CSS guarantees while the real affordance sat 303px off; a download suite that
+  proved the button on the card but never the same button in the fullscreen viewer, which was the
+  one path that was broken.
+- **Two findings became `!p1` cards rather than fixes, because they are the user's call.**
+  Ctrl+S does not save the board (it opens a Save-As dialog or downloads a file) and both suites
+  guarding that are structurally incapable of failing. And `scripts/preview-server.mjs` binds
+  beyond loopback and checks no `Origin`, so any site in an open tab can post to its write APIs.
+  That second one is also what stopped the terminal node being built, since a WebSocket upgrade
+  is not covered by CORS.
+- **A research note corrected one of our own.** Tauri and Electron webviews both enforce
+  X-Frame-Options, contrary to `vnc_and_iframe_embedding_2026-07-30.md`. Electron can strip
+  headers and keep embeds as real iframes that pan and zoom with the canvas; Tauri cannot. That
+  flips the shell recommendation to Electron and wants an explicit decision before anyone
+  scaffolds one.
+- Still open and unchanged: nothing is pushed (six commits, CI has never run on this branch), the
+  four PDFs remain recoverable from `origin/main` history, and the Review queue is now 67 cards.
+- Next: the Review queue is the bottleneck. The mechanical re-verification pass proposed on its
+  card is the highest-value next move.
+
+### End Of Session, 2026-08-02
+
+**Full map: [`handoff_2026-08-02_seven_wave_sprint.md`](./.agents/handoffs/handoff_2026-08-02_seven_wave_sprint.md).**
+Waves 4 to 7. Read that one first; the 2026-08-01 handoff above it is still correct for waves 1
+to 3 and is not repeated there.
+
+- Verified today: **77 of 79 suites pass**, run one at a time. Build clean, stage gate 9/9 after
+  it. The two reds are `inertia-browsing` and `presentation-mode`, both untracked suites for
+  patches still held unapplied in `.tmp/scratch/opus5-42` and `opus5-43`, so they are red by
+  construction rather than by regression. Decide what happens to those two patches first.
+- Branch at `e0de4d5`, in sync with its remote, 12 ahead of `origin/main`. Wave 7 is uncommitted.
 
 ### Start Of Session
 
 - Date: 2026-07-31
-- Working on, in order:
-  1. The recommendation panel escaping the viewport at desktop widths near 1024px. Top open bug and
-     it sits on the objective's criterion 4, the route a stranger uses to send a suggestion.
-  2. Delete orphan markdown node `hgr0v5cjqam` from the cosmoboard canvas. Answered A on the board.
-  3. Make 4174 the documented preview port everywhere. Answered A on the board.
-- Why now: 1 is the highest open card that is neither frozen nor waiting on a decision. 2 and 3 are
-  already decided by the user and are one-liners, so they clear with it.
-- Known constraints: underscore emphasis and the shared-entity node are frozen in `agents.md`, so
-  the other two answered questions stay parked regardless of having answers.
+- Working on: the two `!p1` cards from Features and ideas, both PDF and both the same area:
+  the fullscreen button, and embeds swallowing wheel-zoom and middle-drag pan.
+- Why now: Review is full and waiting on user verdicts, nothing was claimed, and no new
+  feedback had landed since the Firefox-alt issue, which is already fixed. That leaves the
+  To do lane, where these two carry the highest priority marker and serve the polished-UX goal.
+- Known constraints: preview server was down on arrival, restarted on 4174. The cosmoboard
+  canvas holds ~292 lines of uncommitted user work, so every browser probe ran with autosave
+  off and `/api/save-board` blocked.
+- **A second session ran on `main` in parallel with this branch** and is merged in here. It
+  fixed the recommendation panel overflowing the viewport near 1024px, made 4174 the documented
+  port across `README.md`, `scripts/README.md`, `scripts/AGENTS.md` and the whiteboard skill's
+  desktop doc, and confirmed the orphan markdown node was already gone. Its test,
+  `tests/features/toolbar-panel-viewport-fit-e2e.test.mjs`, is now part of this tree.
 
 ### End Of Session
 
-- Date: 2026-07-31
+- Date: 2026-07-31 (the session that ran on `main`, merged into this branch)
 - Preview server: `http://127.0.0.1:4174`, running.
 - What changed:
   - Fixed the panel overflow. It was worse than filed: the shell is centred, so an open panel wider
@@ -82,67 +183,141 @@ was dropped.
     the fix.
 - What still needs work:
   - Two questions are on the board: whether the landing page should be the indexed front door, and
-    what happens to the four public PDFs. Both are yours, neither blocks anything.
-  - `tests/export/export-bundling-e2e.test.mjs` still fails on its 30s `waitForFunction`. Untouched
-    and unrelated; not re-run this session.
-  - Nothing is committed. The whole session sits in the working tree.
-- Next step:
-  - Answer the two board questions, or point me at the next card.
+    what happens to the public PDFs. Both are yours, neither blocks anything. The PDF one is
+    carried into `todo.md` as an open `!p1` card so the merge cannot bury it.
+  - `tests/export/export-bundling-e2e.test.mjs` was failing on a 30s `waitForFunction` there. It
+    passes on this branch, so the merge resolves it.
 
-### End Of Session (previous, 2026-07-29)
+### End Of Session, this branch
 
-- Date: 2026-07-29
+- Date: 2026-07-31
 - What changed:
-  - Wrote `tests/board/markdown-caret-offset-mapping.test.mjs`. It parks a markdown note in screen
-    space, sets a line's raw text, lets the editor render it, clicks a specific rendered character,
-    and reads back the raw offset the caret landed on. 13 of 66 probes failed on the code as it
-    stood.
-  - Rewrote `buildVisibleToRawMap` in `JavaScript/braindump.js`. It was a second markdown parser
-    hand-written to mirror `renderMarkdownLineToHtml`, and it drifted. It now replays the renderer's
-    own rules in the renderer's own order, carrying a raw offset per surviving character, so the two
-    cannot disagree. Fixed `_em_` being stripped when the renderer keeps it, nested markers, the
-    offset-0 case on lines starting with a marker, and empty list items. 72/72 probes pass.
-  - Rebuilt for the cache-bust hashes and re-synced `cosmoboard-landing.html`. This also picked up
-    `content/boards/eurocrate-storage.html`, which was still on the hand-edited `?v=59` / `?v=30`
-    and therefore serving a stale runtime.
-  - Un-parked `tests/features/markdown-authoring-e2e.test.mjs`. What had blocked it was the
-    two-click entry into a note: one click only selects the node, so focus stayed on BODY and every
-    keystroke was eaten as a board shortcut. The test now asserts focus reached the editor before
-    typing, blurs with Escape to commit and trigger the sidecar save, and edits a second time to
-    prove the file round-trips. Three consecutive runs, clean tree after each.
-  - That test also explains the orphan node found earlier: it used to run with board autosave on, so
-    the new note was written into `current.canvas` while its `.md` was deleted on teardown. Autosave
-    is off in the test now, so it stops producing them.
-  - Built out the eurocrate project board, which had zero nodes while being linked as a working
-    board. 15 nodes drawn from the project's own Notion content: crate sizes with their emtrade
-    links, `design-notes.md` and `open-questions.md` as real markdown sidecars, the two reference
-    images, a link to the project page, and a board-preview back to Cosmoboard. Both notes added to
-    `src/registry.json`. Checked in a browser: everything renders, no failed requests, no console
-    errors.
-  - Measured the panel overflow report across phone, tablet and desktop widths before the user
-    closed it. It did not reproduce at any touch width. One separate thing did turn up and is filed:
-    the recommendation panel escapes the viewport near 1024px with a mouse, because the column
-    layout only starts below 1000px or at 1200px with a coarse pointer.
-  - Built the review flow into the tracker, which answers "what do I do after a review". Every card
-    now carries a **works** button, an **issue** button and a feedback field, and cards drag between
-    columns. A verdict is also a move: works sends the card to Done, issue sends it back to To do,
-    text on its own just records a comment. All of it writes into `.agents/todo.md` and appends to
-    `.agents/review-feedback.json`, which `agents.md` now tells agents to read at session start.
-  - One endpoint behind both gestures, `POST /api/todo-update` in `scripts/preview-server.mjs`. It
-    addresses a card by line number and refuses the write if the card text at that line no longer
-    matches, so a stale board cannot stamp the wrong card. Covered by
-    `tests/preview/preview-todo-update-endpoint.test.mjs`, including the stale guard and the
-    rejection of unknown statuses and verdicts.
-  - Ran every suite one file at a time. Board 33/33, build 4/4, preview 4/4, features 3/3.
-- What still needs work:
-  - `tests/export/export-bundling-e2e.test.mjs` fails on a 30s `waitForFunction` timeout. Confirmed
-    pre-existing against unmodified `HEAD`. The `export/` directory was never in the suite count.
-  - Two new findings filed in `todo.md`: `_underscore_` does not render as emphasis at all, and the
-    cosmoboard canvas has an orphan markdown node pointing at a note file that earlier commits
-    deleted as test litter.
-  - The remaining parked tests, `shared-entity-*.pending.mjs`, are blocked on a decision rather than
-    on mechanics: the `entity` node was never added to the cosmoboard canvas. Deciding to add it
-    would un-park both.
-  - Nothing is committed. The branch has the full session's work in the working tree.
-- Next step:
-  - Decide on the shared-entity node, which is the last thing keeping tests parked.
+  - Both `!p1` PDF cards built, verified and in Review. The pointer fix was a gate, not new
+    code: the YouTube shield's logic was already general, so ungating it covers PDFs,
+    embedded websites and app nodes at once. Fullscreen uses the native API deliberately, so
+    the iframe is never re-parented and a PDF keeps its page.
+  - New suite `tests/board/embed-pointer-and-fullscreen.test.mjs`, 8 cases, hermetic. Proved
+    it fails without the fix. Regression suites green: stage gate 9/9, overlay-wheel-scroll,
+    markdown-wheel-routing, node-size-and-overflow, youtube-live-embed, youtube-player-controls.
+  - Two bug cards corrected. `cosmoboard-initial-layout` is **not** red, it passes, and the
+    camera the card blamed was never in the file. The real fault is autosaved cameras deciding
+    where a board opens; cosmoboard and braindump are the two boards without a `defaultViewport`
+    guard. One decision is on that card for the user.
+  - Grid read for the mobile crash: 240000px square, purely decorative, zero JS references, so
+    capping it to the viewport is safe. Noted the missing viewport-rect helper and that
+    `mobile-pinch-zoom.test.mjs` is untracked.
+- Two decisions taken by the user this session: **leave the board opening cameras alone** (no
+  `defaultViewport`, card parked to Backlog with the mechanism recorded), and **no blind grid
+  cap** for the mobile crash. That card is now blocked on one session with the phone on USB,
+  and the full setup is written on it.
+
+### Second half of 2026-07-31: clearing the To do lane
+
+Goal set by the user mid-session: implement every open todo item, well documented and with
+tests, fanning out agents wherever they will not interfere.
+
+- **Fan-out shape.** `JavaScript/braindump.js` is one 9,900-line file, so agents never write it.
+  Each proves its fix in the running page (route-intercepting a patched copy, or a mirror of
+  the tree under its own scratch dir) and hands back anchor-based hunks; opus5-0 is the sole
+  writer and applies them. Own port each, own test file each, no builds while others work.
+- **Landed this half:** both YouTube cards (real address in the header with double-click copy;
+  videos remember where you left off), shift-constrained drag from agent 5, and a regression the
+  user filed live on the tracker: wheeling over a markdown note had stopped zooming the board.
+- **That regression is worth remembering.** Last session's settings-panel scroll fix routes a
+  wheel to "the first scrollable element on the way up", and checked for a board node *inside*
+  that walk. Any node containing something scrollable matched first, so long notes silently ate
+  the wheel. `markdown-wheel-routing` missed it because it asserts a synthetic event reaches the
+  viewport, not that the camera moves. New suite asserts the camera.
+- **Ordering constraint for the remaining patches:** agent 7's theme sweep touches 242 CSS
+  occurrences and anchors on the settings region, which agent 6 is also editing. It re-derives
+  from the files at apply time, so it goes **last**, after 6 and 8.
+- **All of it landed.** Applied in dependency order: pin to viewport, then toolbar auto-hide plus
+  page lock, then the theme sweep last so it re-derived over the other two (250 colour
+  occurrences instead of the 242 it was written against). Three of the theme patch's four JS
+  anchors had drifted onto the settings region the lock patch rewrote; re-anchored by folding the
+  lock's lines into both halves of each hunk rather than dropping either feature.
+- **The To do lane is empty.** Everything open at the start of the session is in Review, except
+  the mobile crash, which is blocked on the user's phone by their own decision. What remains open
+  is five new roadmap cards added deliberately.
+
+### Three problems the verification pass found, all fixed
+
+Worth remembering, because two of them were invisible to a green suite.
+
+1. **A killed perf-budget run left 114 `storm-*` nodes in the sandbox board**, which was breaking
+   `markdown-wheel-zoom` and `vnc-node` from board data rather than code. Restored from the seed
+   fixture. A run that completes does restore itself; one that dies mid-flight does not.
+2. **The pin patch broke `board-shift-snap-runtime` without changing any behaviour.** That suite
+   scrapes the source for the *first* `viewport.addEventListener("mousedown")` block, and the pin
+   chord registers one above the tool-routing handler. It now picks the block by what it contains.
+   This is the exact failure mode of the "assert outcomes, not mechanisms" card in the backlog.
+3. **`cosmoboard-initial-layout` was red from camera drift**, not code: an open tab autosaves its
+   live camera into the canvas. Leaving that behaviour alone is the user's decision, so the test
+   was changed instead: it serves the real board with a pinned camera, the same trick the stage
+   gate uses when it seeds the sandbox.
+
+Also fixed a flake in the new theme suite: it read a toolbar colour mid-transition, so roughly one
+run in three saw the button's resting grey instead of the accent. A fixed wait could not fix a
+race, so transitions are disabled for that suite; it measures resolved colour, never animation.
+
+### End state
+
+Whole suite green: board, build, features, export, preview. Performance holds after everything:
+idle 16.8ms p95, drag 83.4, pan 99.9, zoom 166.6 against a 220 budget, pointer dispatch 4.85us
+against 25us, so the pin hook and the shift-drag recompute cost nothing measurable. Site rebuilt.
+
+**Next agent: start with
+[`.agents/handoffs/handoff_2026-08-01_continue_here.md`](./.agents/handoffs/handoff_2026-08-01_continue_here.md).**
+It says what to pick up and in what order, the traps that cost real time, and the decisions already
+taken so they are not re-litigated. The sprint's own map, if you want the detail behind it, is
+[`handoff_2026-07-31_todo_lane_cleared.md`](./.agents/handoffs/handoff_2026-07-31_todo_lane_cleared.md).
+
+Since that map was written: `origin/main` was merged in (the toolbar panel viewport fix), and two
+board questions were answered and built. The landing page now leads the sitemap with both pages
+indexed, and all four public PDFs are down, boards and repo. The user also added four new cards
+mid-session, and two of them are feedback on work that just shipped. They are the first thing to
+pick up.
+
+### Start Of Previous Session
+
+- Date: 2026-07-30 (afternoon, fresh session after /clear)
+- Working on: the next ranked Backlog items, per the performance action plan. In order: the perf
+  budget test on the sandbox board (asserting p95 frame time), the machine-readability benchmark
+  backfill to 100 percent (13 legacy markdown nodes without ids, two empty text nodes, two
+  untitled links), and fallback preview cards for sites that refuse iframe embedding. Board
+  maintained every cycle: verdicts read, feed updated, cards claimed and released.
+- Why now: the board has zero open To do and In progress; Review awaits user verdicts, so the
+  agent lane is the non-frozen Backlog cards that serve the performance-and-polish goal. The
+  perf plan explicitly defers incremental saves and staged mount until a big-enough board
+  exists, and says the budget test "lands with the next test pass", so that is first.
+- Known constraints: stale open tabs autosave over disk changes (guard now refuses, but reload
+  tabs after canvas edits); rebuild after runtime changes; restart the server only after
+  `scripts/preview-server.mjs` changes; run suites with the build lock in place.
+
+### End Of Session
+
+- Date: 2026-07-30, first cycle of the fresh session
+- What changed:
+  - All three Backlog pulls built, verified, and in Review on the board:
+    1. Perf budget test (`tests/board/perf-budget.test.mjs`): seeds 120 nodes on the sandbox,
+       measures idle, zoom, drag, pan frame times plus pointer-dispatch cost (2.8 to 5us
+       measured; the old listener bug was 71.2us). Runs in CI via the new
+       `.github/workflows/board-tests.yml` (stage gate + budget on every PR).
+    2. Benchmark backfill: machine-readability 47/47 (100 percent). 13 legacy markdown nodes
+       got `cosmo-note-<nodeId>` ids; four content-free litter nodes deleted; updatedAt bumped
+       so stale tabs hit the guard. Site rebuilt.
+    3. Fallback cards for iframe-refusing sites: known-refuser list plus a real header probe
+       (`GET /api/frame-check`, reads XFO and frame-ancestors). Refused live embeds show a named
+       card instead of the grey box. Endpoint test added; browser-verified on github, MDN,
+       example.com.
+  - Found on arrival: the sandbox had drifted (user play renamed the markdown node, left litter,
+    a dead image ref) and the stage gate was silently red. Both gates now seed canonical state
+    from `tests/fixtures/test-board-seed.canvas` before running, so drift can never break them
+    again; the on-disk sandbox is reset to canonical.
+  - Server on 4174 restarted with the frame-check endpoint. Suites green: stage gate 9/9, perf
+    budget, frame-check endpoint, YouTube embed, preview routes.
+- What still needs work: nothing claimed; remaining Backlog is frozen phases plus incremental
+  saves and staged mount, which the perf plan defers until a board big enough to prove them
+  exists. Nothing committed, per the review-on-board workflow.
+- Next step: user verdicts on the Review column and the proposed roadmap at the end of
+  holistic_planning.md. Reload any open board tabs (canvases changed on disk).

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>Cosmoboard · board</title>
-<link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
 <style>
   :root {
     --ground: #222222;
@@ -78,8 +78,14 @@
     border: 1px solid var(--agent, var(--line)); color: var(--agent, var(--ink-dim));
     display: inline-flex; align-items: center; gap: 6px;
   }
-  .who-chip i { width: 6px; height: 6px; border-radius: 50%; background: var(--agent, var(--idle)); display: inline-block; }
+  .who-chip i { width: 6px; height: 6px; border-radius: 50%; background: var(--agent, var(--idle)); display: inline-block; flex: none; }
   .who-chip.busy { background: color-mix(in srgb, var(--agent) 10%, transparent); }
+  .who-name { font-weight: 650; }
+  .who-goal { color: var(--ink-dim); letter-spacing: 0.02em; }
+  .who-state { color: var(--ink-faint); }
+  .who-chip.busy .who-state { color: var(--agent); }
+  .who-sep { color: var(--ink-faint); opacity: 0.55; }
+  .who-chip:not(.busy) { opacity: 0.72; }
 
   ul.feed-list { list-style: none; margin: 0; padding: 0; max-height: 154px; overflow-y: auto; }
   li.feed-item {
@@ -89,7 +95,7 @@
   }
   li.feed-item:first-child { border-top: none; }
   .feed-when { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-  .feed-agent { font-family: var(--mono); font-size: 11px; color: var(--agent, var(--ink-dim)); font-weight: 650; }
+  .feed-agent { font-family: var(--mono); font-size: 11px; color: var(--agent, var(--ink-dim)); font-weight: 650; overflow-wrap: anywhere; }
   .feed-text { color: var(--ink-dim); min-width: 0; }
   li.feed-item:first-child .feed-text { color: var(--ink); }
 
@@ -118,9 +124,21 @@
   .add-msg.err { color: var(--fail); }
 
   /* ---- kanban ---- */
-  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  /* Four working columns; Done is a full-width bar underneath them, so the
+     live columns get the horizontal space. */
+  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .col--done { grid-column: 1 / -1; }
+  .col--done .col-body { max-height: 40vh; }
   @media (max-width: 1180px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 680px) { .board { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 640px) { .board { grid-template-columns: minmax(0, 1fr); } }
+
+  .col-toggle {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 7px;
+    color: var(--ink-faint); cursor: pointer; margin-left: 8px;
+  }
+  .col-toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .col--collapsed .col-head { border-bottom: none; }
 
   .col { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
   .col-head {
@@ -149,10 +167,70 @@
   .card.done .card-title { color: var(--ink-dim); }
 
   .card-top { display: flex; gap: 7px; align-items: baseline; flex-wrap: wrap; }
+  /* The lane badge is the control for the lane: what section of todo.md this
+     card lives under, i.e. what kind of work it is. Clicking it opens the list. */
   .lane {
     font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--lane, var(--ink-faint)); border: 1px solid currentColor; border-radius: 3px; padding: 0 5px;
+    color: var(--lane, var(--ink-faint)); border: 1px solid currentColor; border-radius: 3px;
+    padding: 1px 5px; background: none; cursor: pointer; line-height: 1.35;
   }
+  .lane:hover { background: color-mix(in srgb, var(--lane, #888) 18%, transparent); }
+  .lane:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .lane::after { content: " \25BE"; opacity: 0.6; }
+
+  .lane-menu { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 0 1px; }
+  .lane-menu button {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: none; border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px;
+    color: var(--ink-dim); cursor: pointer;
+  }
+  .lane-menu button:hover { border-color: var(--accent); color: var(--accent); }
+  .lane-menu button[aria-current="true"] { color: var(--ink-faint); border-style: dashed; cursor: default; }
+  .lane-menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Delete sits next to the edit pencil at the end of the title, not up in the
+     card-top row: that row already wraps at column width, and a lone x on a line
+     of its own reads like part of the card. It does nothing on its own click,
+     it opens the confirm row below. */
+  .db {
+    background: none; border: none; padding: 0 2px; cursor: pointer;
+    color: var(--ink-faint); font-size: 13px; line-height: 1;
+  }
+  .db:hover { color: var(--fail); }
+  .db:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+
+  .confirm {
+    display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-top: 3px;
+    padding: 6px 8px; border: 1px solid var(--fail); border-radius: 6px;
+    background: color-mix(in srgb, var(--fail) 10%, transparent);
+    font-family: var(--mono); font-size: 11px; color: var(--ink);
+  }
+  .confirm button {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+    border-radius: 4px; padding: 3px 8px; cursor: pointer; border: 1px solid var(--line);
+    background: none; color: var(--ink-dim);
+  }
+  .confirm button.yes { border-color: var(--fail); background: var(--fail); color: #161515; font-weight: 700; }
+  .confirm button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Undo lives on screen, not in a dialog: a delete is one click away from being
+     put back for 25 seconds, and .tracker/deleted-cards.jsonl keeps the block
+     after that. */
+  .undo {
+    position: fixed; left: 18px; bottom: 18px; z-index: 40;
+    display: flex; gap: 11px; align-items: center;
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px;
+    padding: 9px 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    font-family: var(--mono); font-size: 12px; color: var(--ink);
+  }
+  .undo[hidden] { display: none; }
+  .undo button {
+    font: inherit; text-transform: uppercase; letter-spacing: 0.08em;
+    background: var(--accent); border: 1px solid var(--accent); color: #161515;
+    border-radius: 5px; padding: 3px 10px; cursor: pointer; font-weight: 700;
+  }
+  .undo button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .undo .undo-err { color: var(--fail); }
   .owner {
     font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.07em;
     color: var(--agent); border: 1px solid currentColor; border-radius: 3px; padding: 0 5px;
@@ -160,8 +238,53 @@
   }
   .owner i { width: 5px; height: 5px; border-radius: 50%; background: var(--agent); display: inline-block; }
 
-  .card-title { font-size: 13.5px; font-weight: 550; line-height: 1.42; }
-  .card-note { color: var(--ink-dim); font-size: 12px; line-height: 1.45; }
+  /* ---- short, stable per-card id, top left ---- */
+  .card-num {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.02em;
+    color: var(--ink-faint); flex: none;
+  }
+
+  /* ---- priority 1-5 per card ---- */
+  .prio-row { display: inline-flex; gap: 3px; margin-left: auto; }
+  .pb {
+    width: 17px; height: 17px; padding: 0; border-radius: 4px; cursor: pointer;
+    font-family: var(--mono); font-size: 9.5px; line-height: 1;
+    background: none; border: 1px solid var(--line); color: var(--ink-faint);
+  }
+  .pb:hover { border-color: var(--p); color: var(--p); }
+  .pb.on { background: var(--p); border-color: var(--p); color: #161515; font-weight: 700; }
+  .pb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .card-title { font-size: 13.5px; font-weight: 550; line-height: 1.42; overflow-wrap: anywhere; min-width: 0; }
+  .eb {
+    background: none; border: none; padding: 0 2px; cursor: pointer;
+    color: var(--ink-faint); font-size: 11px; line-height: 1;
+  }
+  .eb:hover { color: var(--accent); }
+  .eb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+  .title-edit {
+    width: 100%; background: var(--ground); color: var(--ink);
+    border: 1px solid var(--accent); border-radius: 4px; padding: 4px 7px;
+    font: inherit; font-size: 13px;
+  }
+  .title-edit:focus-visible { outline: none; }
+  .card-note { color: var(--ink-dim); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+
+  /* Compact mode: headings only */
+  body.compact .card-note,
+  body.compact .more,
+  body.compact .said,
+  body.compact .review,
+  body.compact .card-meta { display: none; }
+  body.compact .card { gap: 3px; padding: 7px 9px; }
+  .compact-toggle {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px;
+    color: var(--ink-faint); cursor: pointer;
+  }
+  .compact-toggle:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .compact-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+  .compact-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .card-note.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
   .more {
@@ -203,6 +326,11 @@
   .said span {
     display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px;
+  }
+
+  .card-meta {
+    font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint);
+    letter-spacing: 0.03em;
   }
 
   .review { display: flex; gap: 5px; align-items: center; margin-top: 2px; }
@@ -288,6 +416,8 @@
       <h1>Cosmoboard board</h1>
     </div>
     <div class="right">
+      <button type="button" class="compact-toggle" id="reload-hint" hidden>New version · reload</button>
+      <button type="button" class="compact-toggle" id="compact-toggle" aria-pressed="false">Compact</button>
       <div class="suites" id="suites"></div>
       <div class="live" id="live"><span class="dot"></span><span id="live-text">connecting</span></div>
     </div>
@@ -324,8 +454,13 @@
     <form id="qform"></form>
   </section>
 
+  <div class="undo" id="undo" hidden role="status">
+    <span id="undo-text">Card deleted.</span>
+    <button type="button" id="undo-btn">Undo</button>
+  </div>
+
   <footer class="foot">
-    Live from <code>.agents/todo.md</code> · <a href="/cosmoboard.html">cosmoboard</a> · <a href="/onboarding.html">onboarding</a> · <a href="/braindump.html">braindump</a>
+    Live from <code>.agents/todo.md</code> · <a href="/cosmoboard.html">cosmoboard</a> · <a href="/onboarding.html">onboarding</a> · <a href="/braindump.html">braindump</a> · <a href="/content/boards/dev.html">dev board</a> · <a href="/content/boards/test-board.html">test board</a>
   </footer>
 </div>
 
@@ -334,18 +469,39 @@
   var KEY = "cosmoboard-tracker-v1";
   var POLL_MS = 4000;
   var state = {}, notesValue = "", questions = [], lastOk = 0;
-  var lastTodo = null, lastMeta = null, lastFeed = null, lastReview = null;
+  var lastTodo = null, lastMeta = null, lastFeed = null, lastReview = null, lastCardMeta = null, lastAgents = null;
   var expanded = {};
-  var feedbackIndex = {}, noteDrafts = {};
+  var feedbackIndex = {}, noteDrafts = {}, cardMetaIndex = {};
+
+  var compactMode = false;
 
   try {
     var raw = localStorage.getItem(KEY);
-    if (raw) { var p = JSON.parse(raw); state = p.state || {}; notesValue = p.notes || ""; }
+    if (raw) {
+      var p = JSON.parse(raw);
+      state = p.state || {}; notesValue = p.notes || "";
+      // Feedback drafts survive a reload until they are actually sent.
+      noteDrafts = p.drafts || {};
+      compactMode = p.compact === true;
+    }
   } catch (e) { state = {}; }
 
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ state: state, notes: notesValue })); } catch (e) {}
+    try { localStorage.setItem(KEY, JSON.stringify({ state: state, notes: notesValue, drafts: noteDrafts, compact: compactMode })); } catch (e) {}
   }
+
+  function applyCompactMode() {
+    document.body.classList.toggle("compact", compactMode);
+    var btn = document.getElementById("compact-toggle");
+    if (btn) btn.setAttribute("aria-pressed", String(compactMode));
+  }
+
+  document.getElementById("compact-toggle").addEventListener("click", function () {
+    compactMode = !compactMode;
+    applyCompactMode();
+    save();
+  });
+  applyCompactMode();
 
   function esc(s) {
     return String(s == null ? "" : s)
@@ -372,11 +528,54 @@
     return "hsl(" + hue + " 70% 62%)";
   }
 
+  // Declared identities from .tracker/agents.json. A declared agent wins over
+  // the hash: it gets the colour it registered and is named by its model and
+  // number, with the goal it is working on. Anyone not in the registry still
+  // renders, with the hashed colour and their bare name.
+  var agentRegistry = [], agentById = {};
+
+  function setRegistry(list) {
+    agentRegistry = (Array.isArray(list) ? list : []).filter(function (a) { return a && a.id; });
+    agentById = {};
+    agentRegistry.forEach(function (a) { agentById[a.id] = a; });
+  }
+
+  // Agent 0 is a real agent, so test for a number rather than for truth.
+  function agentNumber(a) { return typeof a.n === "number" ? a.n : null; }
+
+  function agentInfo(id) {
+    var a = agentById[id];
+    if (!a) return { id: id, label: id, goal: "", color: agentColor(id), known: false };
+    var n = agentNumber(a);
+    var label = a.model ? (n === null ? a.model : a.model + " · " + n) : id;
+    return { id: id, label: label, goal: a.goal || "", color: a.color || agentColor(id), known: true };
+  }
+
+  // The per-agent feeds are appended to while we read them, so the last line can
+  // arrive half written. Parse line by line and drop whatever does not parse,
+  // rather than losing the whole file to one torn tail.
+  function parseJsonl(text, agent) {
+    var out = [];
+    String(text || "").split(/\r?\n/).forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      try {
+        var o = JSON.parse(line);
+        if (o && o.text) out.push({ at: o.at, agent: agent, text: o.text });
+      } catch (e) {}
+    });
+    return out;
+  }
+
+  // Priority colours, 1 loudest to 5 calmest.
+  var PRIO = { 1: "#e0655f", 2: "#e08a54", 3: "#e0b054", 4: "#5cc47f", 5: "#7f8c9b" };
+
   var COLUMNS = [
+    { key: ".", title: "Backlog", mark: "[.]" },
     { key: " ", title: "To do", mark: "[ ]" },
     { key: "~", title: "In progress", mark: "[~]" },
     { key: "A", title: "Review", mark: "[A]" },
-    { key: "x", title: "Done", mark: "[x]" }
+    { key: "x", title: "Done", mark: "[x]", collapsed: true }
   ];
 
   // Sections of todo.md that carry task state. Everything else in that file is
@@ -403,16 +602,19 @@
       if (h) { push(); section = LANES[h[1]] ? h[1] : null; continue; }
       if (!section) continue;
 
-      var m = /^-\s+\[([ xA~])\]\s+(.*)$/.exec(line);
+      var m = /^-\s+\[([ xA~.])\]\s+(.*)$/.exec(line);
       if (m) {
         push();
         var text = m[2];
         var owner = null;
         var at = /(^|\s)@([a-z0-9][a-z0-9._-]*)/i.exec(text);
         if (at) { owner = at[2]; text = text.replace(at[0], "").trim(); }
+        var priority = null;
+        var pr = /(^|\s)!p([1-5])\b/i.exec(text);
+        if (pr) { priority = Number(pr[2]); text = text.replace(pr[0], pr[1]).replace(/\s+/g, " ").trim(); }
         // `line` and `raw` are what the write endpoint uses to find this card
         // again, and to refuse the write if the file moved underneath us.
-        item = { status: m[1], lane: section, owner: owner, text: text, extra: [], line: i, raw: line };
+        item = { status: m[1], lane: section, owner: owner, priority: priority, text: text, extra: [], line: i, raw: line };
         continue;
       }
       if (item && /^\s{2,}\S/.test(line)) { item.extra.push(line.trim()); continue; }
@@ -423,6 +625,42 @@
   }
 
   function cardId(c) { return c.lane + "|" + c.text.slice(0, 60); }
+
+  // A short id a person can say out loud, e.g. "fix card 42". It has to survive
+  // todo.md shifting around under hand edits and agent writes, so it is a pure
+  // function of the same stable key used for feedback (lane + title prefix),
+  // never a line number or array index. No file persists a counter: every
+  // browser or agent parsing the same todo.md computes the same ids from
+  // scratch, the same way agentColor hashes a name into a colour with no
+  // registry required.
+  function hashStr(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h;
+  }
+
+  // Collisions (two different cards hashing to the same number) are rare but
+  // not impossible, so resolve them deterministically: process every card on
+  // the board in a fixed order (sorted by its own stable key, not file order),
+  // and a card that loses the number to an earlier one gets a letter suffix
+  // instead of a different number. That keeps the common case a clean number
+  // and keeps a collision from reshuffling unrelated cards' ids.
+  function assignShortIds(cards) {
+    var byKey = {}, used = {};
+    cards.slice().sort(function (a, b) {
+      var ka = cardId(a), kb = cardId(b);
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    }).forEach(function (c) {
+      var key = cardId(c);
+      var base = hashStr(key) % 1000;
+      var label = String(base);
+      var suffix = 0;
+      while (used[label]) { label = String(base) + String.fromCharCode(97 + suffix); suffix++; }
+      used[label] = true;
+      byKey[key] = label;
+    });
+    return byKey;
+  }
 
   // Feedback is keyed by lane and title rather than by line number, so a card
   // keeps what you said about it after the file shifts around it.
@@ -440,18 +678,46 @@
 
   function renderBoard(cards) {
     var host = document.getElementById("board");
+    // A full re-render replaces every card node, which resets scrollTop to 0.
+    // Clicking a priority chip, dragging a card, or the plain 4s poll all end
+    // up here, so without this a card you were looking at jumps out of view on
+    // almost every interaction. Snapshot each column's scroll position (and the
+    // page's) before rebuilding the DOM, restore it after.
+    var scrollByStatus = {};
+    Array.prototype.forEach.call(host.querySelectorAll(".col-body"), function (b) {
+      scrollByStatus[b.getAttribute("data-status")] = b.scrollTop;
+    });
+    var pageScrollX = window.scrollX, pageScrollY = window.scrollY;
+    var shortIds = assignShortIds(cards);
     var html = "";
     COLUMNS.forEach(function (col) {
-      var mine = cards.filter(function (c) { return c.status === col.key; });
-      html += '<div class="col"><div class="col-head"><span class="col-mark">' + esc(col.mark) + "</span>" +
-        "<h2>" + esc(col.title) + '</h2><span class="col-count">' + mine.length + "</span></div>";
+      // Prioritised cards float to the top of their column, 1 first; the rest
+      // keep file order (sort is stable).
+      // Actively claimed cards first, then priority, then file order.
+      var mine = cards.filter(function (c) { return c.status === col.key; })
+        .sort(function (a, b) {
+          var ownered = (a.owner ? 0 : 1) - (b.owner ? 0 : 1);
+          if (ownered !== 0) return ownered;
+          return (a.priority || 9) - (b.priority || 9);
+        });
+      // Collapsible columns (Done) render as a header stub until opened, so a
+      // long Done list stops eating vertical space.
+      var isCollapsed = col.collapsed && !expanded["col:" + col.key];
+      html += '<div class="col' + (isCollapsed ? " col--collapsed" : "") + (col.collapsed ? " col--done" : "") + '"><div class="col-head"><span class="col-mark">' + esc(col.mark) + "</span>" +
+        "<h2>" + esc(col.title) + '</h2>';
+      if (col.collapsed) {
+        html += '<button type="button" class="col-toggle" data-col="' + esc(col.key) + '">' + (isCollapsed ? "show" : "hide") + "</button>";
+      }
+      html += '<span class="col-count">' + mine.length + "</span></div>";
+      if (isCollapsed) { html += "</div>"; return; }
       html += '<div class="col-body" data-status="' + esc(col.key) + '">';
       if (!mine.length) html += '<div class="empty-col">empty</div>';
       mine.forEach(function (c) {
         var lane = LANES[c.lane] || "#5f5c5a";
         var styles = "--lane:" + lane + ";";
         var cls = "card";
-        if (c.owner) { styles += "--agent:" + agentColor(c.owner) + ";"; cls += " claimed"; }
+        var own = c.owner ? agentInfo(c.owner) : null;
+        if (own) { styles += "--agent:" + own.color + ";"; cls += " claimed"; }
         if (c.status === "x") cls += " done";
         var id = cardId(c);
         var note = c.extra.join(" ");
@@ -460,13 +726,29 @@
         var said = feedbackFor(id);
         html += '<article class="' + cls + '" style="' + styles + '" draggable="true"' +
           ' data-line="' + c.line + '" data-lane="' + esc(c.lane) + '"' +
-          ' data-expect="' + esc(c.raw.replace(/^-\s+\[[ xA~]\]\s+/, "").slice(0, 40)) + '"' +
+          ' data-expect="' + esc(c.raw.replace(/^-\s+\[[ xA~.]\]\s+/, "").slice(0, 40)) + '"' +
+          ' data-priority="' + (c.priority || 0) + '"' +
           ' data-id="' + esc(id) + '">';
-        html += '<div class="card-top"><span class="lane">' + esc(c.lane) + "</span>";
-        if (c.owner) html += '<span class="owner"><i></i>' + esc(c.owner) + "</span>";
+        html += '<div class="card-top"><span class="card-num" title="Card id, stable across edits">#' +
+          esc(shortIds[id] || "") + '</span><button type="button" class="lane" title="Change lane" ' +
+          'aria-label="Change lane, currently ' + esc(c.lane) + '">' + esc(c.lane) + "</button>";
+        if (own) {
+          html += '<span class="owner" title="' + esc(own.id + (own.goal ? " · " + own.goal : "")) + '"><i></i>' +
+            esc(own.label) + "</span>";
+        }
         if (said) html += '<span class="verdict ' + esc(said.verdict || "note") + '">' + esc(said.verdict || "note") + "</span>";
-        html += "</div>";
-        html += '<div class="card-title">' + inline(c.text) + "</div>";
+        html += '<span class="prio-row" role="group" aria-label="Priority">';
+        for (var p = 1; p <= 5; p++) {
+          var on = c.priority === p;
+          html += '<button type="button" class="pb' + (on ? " on" : "") + '" style="--p:' + PRIO[p] + '"' +
+            ' data-prio="' + p + '" aria-pressed="' + on + '"' +
+            ' aria-label="' + (on ? "Clear priority " + p : "Set priority " + p) + '"' +
+            ' title="' + (on ? "Clear priority " + p : "Set priority " + p) + '">' + p + "</button>";
+        }
+        html += "</span></div>";
+        html += '<div class="card-title" data-text="' + esc(c.text) + '">' + inline(c.text) +
+          ' <button type="button" class="eb" title="Edit card text" aria-label="Edit card text">&#9998;</button>' +
+          '<button type="button" class="db" title="Delete card" aria-label="Delete card">&#215;</button></div>';
         if (note) {
           html += '<div class="card-note' + (long && !open ? " clamped" : "") + '">' + inline(note) + "</div>";
           if (long) html += '<button type="button" class="more" data-id="' + esc(id) + '">' + (open ? "less" : "more") + "</button>";
@@ -474,10 +756,24 @@
         if (said && said.note) {
           html += '<div class="said"><span>you said</span>' + esc(said.note) + "</div>";
         }
+        var meta = cardMetaIndex[c.text.slice(0, 60)];
+        if (meta && (meta.createdAt || meta.updatedAt)) {
+          var when = function (iso) {
+            try {
+              var d = new Date(iso);
+              return isNaN(d) ? "" : d.toLocaleDateString([], { day: "2-digit", month: "short" }) +
+                " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            } catch (err) { return ""; }
+          };
+          var bits = [];
+          if (meta.createdAt) bits.push("created " + when(meta.createdAt));
+          if (meta.updatedAt) bits.push("updated " + when(meta.updatedAt) + (meta.updatedBy ? " by " + esc(meta.updatedBy) : ""));
+          html += '<div class="card-meta">' + bits.join(" · ") + "</div>";
+        }
         html += '<div class="review">';
         html += '<button type="button" class="vb works" data-verdict="works" title="Verified, moves to Done">works</button>';
         html += '<button type="button" class="vb issue" data-verdict="issue" title="Still wrong, moves back to To do">issue</button>';
-        html += '<input type="text" class="rnote" placeholder="feedback…" value="' + esc(noteDrafts[id] || "") + '">';
+        html += '<input type="text" class="rnote" placeholder="feedback…" aria-label="Feedback" value="' + esc(noteDrafts[id] || "") + '">';
         html += '<button type="button" class="vb send" data-verdict="">send</button>';
         html += "</div>";
         html += "</article>";
@@ -485,6 +781,11 @@
       html += "</div></div>";
     });
     host.innerHTML = html;
+    Array.prototype.forEach.call(host.querySelectorAll(".col-body"), function (b) {
+      var s = scrollByStatus[b.getAttribute("data-status")];
+      if (s) b.scrollTop = s;
+    });
+    if (pageScrollX || pageScrollY) window.scrollTo(pageScrollX, pageScrollY);
   }
 
   function renderFeed(rawFeed) {
@@ -502,22 +803,64 @@
         var d = new Date(f.at);
         when = isNaN(d) ? String(f.at || "") : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " " + d.toLocaleDateString([], { day: "2-digit", month: "short" });
       } catch (e) { when = String(f.at || ""); }
-      var color = f.agent ? agentColor(f.agent) : "var(--ink-dim)";
+      var info = f.agent ? agentInfo(f.agent) : null;
+      var color = info ? info.color : "var(--ink-dim)";
       return '<li class="feed-item" style="--agent:' + color + '"><span class="feed-when">' + esc(when) +
-        '</span><span class="feed-agent">' + esc(f.agent || "") + '</span><span class="feed-text">' + inline(f.text || "") + "</span></li>";
+        '</span><span class="feed-agent"' + (info ? ' title="' + esc(info.id) + '"' : "") + '>' +
+        esc(info ? info.label : "") + '</span><span class="feed-text">' + inline(f.text || "") + "</span></li>";
     }).join("");
+  }
+
+  // An agent with no feed line in six hours drops off the strip: still
+  // registered, still reserving its name and colour, it just stops cluttering
+  // a list of who is around right now. Posting again brings it straight back;
+  // nothing here is deleted or rewritten, this only changes what renders.
+  var AGENT_STALE_MS = 6 * 60 * 60 * 1000;
+
+  function lastSeenByAgent(feed) {
+    var seen = {};
+    feed.forEach(function (f) {
+      if (!f.agent) return;
+      var t = new Date(f.at).getTime();
+      if (isNaN(t)) return;
+      if (!seen[f.agent] || t > seen[f.agent]) seen[f.agent] = t;
+    });
+    return seen;
   }
 
   function renderWho(cards, feed) {
     var busy = {};
     cards.forEach(function (c) { if (c.status === "~" && c.owner) busy[c.owner] = true; });
-    var seen = {};
-    feed.forEach(function (f) { if (f.agent) seen[f.agent] = true; });
-    Object.keys(busy).forEach(function (a) { seen[a] = true; });
-    var names = Object.keys(seen);
-    document.getElementById("who").innerHTML = names.map(function (n) {
-      return '<span class="who-chip' + (busy[n] ? " busy" : "") + '" style="--agent:' + agentColor(n) + '"><i></i>' +
-        esc(n) + (busy[n] ? " · working" : " · idle") + "</span>";
+    // Declared agents first, in the order they numbered themselves, so the strip
+    // stays put as they pick work up and put it down. Anyone holding a card or
+    // posting to the feed without registering follows on the end.
+    var order = [], seen = {};
+    var add = function (id) { if (id && !seen[id]) { seen[id] = true; order.push(id); } };
+    agentRegistry.slice()
+      .sort(function (a, b) {
+        var x = agentNumber(a), y = agentNumber(b);
+        return (x === null ? 99 : x) - (y === null ? 99 : y);
+      })
+      .forEach(function (a) { add(a.id); });
+    Object.keys(busy).forEach(add);
+    feed.forEach(function (f) { add(f.agent); });
+
+    // A registered agent that has never posted at all is new, not stale, so it
+    // still shows; one whose last post is older than the window is hidden.
+    var lastSeen = lastSeenByAgent(feed);
+    var now = Date.now();
+    order = order.filter(function (n) {
+      var t = lastSeen[n];
+      return t === undefined || (now - t) <= AGENT_STALE_MS;
+    });
+
+    document.getElementById("who").innerHTML = order.map(function (n) {
+      var a = agentInfo(n);
+      var bits = '<i></i><span class="who-name">' + esc(a.label) + "</span>";
+      if (a.goal) bits += '<span class="who-sep">·</span><span class="who-goal">' + esc(a.goal) + "</span>";
+      bits += '<span class="who-sep">·</span><span class="who-state">' + (busy[n] ? "working" : "idle") + "</span>";
+      return '<span class="who-chip' + (busy[n] ? " busy" : "") + '" style="--agent:' + a.color +
+        '" title="' + esc(n) + '">' + bits + "</span>";
     }).join("");
   }
 
@@ -628,7 +971,7 @@
     fetch("/api/add-todo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text, section: section })
+      body: JSON.stringify({ text: text, section: section, by: "you" })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (!res.ok || !res.body.success) throw new Error(res.body.error || "Could not save.");
@@ -653,8 +996,9 @@
     if (!btn) return;
     var id = btn.getAttribute("data-id");
     expanded[id] = !expanded[id];
-    lastTodo = null; // force a re-render on the next tick
-    poll();
+    // Re-render straight from cache. This used to force a network poll first,
+    // which is why expanding a card sometimes felt slow.
+    renderBoard(cardsCache);
   });
 
   // ---- writing back to todo.md ----
@@ -666,7 +1010,8 @@
     var body = {
       line: Number(card.getAttribute("data-line")),
       lane: card.getAttribute("data-lane"),
-      expect: card.getAttribute("data-expect")
+      expect: card.getAttribute("data-expect"),
+      by: "you"
     };
     for (var k in payload) body[k] = payload[k];
 
@@ -681,6 +1026,9 @@
         delete noteDrafts[card.getAttribute("data-id")];
         lastTodo = null; lastReview = null; // force a redraw
         poll();
+        // Callers that need what the server did (a delete hands back the removed
+        // block so Undo can put it back) read it off this.
+        return res.body;
       })
       .catch(function (err) {
         card.classList.remove("busy");
@@ -694,8 +1042,12 @@
   document.getElementById("board").addEventListener("dragstart", function (e) {
     var card = e.target.closest(".card");
     if (!card) return;
-    // Selecting text in the feedback field must not drag the card out from under it.
-    if (e.target.closest(".review")) { e.preventDefault(); return; }
+    // Selecting text in the feedback field, clicking a priority chip, or
+    // editing the title must not drag the card out from under it.
+    if (e.target.closest(".review") || e.target.closest(".prio-row") ||
+        e.target.closest(".title-edit") || e.target.closest(".eb") ||
+        e.target.closest(".lane") || e.target.closest(".lane-menu") ||
+        e.target.closest(".db") || e.target.closest(".confirm")) { e.preventDefault(); return; }
     dragging = card;
     card.classList.add("dragging");
     // Firefox will not start a drag without payload on the transfer.
@@ -740,6 +1092,43 @@
     var input = e.target.closest(".rnote");
     if (!input) return;
     noteDrafts[input.closest(".card").getAttribute("data-id")] = input.value;
+    save();
+  });
+
+  // ---- inline title editing ----
+  document.getElementById("board").addEventListener("click", function (e) {
+    var btn = e.target.closest(".eb");
+    if (!btn) return;
+    var card = btn.closest(".card");
+    var titleEl = card.querySelector(".card-title");
+    if (!titleEl || card.querySelector(".title-edit")) return;
+
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "title-edit";
+    input.setAttribute("aria-label", "Card text");
+    input.value = titleEl.getAttribute("data-text") || "";
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    var closed = false;
+    var done = function (commit) {
+      if (closed) return;
+      closed = true;
+      var next = input.value.replace(/\s+/g, " ").trim();
+      if (commit && next && next !== titleEl.getAttribute("data-text")) {
+        sendUpdate(card, { text: next });
+      } else {
+        lastTodo = null; // put the rendered title back
+        poll();
+      }
+    };
+    input.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") { ev.preventDefault(); done(true); }
+      else if (ev.key === "Escape") { ev.preventDefault(); done(false); }
+    });
+    input.addEventListener("blur", function () { done(true); });
   });
 
   document.getElementById("board").addEventListener("keydown", function (e) {
@@ -749,6 +1138,24 @@
     e.preventDefault();
     var card = input.closest(".card");
     if (input.value.trim()) sendUpdate(card, { note: input.value.trim() });
+  });
+
+  document.getElementById("board").addEventListener("click", function (e) {
+    var btn = e.target.closest(".col-toggle");
+    if (!btn) return;
+    var key = "col:" + btn.getAttribute("data-col");
+    expanded[key] = !expanded[key];
+    renderBoard(cardsCache);
+  });
+
+  document.getElementById("board").addEventListener("click", function (e) {
+    var btn = e.target.closest(".pb");
+    if (!btn) return;
+    var card = btn.closest(".card");
+    var p = Number(btn.getAttribute("data-prio"));
+    var current = Number(card.getAttribute("data-priority") || 0);
+    // Clicking the active label clears it; the server strips the token on 0.
+    sendUpdate(card, { priority: p === current ? 0 : p });
   });
 
   document.getElementById("board").addEventListener("click", function (e) {
@@ -768,10 +1175,160 @@
     sendUpdate(card, payload);
   });
 
+  // ---- change a card's lane, and delete a card ----
+  //
+  // The status marker is the kanban column and is already changed by dragging.
+  // A card's LANE is the `## section` of todo.md it physically lives under, which
+  // is what kind of work it is, and it had no control at all until now. The lane
+  // badge is that control: click it, pick a lane, the card's whole block moves
+  // under that heading. Deleting is the other missing one, and it is destructive,
+  // so it takes a confirm and hands back an Undo.
+
+  function closeLaneMenus() {
+    Array.prototype.forEach.call(document.querySelectorAll(".lane-menu"), function (m) { m.remove(); });
+  }
+
+  function closeConfirms() {
+    Array.prototype.forEach.call(document.querySelectorAll(".confirm"), function (c) { c.remove(); });
+  }
+
+  var undoTimer = null, undoBlock = null, undoLane = "";
+
+  function hideUndo() {
+    if (undoTimer) { clearTimeout(undoTimer); undoTimer = null; }
+    undoBlock = null;
+    document.getElementById("undo").hidden = true;
+  }
+
+  function showUndo(block, lane, title) {
+    undoBlock = block;
+    undoLane = lane;
+    document.getElementById("undo-text").textContent = "Deleted: " + String(title || "card").slice(0, 52);
+    document.getElementById("undo").hidden = false;
+    if (undoTimer) clearTimeout(undoTimer);
+    // Long enough to notice and act, short enough that it is not still sitting
+    // there next time you look. After it goes, the block is still on disk in
+    // .tracker/deleted-cards.jsonl.
+    undoTimer = setTimeout(hideUndo, 25000);
+  }
+
+  document.getElementById("undo-btn").addEventListener("click", function () {
+    if (!undoBlock) return;
+    var btn = this;
+    btn.disabled = true;
+    fetch("/api/todo-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restore: undoBlock, toLane: undoLane, by: "you" })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.body.success) throw new Error(res.body.error || "Could not restore.");
+        hideUndo();
+        lastTodo = null;
+        poll();
+      })
+      .catch(function (err) {
+        document.getElementById("undo-text").textContent = String(err.message || err);
+        document.getElementById("undo-text").className = "undo-err";
+      })
+      .then(function () { btn.disabled = false; });
+  });
+
+  document.getElementById("board").addEventListener("click", function (e) {
+    var laneBtn = e.target.closest(".lane");
+    if (laneBtn) {
+      var card = laneBtn.closest(".card");
+      var alreadyOpen = card.querySelector(".lane-menu");
+      closeLaneMenus();
+      closeConfirms();
+      if (alreadyOpen) return; // clicking the badge again closes it
+      var current = card.getAttribute("data-lane");
+      var menu = document.createElement("div");
+      menu.className = "lane-menu";
+      Object.keys(LANES).forEach(function (name) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("data-lane-to", name);
+        b.textContent = name;
+        if (name === current) b.setAttribute("aria-current", "true");
+        menu.appendChild(b);
+      });
+      card.querySelector(".card-top").insertAdjacentElement("afterend", menu);
+      return;
+    }
+
+    var pick = e.target.closest(".lane-menu button");
+    if (pick) {
+      var laneCard = pick.closest(".card");
+      var to = pick.getAttribute("data-lane-to");
+      closeLaneMenus();
+      if (!to || to === laneCard.getAttribute("data-lane")) return;
+      sendUpdate(laneCard, { toLane: to });
+      return;
+    }
+
+    var del = e.target.closest(".db");
+    if (del) {
+      var delCard = del.closest(".card");
+      var open = delCard.querySelector(".confirm");
+      closeConfirms();
+      closeLaneMenus();
+      if (open) return;
+      var row = document.createElement("div");
+      row.className = "confirm";
+      row.innerHTML = "<span>Delete this card?</span>" +
+        '<button type="button" class="yes">Delete</button>' +
+        '<button type="button" class="no">Keep</button>';
+      delCard.appendChild(row);
+      // Focus lands on Keep, not Delete, so a stray Enter cancels.
+      row.querySelector(".no").focus();
+      return;
+    }
+
+    if (e.target.closest(".confirm .no")) { closeConfirms(); return; }
+
+    var yes = e.target.closest(".confirm .yes");
+    if (yes) {
+      var doomed = yes.closest(".card");
+      var lane = doomed.getAttribute("data-lane");
+      var titleEl = doomed.querySelector(".card-title");
+      var title = titleEl ? titleEl.getAttribute("data-text") : "";
+      closeConfirms();
+      sendUpdate(doomed, { remove: true }).then(function (body) {
+        if (body && body.removed) showUndo(body.removed, lane, title);
+      });
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".lane") && !e.target.closest(".lane-menu")) closeLaneMenus();
+    if (!e.target.closest(".db") && !e.target.closest(".confirm")) closeConfirms();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    closeLaneMenus();
+    closeConfirms();
+  });
+
   function setLive(kind, text) {
     document.getElementById("live").className = "live" + (kind ? " " + kind : "");
     document.getElementById("live-text").textContent = text;
   }
+
+  // An open tab runs whatever tracker.html it loaded, forever; new features
+  // land on disk and silently do not exist here. Watch our own Last-Modified
+  // and offer a reload when the file changes underneath us.
+  var pageStamp = null;
+  function checkPageVersion() {
+    fetch("/.tracker/tracker.html", { method: "HEAD", cache: "no-store" }).then(function (r) {
+      var lm = r.headers.get("Last-Modified");
+      if (!lm) return;
+      if (pageStamp === null) { pageStamp = lm; return; }
+      if (lm !== pageStamp) document.getElementById("reload-hint").hidden = false;
+    }).catch(function () {});
+  }
+  document.getElementById("reload-hint").addEventListener("click", function () { location.reload(); });
 
   var cardsCache = [], feedCache = [];
 
@@ -783,17 +1340,57 @@
         return json ? r.json() : r.text();
       });
     };
+    // The registry names the per-agent feeds, so those fetches hang off it and
+    // the whole lot still lands as one entry in the batch below. An empty or
+    // missing registry is fine: the board falls back to hashed colours.
+    var roster = get("/.tracker/agents.json", true)
+      .catch(function () { return null; })
+      .then(function (reg) {
+        var list = (reg && Array.isArray(reg.agents)) ? reg.agents : [];
+        return Promise.all(list.map(function (a) {
+          return get("/.tracker/feed/" + encodeURIComponent(a.id) + ".jsonl", false)
+            .then(function (text) { return parseJsonl(text, a.id); })
+            .catch(function () { return []; });
+        })).then(function (chunks) {
+          return { agents: list, lines: [].concat.apply([], chunks) };
+        });
+      })
+      .catch(function () { return { agents: [], lines: [] }; });
+
     Promise.all([
       get("/.agents/todo.md", false),
       get("/.tracker/tracker-questions.json", true),
       get("/.tracker/tracker-feed.json", true).catch(function () { return []; }),
-      get("/.agents/review-feedback.json", true).catch(function () { return []; })
+      get("/.agents/review-feedback.json", true).catch(function () { return []; }),
+      get("/.tracker/card-meta.json", true).catch(function () { return {}; }),
+      roster
     ]).then(function (res) {
-      var md = res[0], meta = res[1], feed = res[2] || [], review = res[3] || [];
+      var md = res[0], meta = res[1], feed = res[2] || [], review = res[3] || [], cardMeta = res[4] || {};
+      var roll = res[5] || { agents: [], lines: [] };
+      // Never re-render while typing in a card: a poll that swaps the DOM out
+      // from under a draft or an open title editor throws the typing away. The
+      // change stays unconsumed, so it renders on the first poll after focus
+      // leaves the card. This has to check for an actual text control, not just
+      // "focus is somewhere in a card": a button (priority chip, works/issue,
+      // the edit pencil) keeps browser focus after a click too, and treating
+      // that as "typing" froze every future re-render of that card until you
+      // clicked outside it, which is worse than the scroll loss this guard
+      // exists to avoid.
+      var activeEl = document.activeElement;
+      var typingInCard = activeEl && activeEl.closest && activeEl.closest("#board .card") &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+      // Colours and names are read out of the registry at render time, so apply
+      // it first. Only a change to it needs to force the board to redraw.
+      var agentsStr = JSON.stringify(roll.agents);
+      var agentsChanged = agentsStr !== lastAgents;
+      if (agentsChanged) { lastAgents = agentsStr; setRegistry(roll.agents); }
       var reviewStr = JSON.stringify(review);
       var reviewChanged = reviewStr !== lastReview;
-      if (reviewChanged) { lastReview = reviewStr; indexFeedback(review); }
-      if (md !== lastTodo || reviewChanged) {
+      if (reviewChanged && !typingInCard) { lastReview = reviewStr; indexFeedback(review); }
+      var cardMetaStr = JSON.stringify(cardMeta);
+      var cardMetaChanged = cardMetaStr !== lastCardMeta;
+      if (cardMetaChanged && !typingInCard) { lastCardMeta = cardMetaStr; cardMetaIndex = cardMeta; }
+      if ((md !== lastTodo || reviewChanged || cardMetaChanged || agentsChanged) && !typingInCard) {
         lastTodo = md; cardsCache = parseTodo(md); renderBoard(cardsCache);
       }
       var metaStr = JSON.stringify(meta);
@@ -801,8 +1398,12 @@
         lastMeta = metaStr; renderMeta(meta);
         questions = meta.questions || []; renderQuestions();
       }
-      var feedStr = JSON.stringify(feed);
-      if (feedStr !== lastFeed) { lastFeed = feedStr; feedCache = feed; renderFeed(feed); }
+      // One feed out of many files: the shared tracker-feed.json plus a .jsonl
+      // per agent. renderFeed sorts, so which file a line came from stops
+      // mattering the moment it is merged.
+      var merged = (Array.isArray(feed) ? feed : []).concat(roll.lines);
+      var feedStr = JSON.stringify(merged);
+      if (feedStr !== lastFeed) { lastFeed = feedStr; feedCache = merged; renderFeed(merged); }
       renderWho(cardsCache, feedCache);
       lastOk = Date.now();
       setLive("", "live · " + new Date().toLocaleTimeString());
@@ -814,6 +1415,8 @@
 
   poll();
   setInterval(poll, POLL_MS);
+  checkPageVersion();
+  setInterval(checkPageVersion, 20000);
 })();
 </script>
 </body>

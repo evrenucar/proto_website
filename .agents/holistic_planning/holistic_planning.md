@@ -122,3 +122,40 @@ Product north star, product pillars, phased roadmap, skeleton decisions, confirm
 | Cross-origin embed limits | Many websites cannot be embedded freely | Use metadata cards, open actions, snapshots, and provider adapters |
 | Collaboration conflict complexity | Realtime and GitHub flows solve different problems | Ship async versioning first, realtime later |
 | Mobile UX degradation | Desktop-first canvas tools often fail on touch devices | Keep mobile and tablet in scope at every phase |
+
+---
+
+## Proposed roadmap update, 2026-07-30 (awaiting approval)
+
+Written from the goal statements of 2026-07-30 and the staged decomposition in
+`COSMOBOARD_MIGRATION.md`. Nothing below is adopted until you approve or edit it; the current
+objective in `agents.md` stands until then.
+
+**Proposed north star:** Cosmoboard is a high performance, polished, local-first workspace where
+canvases, markdown, files, and running surfaces live together, with tests gating every stage,
+growing toward an operating environment.
+
+**Proposed stages** (each gated by the stage-gate suite plus a review on the board):
+
+1. **Polished single-user workspace** — largely the current state: 60 FPS interactions, lazy
+   embeds, dev overlay, stage-gate tests, machine-readability benchmark at 89 percent.
+2. **Durable sync** — GitHub repo sync (built, in review) hardened into the default persist
+   path; operation-level canvas writes to end stale-tab clobbers.
+3. **Presence and reflected collaboration** — heartbeats plus the tracker's proven poll pattern;
+   plan in `whiteboard/realtime_collaboration_note.md`.
+4. **Session surfaces** — VNC nodes via web-native servers (KasmVNC path), then the desktop
+   shell (Tauri/Electron) that also solves iframe-refusing sites; research in
+   `research/vnc_and_iframe_embedding_2026-07-30.md`.
+5. **Operating environment** — only after 1 through 4 prove out, per the migration plan's own
+   staging.
+
+**Proposed objective line for `agents.md`** (replacing the shipped one when you adopt this):
+"A stranger and an agent both do real work on a Cosmoboard board, and the work survives:
+synced, reviewed, and reloadable. Done when one real session by someone else round-trips
+through GitHub sync."
+
+**Runtime decision, recommendation:** the custom runtime stays primary. Evidence this week: it
+holds 60 FPS at 145 nodes, the whole runtime is one dependency-free file, and every needed
+feature landed without fighting a framework. Revisit only if a stage needs rich-text or CRDT
+primitives a framework provides for free, and then via the extraction plan's triggers rather
+than a rewrite in place.

@@ -42,6 +42,9 @@ const post = (payload) =>
 const todoBackup = await readFile(todoPath, "utf8");
 const feedbackExisted = existsSync(feedbackPath);
 const feedbackBackup = feedbackExisted ? await readFile(feedbackPath, "utf8") : null;
+const cardMetaPath = path.join(process.cwd(), ".tracker", "card-meta.json");
+const cardMetaExisted = existsSync(cardMetaPath);
+const cardMetaBackup = cardMetaExisted ? await readFile(cardMetaPath, "utf8") : null;
 
 const child = spawn(process.execPath, ["scripts/preview-server.mjs"], {
   cwd: process.cwd(),
@@ -54,11 +57,11 @@ try {
 
   // Find a real card to act on, so the test tracks the file's actual shape.
   const lines = todoBackup.split(/\r?\n/);
-  const target = lines.findIndex((l) => /^-\s+\[[ xA~]\]\s+\S/.test(l));
+  const target = lines.findIndex((l) => /^-\s+\[[ xA~.]\]\s+\S/.test(l));
   assert.ok(target >= 0, "todo.md has no cards to test against");
   const original = lines[target];
   // The guard matches on the card's text, so it survives the marker changing.
-  const expect = original.replace(/^-\s+\[[ xA~]\]\s+/, "").slice(0, 40);
+  const expect = original.replace(/^-\s+\[[ xA~.]\]\s+/, "").slice(0, 40);
 
   // --- moving a card rewrites only its marker ---
   const moved = await post({ line: target, expect, status: "~", lane: "Bugs" });
@@ -69,7 +72,7 @@ try {
   assert.match(now[target], /^-\s+\[~\]/, "marker was not rewritten");
   assert.equal(
     now[target].replace(/^-\s+\[~\]/, ""),
-    original.replace(/^-\s+\[[ xA~]\]/, ""),
+    original.replace(/^-\s+\[[ xA~.]\]/, ""),
     "the rest of the line must survive untouched"
   );
   assert.equal(now.length, lines.length, "line count must not change");
@@ -115,10 +118,53 @@ try {
   const heading = lines.findIndex((l) => l.startsWith("## "));
   assert.equal((await post({ line: heading, expect: "", status: "x" })).status, 409);
 
+  // --- priority: set appends a trailing token, change replaces it, 0 clears it ---
+  // The target card may already carry a token set from the live board, so the
+  // expected after-clear shape is the line without any token, not the line as found.
+  const beforePriority = (await readFile(todoPath, "utf8"))
+    .split(/\r?\n/)[target]
+    .replace(/\s*!p[1-5]\b/i, "");
+  const p2 = await post({ line: target, expect, priority: 2 });
+  assert.equal(p2.status, 200);
+  now = (await readFile(todoPath, "utf8")).split(/\r?\n/);
+  assert.match(now[target], /!p2$/, "priority token must land at the end of the line");
+
+  const p5 = await post({ line: target, expect, priority: 5 });
+  assert.equal(p5.status, 200);
+  now = (await readFile(todoPath, "utf8")).split(/\r?\n/);
+  assert.match(now[target], /!p5$/);
+  assert.equal((now[target].match(/!p[1-5]\b/g) || []).length, 1, "only one priority token may exist");
+
+  const cleared = await post({ line: target, expect, priority: 0 });
+  assert.equal(cleared.status, 200);
+  now = (await readFile(todoPath, "utf8")).split(/\r?\n/);
+  assert.equal(now[target], beforePriority, "clearing priority must leave the line token-free");
+
+  // --- rejects junk priorities rather than writing them ---
+  assert.equal((await post({ line: target, expect, priority: 7 })).status, 400);
+  assert.equal((await post({ line: target, expect, priority: "high" })).status, 400);
+  assert.equal((await post({ line: target, expect, priority: 2.5 })).status, 400);
+
+  // --- text edit rewrites the title and keeps the marker and the priority token ---
+  await post({ line: target, expect, priority: 4 });
+  const renamed = await post({ line: target, expect, text: "renamed by the endpoint test" });
+  assert.equal(renamed.status, 200);
+  now = (await readFile(todoPath, "utf8")).split(/\r?\n/);
+  assert.match(
+    now[target],
+    /^-\s+\[[ xA~.]\]\s+renamed by the endpoint test !p4$/,
+    "text edit must keep the marker and re-append the priority token"
+  );
+
+  // --- empty text is refused ---
+  assert.equal((await post({ line: target, expect: "renamed by", text: "   " })).status, 400);
+
   console.log("todo-update endpoint check passed");
 } finally {
   child.kill();
   await writeFile(todoPath, todoBackup, "utf8");
   if (feedbackExisted) await writeFile(feedbackPath, feedbackBackup, "utf8");
   else await rm(feedbackPath, { force: true });
+  if (cardMetaExisted) await writeFile(cardMetaPath, cardMetaBackup, "utf8");
+  else await rm(cardMetaPath, { force: true });
 }

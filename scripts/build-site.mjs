@@ -1399,7 +1399,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
               <span class="braindump-toolbar-action-label">Recommend</span>
             </button>
             <button type="button" class="braindump-toolbar-action" data-tool="export" aria-label="Export project bundle" title="Export project bundle">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span class="braindump-toolbar-action-label">Export</span>
             </button>
             <label class="braindump-file-label braindump-toolbar-action" aria-label="Open Canvas (.canvas / .canvas.json / .zip / .canvas.diff)" title="Open Canvas (.canvas / .canvas.json / .zip / .canvas.diff) — Ctrl+O">
@@ -1409,7 +1409,7 @@ function renderBoardPage(currentFile, board, introPanel = null) {
             </label>
             <label class="braindump-file-label braindump-toolbar-action" aria-label="Import files into the current board (image / PDF / markdown / text)" title="Import files into board — Ctrl+I">
               <input type="file" id="braindump-import" data-board-ui="import-input" accept="image/*,.pdf,.md,.txt,.csv,.docx,.json" multiple hidden>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span class="braindump-toolbar-action-label">Import</span>
             </label>
             <button type="button" class="braindump-toolbar-action" data-tool="settings" aria-label="Board settings" title="Settings">
@@ -1485,6 +1485,41 @@ function renderBoardPage(currentFile, board, introPanel = null) {
               <div class="braindump-settings-input-row">
                 <input type="number" id="braindump-setting-autosave-seconds" min="5" max="300" step="5" inputmode="numeric">
                 <span>seconds</span>
+              </div>
+            </label>
+            <label class="braindump-settings-toggle" for="braindump-setting-dev-mode">
+              <span class="braindump-settings-label-wrap">
+                <span class="braindump-settings-label">Developer mode</span>
+                <span class="braindump-settings-copy">Shows a live overlay with FPS, camera position and zoom, pointer coordinates, node counts, and the selected node.</span>
+              </span>
+              <input type="checkbox" id="braindump-setting-dev-mode">
+            </label>
+          </section>
+          <section class="braindump-settings-section" aria-labelledby="braindump-ghsync-title">
+            <h3 id="braindump-ghsync-title" class="braindump-help-title">GitHub sync</h3>
+            <p class="braindump-help-copy">Mirrors this board's canvas to a repository you control on every save. The token stays in this browser and is sent only to api.github.com. Use a fine-grained token with contents read and write on that one repository.</p>
+            <label class="braindump-settings-toggle" for="braindump-setting-ghsync-enabled">
+              <span class="braindump-settings-label-wrap">
+                <span class="braindump-settings-label">Enabled</span>
+              </span>
+              <input type="checkbox" id="braindump-setting-ghsync-enabled">
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-ghsync-repo">
+              <span class="braindump-settings-label">Repository</span>
+              <div class="braindump-settings-input-row">
+                <input type="text" id="braindump-setting-ghsync-repo" placeholder="owner/repo" spellcheck="false" autocomplete="off">
+              </div>
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-ghsync-branch">
+              <span class="braindump-settings-label">Branch</span>
+              <div class="braindump-settings-input-row">
+                <input type="text" id="braindump-setting-ghsync-branch" placeholder="main" spellcheck="false" autocomplete="off">
+              </div>
+            </label>
+            <label class="braindump-settings-field" for="braindump-setting-ghsync-token">
+              <span class="braindump-settings-label">Token</span>
+              <div class="braindump-settings-input-row">
+                <input type="password" id="braindump-setting-ghsync-token" placeholder="github_pat_..." spellcheck="false" autocomplete="off">
               </div>
             </label>
           </section>
@@ -1642,6 +1677,7 @@ function createBoardPageDefinition(page) {
     description: page.description,
     ogImage: seo.defaultImage,
     bodyClass: `page-${page.board.slug} page-board`,
+    robots: page.robots,
     structuredData: [websiteSchema],
     content: renderBoardPage(page.file, page.board, page.introPanel || null)
   };
@@ -2156,13 +2192,33 @@ const collectionSchema = {
     "A selection of project summaries by Evren Ucar across product concepts, workshop tools, and mobility ideas."
 };
 
+// Hand-maintained public pages that the generator does not write but the
+// sitemap should still advertise.
+const EXTRA_SITEMAP_FILES = ["cosmoboard-landing.html"];
+
+// The page a stranger should be pointed at first. Decided 2026-08-01: index the
+// landing page and the onboarding board both, and lead with the landing page,
+// because it is the clearest written explanation of what Cosmoboard is and
+// objective criterion 3 is about a stranger understanding that.
+//
+// A sitemap has no inherent order, so listing it first is presentation only;
+// <priority> is the part a crawler actually reads. Everything else is left
+// without a priority, which means the 0.5 default, so this one page is the only
+// thing declared above the rest rather than a ranking of the whole site.
+const SITEMAP_LEAD_FILE = "cosmoboard-landing.html";
+
 function renderSitemap(pageList) {
-  const urls = pageList
+  const urls = [...pageList, ...EXTRA_SITEMAP_FILES.map((file) => ({ file }))]
     .filter((page) => !["coming_soon.html", "404.html"].includes(page.file))
+    // noindex pages stay out of the sitemap: a page told to hide from search
+    // engines should not be advertised to them either.
+    .filter((page) => !String(page.robots || "").includes("noindex"))
+    .sort((a, b) =>
+      (b.file === SITEMAP_LEAD_FILE ? 1 : 0) - (a.file === SITEMAP_LEAD_FILE ? 1 : 0))
     .map(
       (page) => `  <url>
     <loc>${pagePathToUrl(page.file)}</loc>
-    <lastmod>${buildDate}</lastmod>
+    <lastmod>${buildDate}</lastmod>${page.file === SITEMAP_LEAD_FILE ? "\n    <priority>1.0</priority>" : ""}
   </url>`
     )
     .join("\n");
@@ -2435,7 +2491,24 @@ export async function build() {
   });
   await writeFile(path.join(baseDataDir, "items.json"), JSON.stringify(baseItems, null, 0), "utf8");
 
+  // The landing page keeps its own hand-crafted design, but the design lives
+  // in a template now: the build injects the two runtime asset hashes and the
+  // onboarding canvas version, which used to be re-copied by hand after every
+  // rebuild and drifted whenever the copy was forgotten.
+  const landingTemplate = await readFile(
+    path.join(rootDir, "src", "templates", "cosmoboard-landing.template.html"),
+    "utf8"
+  );
+  const landingHtml = landingTemplate
+    .replaceAll("{{BRAINDUMP_CSS_VERSION}}", boardAssetVersions.css)
+    .replaceAll("{{BRAINDUMP_JS_VERSION}}", boardAssetVersions.js)
+    .replaceAll(
+      "{{ONBOARDING_SOURCE_VERSION}}",
+      getBoardSourceVersion("content/boards/onboarding/current.canvas")
+    );
+
   await Promise.all([
+    writeFile(path.join(rootDir, "cosmoboard-landing.html"), landingHtml, "utf8"),
     writeFile(
       path.join(rootDir, "robots.txt"),
       `User-agent: *\nAllow: /\nSitemap: ${site.url}/sitemap.xml\n`,

@@ -1,0 +1,2 @@
+﻿{"at":"2026-08-01T06:40:52Z","text":"Start on !p2 [cli]. Reading COSMOBOARD_MIGRATION.md stage 2, registry.json, preview-server.mjs sanitizer + updatedAt guard before writing any code."}
+{"at":"2026-08-01T06:43:38Z","text":"Bug found while reading preview-server.mjs: GET /api/list-markdown returns 500 'readdir is not defined'. readdir is called at line 687 but never imported from node:fs/promises (line 4 imports mkdir, readFile, unlink, writeFile only). Probed live on port 4189. The board's markdown file browser cannot list anything."}

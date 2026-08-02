@@ -1,0 +1,2 @@
+{"at":"2026-07-31T00:59:35.322Z","text":"Starting: toolbar auto-hide + page lock. Reading braindump.js/css and existing tests first."}
+{"at":"2026-07-31T02:11:59.660Z","text":"Done: toolbar auto-hide (settings checkbox, reveal tab, inert pill) + page lock (dock button, gates drag/resize/delete/undo/paste/text-edit, selection+pan+zoom+embeds stay live). Test tests/board/toolbar-autohide-and-lock.test.mjs passes with patch, fails without (confirmed via SKIP_PATCH=1). Exact hunks in final report to orchestrator."}

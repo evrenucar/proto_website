@@ -89,7 +89,9 @@ try {
 
   const createdBody = await created.json();
   markdownPath = createdBody.path;
-  assert.match(markdownPath, /^content\/boards\/cosmoboard\/note-[\d-]+\.md$/);
+  // The timestamp keeps its underscore since the server-side sanitizer was
+  // aligned with the client's (title and filename agree on separator now).
+  assert.match(markdownPath, /^content\/boards\/cosmoboard\/note-[\d_-]+\.md$/);
   assert.equal(path.posix.dirname(markdownPath), boardDir);
 
   const stamp = path.posix.basename(markdownPath, ".md");
