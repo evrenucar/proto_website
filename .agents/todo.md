@@ -382,15 +382,30 @@ work area. Parked without timelines; pull cards out as direction firms up.
   only if offline merge becomes a requirement.
 - [.] [apps] Phase 7, app surface: sandboxed app embeds with a manifest and session state.
 - [.] [export] Phase 8, ecosystem portability: richer Obsidian round-trip, plugin or local API.
-- [.] **Built and NOT applied**, parked at `.tmp/scratch/opus5-41/patch.json`. It turns a
-  green suite red: `board-save-export-runtime` asserts the source matches
-  `/nodes:\s*nodes\.map\(\(node\) => JSON\.parse\(JSON\.stringify\(stripTransientNodeFields\(node\)\)\)\)/`,
-  and the patch moves that expression out of the object literal, so the regex stops matching.
-  That is another source-scraping assertion of the kind the 2026-08-01 audit is about, so the
-  right move is to fix the assertion rather than shape the code around it. Held only because
-  serialization is the path the stale-tab clobber guard defends and it deserves its own careful
-  pass, not a rushed one at the end of a wave.
-  [perf] Incremental saves: dirty-node tracking so serialization is O(change), shared
+- [A] [perf] Incremental saves and staged mount, items 3 and 4 of the performance plan. Both
+  were deferred "until a board big enough to prove them exists", and that board exists now because
+  the benchmark generator builds one, so they were measured rather than assumed. Draft writes are
+  now proportional to what changed: after a drag 1.90ms against 0.50ms after a single keystroke,
+  a 3.8x spread on a 901-node board with a 97KB draft.
+  **The stale-tab clobber guard still holds**, which is the constraint that shaped this: a save
+  still carries the on-disk `updatedAt` the tab loaded against, an out-of-date save is still
+  refused, and a refused save still keeps the work in the browser. All asserted.
+  **A test had to be deleted to land it, and that is the interesting part.**
+  `board-save-export-runtime` asserted the deep-clone guarantee as a regex pinning the exact
+  spelling of one expression. Incremental saves moved that expression out of an object literal
+  with the guarantee completely intact, and the regex went red. It would equally have passed a
+  rewrite that broke the property while keeping the spelling, so it was worth less than nothing:
+  it costs time on every safe change and buys nothing on an unsafe one.
+  It is replaced by a behavioural case that serializes the board three times and asserts the
+  geometry does not move. That fails for any implementation handing out live node references,
+  however it is written. `stripTransientNodeFields` returns the ORIGINAL node when it has nothing
+  to strip, so the property is real and not academic.
+  **One flaky case fixed while in there:** the staged-mount case panned in a fixed direction and
+  hoped it would reveal offscreen nodes, which depended on where the seeded board put them. It
+  now pans towards the nearest genuinely-offscreen node. Three consecutive runs revealed 20 nodes
+  each, where before it was 20 or 0 depending on luck.
+  **How to check:** `node tests/board/incremental-save-and-staged-mount.test.mjs` prints the draft
+  timings. `npm run perf:bench` for the fuller picture.
   design with operation-level writes.
 - [.] [perf] Staged mount: viewport-first node rendering, the rest in idle callbacks.
 - [x] [runtime] A `vnc` node type with the noVNC client vendored, per the VNC research v2. Built
@@ -1491,45 +1506,68 @@ Current state, run one file at a time: `tests/build/` 4/4, `tests/preview/` 4/4,
 
 - [A] The lock icon should be small but visible and yellow when the page is locked and the bar is auto hidden. (can be in small circle next to the pill)
 
-- [ ] **Built, reviewed, and NOT applied**, parked at `.tmp/scratch/opus5-40/patch.json`.
-  It reaches 29 commands, derived from the shortcuts groups, the toolbar DOM and the settings
-  checkboxes. Your card says **"all commands and actions"**, and a reviewer proved the gap by
-  mutating the sources out and reading what was left: every non-boolean action is still menu-only.
-  A palette that covers the easy half is the kind of thing that gets shipped and then quietly not
-  used, so it is worth one more pass rather than a claim of done.
-  Still open and yours: **which key**. You wrote "C might be nice but then lets re-assign canvas",
-  and C shipped as the canvas tool yesterday, so that is a live reassignment. Ctrl+K is the
-  convention and collides with nothing here, which would let C stay on canvas and cost nobody a
-  relearn. Say the word and it ships on Ctrl+K.
-  Original: there should be a command shortcut that opens a command palette. where you can type any command. C might be nice but then lets re-assign canvas. All commands and actions should be accesible in this command interface without going through the menu. Maybe even settings can be configured through here !p3
+- [A] There should be a command shortcut that opens a command palette where you can type any command. !p3
+  **It is on Ctrl+K, so C stays on the canvas tool** and nobody has to relearn anything. You had
+  written "C might be nice but then lets re-assign canvas"; since C shipped as canvas the day
+  before, Ctrl+K is the cheaper answer and it is the convention besides.
+  Fuzzy matching, arrows and Enter, Escape closes, each row shows its own shortcut so the palette
+  teaches rather than just does, and it does not fire while you are typing in a note. That last
+  one is by construction rather than by a second copy of the checks: it sits inside the existing
+  keydown handler whose guards already rule out a note, a text node, a settings field and a
+  focused VNC screen.
+  Boolean settings are togglable from it, which was your "maybe even settings can be configured
+  through here".
+  **What it does not yet reach, stated plainly.** It derives 29 commands from the shortcut groups,
+  the toolbar and the settings checkboxes. A reviewer proved the gap by mutating each source out
+  and reading the residue: **every non-boolean action is still menu-only.** Your card says "all
+  commands and actions", so this is the useful two thirds rather than the whole thing. The
+  remaining third is worth a follow-up card rather than a claim of done.
+  **How to check:** Ctrl+K, type a few letters, press Enter. The board does the thing. Press
+  Ctrl+K while typing inside a note and you get a literal k. where you can type any command. C might be nice but then lets re-assign canvas. All commands and actions should be accesible in this command interface without going through the menu. Maybe even settings can be configured through here !p3
 
-- [ ] **Built, reviewed, and NOT applied. It needs one decision from you and one real fix.**
-  The patch is parked at `.tmp/scratch/opus5-38/patch.json` with its test at
-  `held-rotation-tool.test.mjs`, so nothing is lost.
-  **Why it is held.** Rotating a drawing and then erasing on it destroys the rotation and moves
-  the ink: the eraser gates on the unrotated model rect and clips against untransformed points, so
-  what it removes is not what is under your pointer. That is silent corruption of your drawings,
-  which is worse than not having rotation.
-  Also, every regression result the agent reported was run against the **unpatched** runtime. Its
-  mirror used a directory junction, and Node resolves module realpaths, so the server it started
-  was serving the real repo rather than the mirror. So its greens prove nothing and everything
-  needs re-running.
-  **And R collides.** The shape tool card below binds R to rectangle while this binds R to
-  rotation. You asked for R to be rotation, so rotation keeps R and the shape tool needs another
-  letter. That is the decision I want from you, or say "pick one" and I will.
-  Original: R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool. !p2
+- [A] R should act as rotation tool. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. !p2
+  Built to the spec: R enters rotation mode, the centre is the rotation origin, Shift snaps to 45
+  degrees, you rotate from the corner handle, and holding R then releasing falls back to your
+  previous tool the same way Space does for pan. The angle is a node field and round-trips through
+  save, reload and undo.
+  **One real defect a reviewer proved, and it is fixed by declining to do something.** Erasing on
+  a rotated drawing destroyed the rotation and removed the wrong ink: the eraser gates on the
+  unrotated rect and clips against untransformed points, then rebuilds the surviving pieces
+  through a path that does not carry the angle. So one eraser stroke both moved the ink and
+  silently un-rotated the drawing.
+  **The eraser now skips rotated drawings**, deliberately, and the reason is written above the
+  guard. Doing it properly means mapping the eraser disc into the node's local space and then
+  deciding what angle each surviving piece should carry, which is not simply the original: the
+  pieces have new bounding boxes, so re-applying one angle about each piece's own centre is a
+  different transform from the original rotation about the original centre. That is worth getting
+  right rather than guessing at, so until then the eraser leaves rotated drawings alone instead of
+  corrupting them. **That is a known gap, not a finished corner.**
+  **Also worth recording:** every regression result the agent reported was run against the
+  **unpatched** runtime. Its mirror used a directory junction and Node resolves module realpaths,
+  so the server it started was serving the real repo. Everything was re-run here.
+  **How to check:** select something, press R, drag a corner. It turns about its centre. Hold
+  Shift for 45 degree steps. Ctrl+Z restores the angle, and a reload keeps it. If a shape is selected and R is clicked it goes into rotation mode and center origin is rotation center. with shift can snap to increments of 45 deg. TO rotate you hold on from the corner white scaling point when in rotation mode. Or you can hold down R roate from the corner then let go or let go of R. It will snap back to your previous tool like it does with space for moving tool. !p2
 
-- [ ] **Built, reviewed, and NOT applied**, parked at `.tmp/scratch/opus5-39/patch.json`.
-  Three reasons, in order. It binds **R to rectangle**, and you asked for R to be the rotation
-  tool; rotation wins, so this needs a different letter. It turns a currently-green suite red
-  (`F: every drawing control must take the pointer that lands on it`, because a toolbar element
-  now covers the dev tuning sliders). And it shares three identical anchors with the rotation
-  patch, so applying them naively would have one silently eat the other's changes; my own
-  cross-patch overlap check flagged the same three independently of the reviewer.
-  Worth deciding along with the letter: the eraser clips drawings by scraping coordinates out of a
-  path's `d` attribute, and a `<rect>` or `<ellipse>` has none, so shapes are not eraseable unless
-  that is designed for.
-  Original: add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner. !p3
+- [A] Add a new shape tool. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. !p3
+  All four behaviours: drag-draw rectangles and ellipses, Shift constrains to a square or a
+  circle, and Alt makes the drag origin the centre instead of the corner. Shift+Alt does both.
+  **The key is S, not R.** It was built on R, which you assigned to the rotation tool in the card
+  above; rotation keeps R. S is free and reads as shape or square. O draws ellipses. The
+  shortcuts panel agrees.
+  **Two collisions I had to resolve by hand.** This patch and the rotation patch shared three
+  identical anchors, the tool-guard lists that both needed to append to, so applying them naively
+  would have had one silently drop the other's entry. My cross-patch overlap check flagged the
+  same three independently of the reviewer, which is the check an individual agent cannot run for
+  itself. Both features are folded into each line rather than either being dropped.
+  And it turned the drawing suite red: the widened toolbar covered the developer tuning sliders,
+  so the curve slider could not be clicked at all. **The dev overlay has moved to the bottom
+  right**, clear of both the site nav on the left and the centred toolbar's row, so no future tool
+  can reach it by growing.
+  **A limitation worth knowing:** the eraser clips drawings by scraping coordinates out of a
+  path's `d` attribute, and a `<rect>` or `<ellipse>` has none, so **shapes are not eraseable**.
+  Delete removes them normally.
+  **How to check:** press S and drag: a rectangle. Hold Shift: a square. Hold Alt: it grows from
+  where you started rather than out of that corner. O does the same for ellipses and circles. Should be able to drag draw rectangles circles ellipses. holding shift makes rectangle a square holding shift makes ellipse tool draw a circle. When holding alt it should take draw origin as center of shape. regularly it takes it as corner. !p3
 
 - [A] **15 blank lines: done. Collapsing: answered, and the answer is that it was already
   solved.** You flagged your own uncertainty on the second half, and you were right to.

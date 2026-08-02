@@ -302,7 +302,9 @@ html:has(body.page-board) {
 }
 
 .braindump-viewport[data-mode="draw"] .bd-item,
-.braindump-viewport[data-mode="draw"] .bd-item * {
+.braindump-viewport[data-mode="draw"] .bd-item *,
+.braindump-viewport[data-mode="shape"] .bd-item,
+.braindump-viewport[data-mode="shape"] .bd-item * {
   pointer-events: none !important;
 }
 
@@ -544,8 +546,26 @@ html:has(body.page-board) {
   pointer-events: none;
 }
 
-.braindump-viewport[data-mode="select"] .bd-item.selected .resize-handle {
+.braindump-viewport[data-mode="select"] .bd-item.selected .resize-handle,
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle {
   display: block;
+}
+
+/* Rotation mode reuses the corner handle rather than growing a second one, so
+   the only difference the user sees is what it does and what it looks like.
+   The accent fill is the mode's indicator: R has no toolbar button to light up,
+   so without this the board gives no sign it is in rotation mode at all. */
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle {
+  cursor: grab;
+}
+
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle::after {
+  background: var(--bd-accent, #3fdaca);
+  border-color: var(--bd-accent, #3fdaca);
+}
+
+.braindump-viewport[data-mode="rotate"] .bd-item.selected .resize-handle:active {
+  cursor: grabbing;
 }
 
 /* Image crop */
@@ -2862,8 +2882,21 @@ html:has(body.page-board) {
 /* Developer mode overlay (Settings > Developer mode) */
 .bd-dev-overlay {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
+  /* Bottom RIGHT, and both halves of that matter.
+     Right, because the left is where the 232px site nav sits: it is fixed at
+     z-index 50 over the board, and a panel under it had every slider return
+     aside.sidenav from elementFromPoint, so no drag reached them.
+     Bottom, but clear of the toolbar's row: the toolbar is centred at
+     bottom: 32px and about 52px tall, and it grows outward in BOTH directions
+     every time a tool is added, which is how the shape tool made the curve
+     slider unclickable. Sitting to the right of a centred toolbar and above its
+     row means no future tool can reach this, which a z-index bump would not
+     achieve without the panel covering the toolbar instead.
+     It also has to stay off the middle of the canvas, because that is where
+     you draw, and the drawing suites assert their strokes never cross it. */
+  right: 14px;
+  left: auto;
+  bottom: 96px;
   z-index: 9;
   min-width: 190px;
   padding: 9px 11px;
@@ -2986,20 +3019,17 @@ html:has(body.page-board) {
    the moment it carries sliders: measured on both board shells, elementFromPoint
    at the centre of a slider returned aside.sidenav, so every drag would have hit
    the nav. Clearing the nav is what .board-page-panel already does. */
-@media screen and (min-width: 1201px) {
-  .bd-dev-overlay {
-    left: calc(var(--desktop-nav-width, 232px) + 14px);
-  }
-
-  html.nav-desktop-collapsed .bd-dev-overlay,
-  body.nav-desktop-collapsed .bd-dev-overlay {
-    left: 14px;
-  }
-}
+/* The nav-clearing rules below are obsolete: the panel is anchored to the RIGHT
+   now, so it was never over the nav to begin with. Kept as a comment rather than
+   deleted silently, because the reason they existed is still true and someone
+   moving this panel back to the left will need it: aside.sidenav is fixed at
+   z-index 50 across the left 232px of the board, and anything under it is
+   unclickable however high its own z-index. */
 
 @media (max-width: 768px) {
   .bd-dev-overlay {
-    left: 12px;
+    right: 12px;
+    left: auto;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   }
 }

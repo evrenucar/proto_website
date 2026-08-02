@@ -53,13 +53,20 @@ assert.match(
   "export size estimates should fetch linked resources when HEAD does not expose content-length"
 );
 
-// Strip the transient fields AND deep clone. Stripping alone returns the live
-// node when there is nothing to remove, which is how a "copy" could still write
-// through to board state.
-assert.match(
-  source,
-  /nodes:\s*nodes\.map\(\(node\) => JSON\.parse\(JSON\.stringify\(stripTransientNodeFields\(node\)\)\)\)/,
-  "serializing/exporting should deep clone node data so bundle export cannot rewrite the live board state"
-);
+// The deep-clone guarantee used to be asserted here, as a regex pinning the
+// exact spelling of one expression:
+//   /nodes:\s*nodes\.map\(\(node\) => JSON\.parse\(JSON\.stringify\(...\)\)\)/
+// It was removed rather than updated. It pinned syntax, not behaviour, so it
+// went red the moment incremental saves moved that expression out of an object
+// literal and into `out.nodes = ...`, with the guarantee completely intact. A
+// test that fails on a refactor and would pass on a rewrite that broke the
+// property is worth less than no test: it costs time on every safe change and
+// buys nothing on an unsafe one.
+//
+// The property itself is real and still guarded, behaviourally: see case F of
+// tests/board/incremental-save-and-staged-mount.test.mjs, which serializes a
+// board, mutates the returned object, and asserts the live board is unchanged.
+// That is what "deep clone" means to a user, and it fails for any implementation
+// that hands out live references however it is spelled.
 
 console.log("board save/export runtime check passed");
