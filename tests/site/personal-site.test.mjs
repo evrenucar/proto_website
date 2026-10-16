@@ -6,7 +6,7 @@ const read = (file) => readFile(new URL(`../../${file}`, import.meta.url), 'utf8
 test('personal homepage contains useful actions, without retired content or placeholders', async () => {
   const html = await read('index.html');
   assert.match(html, /Hey, I&#39;m|Hey, I'm/);
-  assert.match(html, /mailto:evrenucar1999@gmail.com/);
+  assert.match(html, /mailto:evrenucr@gmail.com/);
   assert.match(html, /id="contact"/);
   assert.match(html, /photography.html/);
   assert.doesNotMatch(html, /braindump|cosmoboard|Coming soon|Category|page-bottom-ticker|Selected projects/i);

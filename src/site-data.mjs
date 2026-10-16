@@ -2,7 +2,7 @@ export const site = {
   name: "Evren Ucar",
   domain: "evrenucar.com",
   url: "https://evrenucar.com",
-  emailUser: "evrenucar1999",
+  emailUser: "evrenucr",
   emailDomain: "gmail.com",
   headline: "Industrial design engineer, prototyper, and hands-on maker.",
   description:
