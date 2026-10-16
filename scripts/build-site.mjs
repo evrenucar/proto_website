@@ -8,6 +8,7 @@ import {
   homePage,
   makingPage,
   navigation,
+  publishedProjectSlugs,
   openQuestsPage,
   photographyItems,
   photographyPage,
@@ -796,6 +797,7 @@ function renderCardMeta(metaEntries) {
   return `
     <div class="content-card-meta">
       ${metaEntries
+        .filter(entry => !entry.isEmpty)
         .map(
           (entry) =>
             `<span class="content-card-pill content-card-pill--${escapeHtml(
@@ -817,6 +819,7 @@ function renderCardFooter(footerEntries) {
   return `
     <div class="content-card-footer">
       ${footerEntries
+        .filter(entry => !entry.isEmpty)
         .map(
           (entry) =>
             `<p class="content-card-footnote${entry.isEmpty ? " is-empty" : ""}"><strong>${escapeHtml(
@@ -1038,174 +1041,37 @@ function renderDetailPage(item, currentFile, relatedItems = []) {
   `;
 }
 
-function renderHomePage(currentFile, { projectsData, makingData, openQuestsData, coolBookmarksData, photographyData }) {
-  const featuredProjects = featuredProjectIds
-    .map((slug) => projectsData.find((project) => project.slug === slug))
-    .filter(Boolean);
-  const makingPreview = makingData.slice(0, 6);
-  const photographyPreview = photographyData.slice(0, 6);
-  const homeBoardPreviewContent = {
-    braindump: {
-      copy:
-        "The original board stays loose and utility-first. It is where sketches, saved references, and spatial notes can stay rough without losing structure."
-    },
-    cosmoboard: {
-      copy:
-        "The onboarding board turns the whiteboard system into a navigable product direction. The intro now lives inside the canvas instead of being pinned to the viewport."
-    }
-  };
-  const homeBoardPreviewPages = boardPages.filter((page) => homeBoardPreviewContent[page.board?.slug]);
-
-  const facts = homePage.facts
-    .map(
-      (fact) => `
-        <div class="info-pill">
-          <p>${escapeHtml(fact.label)}</p>
-          <strong>${escapeHtml(fact.value)}</strong>
-        </div>
-      `
-    )
-    .join("");
-
-  const serviceCards = homePage.services
-    .map(
-      (service) => `
-        <article class="text-card">
-          <h3>${escapeHtml(service.title)}</h3>
-          <p>${escapeHtml(service.copy)}</p>
-        </article>
-      `
-    )
-    .join("");
-
-  const processCards = homePage.process
-    .map(
-      (step) => `
-        <article class="text-card">
-          <h3>${escapeHtml(step.title)}</h3>
-          <p>${escapeHtml(step.copy)}</p>
-        </article>
-      `
-    )
-    .join("");
-
-  const boardPreviewSection = homeBoardPreviewPages.length > 0
-    ? `
-    <section class="page-section board-preview-section">
-      ${renderSectionHeader("Boards", "Board previews", [
-        "Read-only board previews sit directly on the home page so the whiteboard system is visible in context without turning the page into a second full editor."
-      ])}
-      ${renderEmbeddedBoardPreviewAssets(currentFile)}
-      <div class="board-preview-grid">
-        ${homeBoardPreviewPages
-          .map((page) => {
-            const previewContent = homeBoardPreviewContent[page.board.slug];
-
-            return `
-              <article class="text-card board-preview-card">
-                <div class="board-preview-copy">
-                  <h3>${escapeHtml(page.board.title)}</h3>
-                  <p>${escapeHtml(previewContent.copy)}</p>
-                  <div class="text-card-actions">
-                    <a class="action-link" href="${relativeHref(currentFile, page.file)}">Open the full ${escapeHtml(
-                      page.board.title
-                    )}</a>
-                  </div>
-                </div>
-                <div class="board-preview-embed">
-                  ${renderEmbeddedBoardPreview(currentFile, page.board, {
-                    fullBoardHref: page.file
-                  })}
-                </div>
-              </article>
-            `;
-          })
-          .join("")}
-      </div>
-    </section>
-  `
-    : "";
-
+function renderHomePage(currentFile, { projectsData, photographyData }) {
+  const selected = projectsData.slice(0, 3);
   return `
     <section class="home-hero">
-      <img class="main-photo" src="${homePage.hero.image.src}" alt="${escapeHtml(homePage.hero.image.alt)}">
+      <img class="main-photo" src="${homePage.hero.image.src}" alt="${escapeHtml(homePage.hero.image.alt)}" width="320" height="320">
       <div class="home-copy">
-        <p class="page-tag">${escapeHtml(homePage.hero.eyebrow)}</p>
-        <h1 class="home-title">${escapeHtml(homePage.hero.titleLead)} <span>${escapeHtml(
-    homePage.hero.titleHighlight
-  )}</span></h1>
+        <p class="page-tag">Designer &amp; maker</p>
+        <h1 class="home-title">${escapeHtml(homePage.hero.titleLead)} <span>${escapeHtml(homePage.hero.titleHighlight)}</span></h1>
         ${renderParagraphs(homePage.hero.intro)}
+        <div class="personal-actions">
+          ${selected.length ? '<a class="personal-link" href="projects.html">View projects &rarr;</a>' : '<a class="personal-link" href="photography.html">View photography &rarr;</a>'}
+          <a class="personal-link" href="#contact">Get in touch &rarr;</a>
+        </div>
       </div>
     </section>
-
-    <section class="page-section info-strip">
-      ${facts}
-    </section>
-
+    ${selected.length ? `
     <section class="page-section">
-      ${renderSectionHeader("Design engineering consulting", "What I usually help with", homePage.consultingIntro)}
-      <div class="text-grid">
-        ${serviceCards}
-      </div>
+      ${renderSectionHeader("Projects", "Things I'm working on")}
+      <div class="work-grid">${selected.map(project => renderProjectCard(project, currentFile)).join("")}</div>
+      <a class="personal-link" href="projects.html">All projects &rarr;</a>
+    </section>` : ""}
+    <section class="page-section personal-photography">
+      ${renderSectionHeader("Photography", "Through the viewfinder", ["A few favourites, shot on film."])}
+      <div class="photo-grid photo-grid-preview">${renderPhotoGrid(photographyData.slice(0, 6))}</div>
+      <a class="personal-link" href="photography.html">More photography &rarr;</a>
     </section>
-
-    <section class="page-section">
-      ${renderSectionHeader("My Process", "How I like to work", homePage.processIntro)}
-      <div class="text-grid">
-        ${processCards}
-      </div>
-    </section>
-
-    ${boardPreviewSection}
-
-    <section class="page-section">
-      ${renderSectionHeader("Projects", "Selected projects", [
-        "The longer case studies are still being rebuilt. For now the short summaries stay on the main project page."
-      ])}
-      <div class="work-grid">
-        ${featuredProjects.map((project) => renderProjectCard(project, currentFile)).join("")}
-      </div>
-    </section>
-
-    <section class="page-section">
-      ${renderSectionHeader("Things i do", "Smaller builds and experiments", makingPage.intro.slice(0, 1))}
-      <div class="mini-grid">
-        ${makingPreview.map((item) => renderMakingCard(item, currentFile)).join("")}
-      </div>
-    </section>
-
-    <section class="page-section">
-      ${renderSectionHeader("Photography", "Analog archive", photographyPage.intro.slice(0, 1))}
-      <div class="photo-grid photo-grid-preview">
-        ${renderPhotoGrid(photographyPreview)}
-      </div>
-    </section>
-
-    <section class="page-section">
-      ${renderSectionHeader("Open-Quests", "Ongoing builds and questions", openQuestsPage.intro.slice(0, 1))}
-      <div class="text-grid">
-        ${renderTextCards(openQuestsData, currentFile)}
-      </div>
-    </section>
-
-    <section class="page-section">
-      ${renderSectionHeader("Cool bookmarks", "References worth keeping close", bookmarksPage.intro.slice(0, 1))}
-      <div class="text-grid">
-        ${renderTextCards(coolBookmarksData, currentFile)}
-      </div>
-    </section>
-
-    <section class="page-section hello-section">
-      ${renderSectionHeader("Hello", "Reach out", homePage.hello.copy)}
-      <div class="hello-card">
-        <p class="body-copy hello-copy">
-          If something here feels relevant to what you are building, send a note.
-        </p>
-        ${renderCopyEmailControl({
-          className: "hello-copy-button",
-          label: `Copy ${site.name} email address`,
-          content: escapeHtml(homePage.hello.buttonLabel)
-        })}
+    <section class="page-section hello-section" id="contact">
+      ${renderSectionHeader("Contact", "Say hello", ["Have something in mind, or just want to chat? Drop me a line."])}
+      <div class="personal-actions">
+        <a class="personal-link" href="mailto:${site.emailUser}@${site.emailDomain}">Email me &rarr;</a>
+        ${renderCopyEmailControl({className: "hello-copy-button", label: `Copy ${site.name} email address`, content: "Copy email"})}
       </div>
     </section>
   `;
@@ -1214,15 +1080,12 @@ function renderHomePage(currentFile, { projectsData, makingData, openQuestsData,
 function renderProjectsPage(currentFile, projectsData) {
   return `
     <section class="page-section page-section-first">
-      ${renderSectionHeader("Projects", "Project work", [
-        "A selection of product and concept work. The long writeups are still being rebuilt, so this page stays short and direct for now."
-      ])}
-      <div class="work-grid">
-        ${projectsData.map((project) => renderProjectCard(project, currentFile)).join("")}
-      </div>
-      <div class="detail-endcap">
-        ${renderEndcapActions(currentFile, "index.html")}
-      </div>
+      <p class="page-tag">Making things</p>
+      <h1 class="section-title">Projects</h1>
+      ${projectsData.length
+        ? `<p class="body-copy">A few things I've been working on.</p><div class="work-grid">${projectsData.map(project => renderProjectCard(project, currentFile)).join("")}</div>`
+        : `<p class="body-copy">I'm putting together a fresh selection of projects. In the meantime, take a look at my photos or say hello.</p>
+          <div class="personal-actions"><a class="personal-link" href="photography.html">View photography &rarr;</a><a class="personal-link" href="index.html#contact">Get in touch &rarr;</a></div>`}
     </section>
   `;
 }
@@ -1244,7 +1107,9 @@ function renderMakingPage(currentFile, makingData) {
 function renderPhotographyPage(currentFile, photographyData) {
   return `
     <section class="page-section page-section-first">
-      ${renderSectionHeader("Photography", "Analog archive", photographyPage.intro)}
+      <p class="page-tag">Photography</p>
+      <h1 class="section-title">Shot on film</h1>
+      ${renderParagraphs(photographyPage.intro)}
       <div class="photo-grid">
         ${renderPhotoGrid(photographyData)}
       </div>
@@ -1963,10 +1828,7 @@ async function loadPhotographyItems() {
 // place, which is enough, and never wiping it means a build can no longer
 // destroy board content.
 const GENERATED_CONTENT_DIRS = [
-  "apps",
-  "base-data",
   "cool-bookmarks",
-  "entities",
   "open-quests",
   "projects"
 ];
@@ -2126,7 +1988,8 @@ async function loadContentData() {
   const photographyData = await loadPhotographyItems();
 
   const notionProjects = [...legacyProjectOverrides, ...filterBySection(notionItems, "projects")];
-  const projectsData = mergeItems(filterBySection(localItems, "projects"), notionProjects);
+  const projectsData = mergeItems(filterBySection(localItems, "projects"), notionProjects)
+    .filter(item => publishedProjectSlugs.includes(item.slug));
   const makingData = mergeItems(
     filterBySection(localItems, "things_i_do"),
     filterBySection(notionItems, "things_i_do")
@@ -2139,7 +2002,7 @@ async function loadContentData() {
     filterBySection(localItems, "cool-bookmarks"),
     filterBySection(notionItems, "cool-bookmarks")
   );
-  const detailItems = [...projectsData, ...makingData, ...openQuestsData, ...coolBookmarksData].filter(
+  const detailItems = projectsData.filter(
     (item) => item.detailPage?.contentHtml
   );
 
@@ -2192,20 +2055,8 @@ const collectionSchema = {
     "A selection of project summaries by Evren Ucar across product concepts, workshop tools, and mobility ideas."
 };
 
-// Hand-maintained public pages that the generator does not write but the
-// sitemap should still advertise.
-const EXTRA_SITEMAP_FILES = ["cosmoboard-landing.html"];
-
-// The page a stranger should be pointed at first. Decided 2026-08-01: index the
-// landing page and the onboarding board both, and lead with the landing page,
-// because it is the clearest written explanation of what Cosmoboard is and
-// objective criterion 3 is about a stranger understanding that.
-//
-// A sitemap has no inherent order, so listing it first is presentation only;
-// <priority> is the part a crawler actually reads. Everything else is left
-// without a priority, which means the 0.5 default, so this one page is the only
-// thing declared above the rest rather than a ranking of the whole site.
-const SITEMAP_LEAD_FILE = "cosmoboard-landing.html";
+const EXTRA_SITEMAP_FILES = [];
+const SITEMAP_LEAD_FILE = "index.html";
 
 function renderSitemap(pageList) {
   const urls = [...pageList, ...EXTRA_SITEMAP_FILES.map((file) => ({ file }))]
@@ -2329,44 +2180,6 @@ export async function build() {
       content: renderProjectsPage("projects.html", projectsData)
     },
     {
-      file: "things_i_do.html",
-      title: "Things I Do",
-      description: makingPage.description,
-      ogImage: makingData[0]?.image || seo.defaultImage,
-      bodyClass: "page-making",
-      structuredData: [websiteSchema],
-      content: renderMakingPage("things_i_do.html", makingData)
-    },
-    {
-      file: "open-quests.html",
-      title: "Open Quests",
-      description: openQuestsPage.description,
-      ogImage: seo.defaultImage,
-      bodyClass: "page-open-quests",
-      structuredData: [websiteSchema],
-      content: renderInfoPage("open-quests.html", {
-        tag: "Open-Quests",
-        title: "Ongoing builds and questions",
-        intro: openQuestsPage.intro,
-        items: openQuestsData
-      })
-    },
-    {
-      file: "cool-bookmarks.html",
-      title: "Cool Bookmarks",
-      description: bookmarksPage.description,
-      ogImage: seo.defaultImage,
-      bodyClass: "page-bookmarks",
-      structuredData: [websiteSchema],
-      content: renderInfoPage("cool-bookmarks.html", {
-        tag: "Cool bookmarks",
-        title: "References worth keeping close",
-        intro: bookmarksPage.intro,
-        items: coolBookmarksData
-      })
-    },
-    ...boardPages.map(createBoardPageDefinition),
-    {
       file: "photography.html",
       title: "Photography",
       description: photographyPage.description,
@@ -2397,16 +2210,6 @@ export async function build() {
         )
       )
     })),
-    {
-      file: "coming_soon.html",
-      title: placeholderPage.title,
-      description: placeholderPage.description,
-      ogImage: seo.defaultImage,
-      bodyClass: "page-placeholder",
-      robots: "noindex,follow",
-      structuredData: [websiteSchema],
-      content: renderPlaceholderPage(placeholderPage.heading, placeholderPage.copy)
-    },
     {
       file: "404.html",
       title: "Page not found",
@@ -2446,69 +2249,7 @@ export async function build() {
     })
   );
 
-  // Copy apps directory to content/apps
-  const srcAppsDir = path.join(rootDir, "src", "apps");
-  const destAppsDir = path.join(rootDir, "content", "apps");
-  try {
-    await access(srcAppsDir);
-    await cp(srcAppsDir, destAppsDir, { recursive: true, force: true });
-  } catch (err) {
-    if (err.code !== "ENOENT") console.warn("[apps] Failed to copy apps:", err.message);
-  }
-
-  // Export shared entity data for board nodes and structured views.
-  const entityIndex = await buildEntityIndex(registry);
-  const entityDataDir = path.join(rootDir, "content", "entities");
-  await mkdir(entityDataDir, { recursive: true });
-  await writeFile(path.join(entityDataDir, "index.json"), JSON.stringify(entityIndex, null, 0), "utf8");
-  const entityByProjectSlug = new Map(
-    entityIndex.entities
-      .filter((entity) => entity.projectSlug)
-      .map((entity) => [entity.projectSlug, entity])
-  );
-
-  // Export base data for the runtime base/database node type
-  const baseDataDir = path.join(rootDir, "content", "base-data");
-  await mkdir(baseDataDir, { recursive: true });
-  const allContentItems = [...projectsData, ...makingData, ...openQuestsData, ...coolBookmarksData];
-  const baseItems = allContentItems.map((item) => {
-    const entity = entityByProjectSlug.get(item.slug || "");
-    return {
-      slug: item.slug || "",
-      section: item.section || "",
-      title: (item.title || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FEFF}]+\s*/u, ""),
-      category: item.category || "",
-      year: item.year || "",
-      publishingStatus: item.publishingStatus || "",
-      effort: item.effort || "",
-      summary: item.summary || "",
-      dateAdded: item.dateAdded || "",
-      dateModified: item.dateModified || item.lastUpdated || "",
-      hasBoard: !!item.board?.sourcePath,
-      entityRef: entity?.slug || "",
-      entityTitle: entity?.title || ""
-    };
-  });
-  await writeFile(path.join(baseDataDir, "items.json"), JSON.stringify(baseItems, null, 0), "utf8");
-
-  // The landing page keeps its own hand-crafted design, but the design lives
-  // in a template now: the build injects the two runtime asset hashes and the
-  // onboarding canvas version, which used to be re-copied by hand after every
-  // rebuild and drifted whenever the copy was forgotten.
-  const landingTemplate = await readFile(
-    path.join(rootDir, "src", "templates", "cosmoboard-landing.template.html"),
-    "utf8"
-  );
-  const landingHtml = landingTemplate
-    .replaceAll("{{BRAINDUMP_CSS_VERSION}}", boardAssetVersions.css)
-    .replaceAll("{{BRAINDUMP_JS_VERSION}}", boardAssetVersions.js)
-    .replaceAll(
-      "{{ONBOARDING_SOURCE_VERSION}}",
-      getBoardSourceVersion("content/boards/onboarding/current.canvas")
-    );
-
   await Promise.all([
-    writeFile(path.join(rootDir, "cosmoboard-landing.html"), landingHtml, "utf8"),
     writeFile(
       path.join(rootDir, "robots.txt"),
       `User-agent: *\nAllow: /\nSitemap: ${site.url}/sitemap.xml\n`,

@@ -1,0 +1,45 @@
+# GitHub Pages serves this repository through Jekyll (main /).
+# Keep working sources and retired pages locally without publishing them.
+exclude:
+  - src
+  - scripts
+  - tests
+  - test-results
+  - previous-tests
+  - tools
+  - docs
+  - markdown
+  - projects
+  - things_i_do
+  - reviews_and_feedback
+  - content/boards
+  - content/apps
+  - content/entities
+  - content/base-data
+  - content/braindump-state.json
+  - content/things_i_do
+  - content/open-quests
+  - content/cool-bookmarks
+  - notion_assets
+  - JavaScript/braindump.js
+  - JavaScript/vendor
+  - CSS/braindump.css
+  - braindump.html
+  - cosmoboard.html
+  - cosmoboard-landing.html
+  - onboarding.html
+  - things_i_do.html
+  - open-quests.html
+  - cool-bookmarks.html
+  - coming_soon.html
+  - random.html
+  - travels.html
+  - AGENTS.md
+  - current_scratch_pad.md
+  - COSMOBOARD_MIGRATION.md
+  - README.md
+  - LICENSE
+  - package.json
+  - package-lock.json
+  - drop-overlay.png
+  - drop-verify.png

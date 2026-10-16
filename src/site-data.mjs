@@ -8,26 +8,22 @@ export const site = {
   description:
     "Portfolio website for Evren Ucar, a TU Delft graduate and freelance industrial design engineer working across mechanics, electronics, prototyping, and hands-on making.",
   location: "Netherlands",
-  tickerText:
-    "If you are reading this at the very bottom of the site, you have probably scrolled past prototypes, camera rolls, workshop fixes, and at least one idea that looked better at 2 a.m. Somewhere nearby there is a darkroom that still needs tweaking, a small kiln that is definitely a normal thing to build, a sketchbook full of arrows pointing nowhere, a half-successful weld, a printer asking for bed leveling again, and a strong suspicion that making strange useful things by hand is still the best way to think. | ",
+  tickerText: "",
   social: {
     linkedin: "https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/",
     youtube: "https://www.youtube.com/channel/UClIvijrVKdvasECOonGPomw"
   }
 };
 
+// Only explicitly selected projects are published, even after a Notion sync.
+// Add approved Notion slugs here when the new project selection is ready.
+export const publishedProjectSlugs = [];
+
 export const navigation = [
-  { label: "About Me", href: "index.html" },
+  { label: "Home", href: "index.html" },
   { label: "Projects", href: "projects.html" },
-  { label: "Things i do", href: "things_i_do.html" },
   { label: "Photography", href: "photography.html" },
-  { label: "Open-Quests", href: "open-quests.html" },
-  { label: "Cool bookmarks", href: "cool-bookmarks.html" },
-  // Cosmoboard points at the written landing page, the best first touch: it
-  // explains the idea and links onward to the onboarding tour and the working
-  // board. Braindump is deliberately absent: it is the scratch pad, and it
-  // answers "what is this?" with a wall of test scribbles.
-  { label: "Cosmoboard", href: "cosmoboard-landing.html" }
+  { label: "Contact", href: "index.html#contact" }
 ];
 
 export const homePage = {
@@ -36,12 +32,10 @@ export const homePage = {
     "Evren Ucar is a TU Delft graduate and freelance industrial design engineer developing physical products through mechanics, electronics, prototyping, and practical problem-solving.",
   hero: {
     eyebrow: "About",
-    titleLead: "Hi there. I'm",
+    titleLead: "Hey, I'm",
     titleHighlight: "Evren",
     intro: [
-      "I am Evren Ucar, a TU Delft graduate and freelance industrial design engineer. Most of my work happens in the messy part between a rough idea and something you can hold, test, break, and improve.",
-      "That usually means product development through mechanics, electronics, prototyping, and practical problem-solving. I like making progress tangible early, then improving it through use.",
-      "Outside of work I keep gravitating to the same kind of making through analog photography, lino printing, metalworking, and other hands-on processes. At OMA Collective I am currently helping build a darkroom and a small metal casting kiln, while also getting pulled into resin printing, welding, machine building, and woodworking."
+      "I'm an industrial design engineer who likes making things. This is a home for my projects, workshop experiments, and analog photography."
     ],
     image: {
       src: "image/masked_photo.png",
@@ -149,8 +143,7 @@ export const photographyPage = {
   description:
     "A selection of analog photography from Evren Ucar. Mostly quiet observations, materials, places, and moments that feel worth holding onto.",
   intro: [
-    "Photography gives me another way to stay close to materials, light, and timing. I mostly use it as a slower way of looking.",
-    "This is a small analog photo selection. You can tap any image to view it larger."
+    "A few things that caught my eye, shot on film. Tap a photo for a closer look."
   ]
 };
 
