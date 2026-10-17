@@ -8,6 +8,7 @@ export const site = {
   description:
     "Evren Ucar is a Delft-based industrial design engineer. Explore his projects and photography, or visit his freelance design and engineering practice.",
   location: "Netherlands",
+  professionalUrl: "https://design.evrenucar.com/",
   tickerText: "",
   social: {
     linkedin: "https://www.linkedin.com/in/evren-u%C3%A7ar-b335971b4/",
@@ -23,6 +24,7 @@ export const navigation = [
   { label: "Home", href: "index.html" },
   { label: "Projects", href: "projects.html" },
   { label: "Photography", href: "photography.html" },
+  { label: "Design work", href: "https://design.evrenucar.com/" },
   { label: "Contact", href: "index.html#contact" }
 ];
 

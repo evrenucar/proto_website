@@ -2121,3 +2121,7 @@ html.nav-pos-left .mobile-menu {
   .page-home .main-photo { flex: 0 0 auto; width: 200px; margin: 0; }
   .personal-photography { margin-top: 48px; }
 }
+
+.professional-site-link { color: #3fdaca; text-decoration: underline; text-underline-offset: 4px; }
+.professional-site-link:hover { color: #fff; }
+.professional-site-link:focus-visible { outline: 2px solid #3fdaca; outline-offset: 4px; }

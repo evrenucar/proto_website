@@ -8,6 +8,7 @@ test('personal homepage contains useful actions, without retired content or plac
   assert.match(html, /Hey, I&#39;m|Hey, I'm/);
   assert.match(html, /mailto:evrenucr@gmail.com/);
   assert.match(html, /id="contact"/);
+  assert.equal((html.match(/href="https:\/\/design\.evrenucar\.com\/"/g) || []).length, 4);
   assert.match(html, /photography.html/);
   assert.doesNotMatch(html, /braindump|cosmoboard|Coming soon|Category|page-bottom-ticker|Selected projects/i);
 });

@@ -1049,6 +1049,7 @@ function renderHomePage(currentFile, { projectsData, photographyData }) {
         <p class="page-tag">Designer &amp; maker</p>
         <h1 class="home-title">${escapeHtml(homePage.hero.titleLead)} <span>${escapeHtml(homePage.hero.titleHighlight)}</span></h1>
         ${renderParagraphs(homePage.hero.intro)}
+        <p class="body-copy">For freelance design and engineering, visit <a class="professional-site-link" href="${site.professionalUrl}">Evren Design &nearr;</a>.</p>
         <div class="personal-actions">
           ${selected.length ? '<a class="personal-link" href="projects.html">View projects &rarr;</a>' : '<a class="personal-link" href="photography.html">View photography &rarr;</a>'}
           <a class="personal-link" href="#contact">Get in touch &rarr;</a>
@@ -1070,6 +1071,7 @@ function renderHomePage(currentFile, { projectsData, photographyData }) {
       ${renderSectionHeader("Contact", "Say hello", ["Have something in mind, or just want to chat? Drop me a line."])}
       <div class="personal-actions">
         <a class="personal-link" href="mailto:${site.emailUser}@${site.emailDomain}">Email me &rarr;</a>
+        <a class="personal-link" href="${site.professionalUrl}">Design &amp; engineering &nearr;</a>
         ${renderCopyEmailControl({className: "hello-copy-button", label: `Copy ${site.name} email address`, content: "Copy email"})}
       </div>
     </section>
@@ -2031,12 +2033,13 @@ const personSchema = {
   url: site.url,
   jobTitle: "Freelance Industrial Design Engineer",
   homeLocation: {"@type": "Place", name: "Delft, Netherlands"},
+  worksFor: {"@id": `${site.professionalUrl}#business`},
   alumniOf: {
     "@type": "CollegeOrUniversity",
     name: "Delft University of Technology"
   },
   image: absoluteAsset(seo.defaultImage),
-  sameAs: [site.social.linkedin, site.social.youtube],
+  sameAs: [site.professionalUrl, site.social.linkedin, site.social.youtube],
   knowsAbout: [
     "industrial design",
     "prototype development",
