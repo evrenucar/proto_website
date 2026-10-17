@@ -499,7 +499,6 @@ function renderShell({
     <meta name="robots" content="${robots}">
     <meta name="author" content="${escapeHtml(site.name)}">
     <meta name="theme-color" content="#222222">
-    <meta name="keywords" content="${escapeHtml(homePage.seoKeywords.join(", "))}">
     <link rel="canonical" href="${canonicalUrl}">
     <link rel="stylesheet" href="${relativeHref(currentFile, "CSS/site.css")}">
     <meta property="og:type" content="website">
@@ -2027,9 +2026,11 @@ const websiteSchema = {
 const personSchema = {
   "@context": "https://schema.org",
   "@type": "Person",
+  "@id": `${site.url}/#person`,
   name: site.name,
   url: site.url,
   jobTitle: "Freelance Industrial Design Engineer",
+  homeLocation: {"@type": "Place", name: "Delft, Netherlands"},
   alumniOf: {
     "@type": "CollegeOrUniversity",
     name: "Delft University of Technology"

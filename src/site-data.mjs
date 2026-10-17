@@ -6,7 +6,7 @@ export const site = {
   emailDomain: "gmail.com",
   headline: "Industrial design engineer, prototyper, and hands-on maker.",
   description:
-    "Portfolio website for Evren Ucar, a TU Delft graduate and freelance industrial design engineer working across mechanics, electronics, prototyping, and hands-on making.",
+    "Evren Ucar is a Delft-based industrial design engineer. Explore his projects and photography, or visit his freelance design and engineering practice.",
   location: "Netherlands",
   tickerText: "",
   social: {
@@ -27,9 +27,9 @@ export const navigation = [
 ];
 
 export const homePage = {
-  title: "Evren Ucar | Industrial Design Engineer and Maker",
+  title: "Evren Ucar | Industrial Design Engineer in Delft",
   description:
-    "Evren Ucar is a TU Delft graduate and freelance industrial design engineer developing physical products through mechanics, electronics, prototyping, and practical problem-solving.",
+    "Evren Ucar is a Delft-based industrial design engineer working across product design, prototyping, mechanics, electronics and fabrication. Explore projects, photography and freelance services.",
   hero: {
     eyebrow: "About",
     titleLead: "Hey, I'm",
